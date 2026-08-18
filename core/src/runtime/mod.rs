@@ -291,9 +291,9 @@ impl Runtime {
         let mut res = EventResult::Ignored;
 
         for &node in path.iter().rev() {
-            sent.push(node);
             let current = self.send_event(node, event, Phase::Ascending);
             if current.is_handled() {
+                sent.push(node);
                 res = current;
             }
             if current.should_stop() {
@@ -303,9 +303,9 @@ impl Runtime {
 
         if !res.should_stop() {
             for &node in &path {
-                sent.push(node);
                 let current = self.send_event(node, event, Phase::Descending);
                 if current.is_handled() {
+                    sent.push(node);
                     res = current;
                 }
                 if current.should_stop() {
