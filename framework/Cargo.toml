@@ -1,0 +1,24 @@
+[package]
+name = "libtui"
+authors.workspace = true
+categories.workspace = true
+description = "A modern retained-mode TUI library with fine-grained reactivity"
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["lib"]
+
+[features]
+default = ["crossterm"]
+crossterm = ["dep:crossterm"]
+
+[dependencies]
+libtui-core = { path = "../core" }
+crossterm = { version = "0.29.0", default-features = false, features = ["bracketed-paste", "events"], optional = true }
+
+[target.'cfg(windows)'.dependencies]
+crossterm = { version = "0.29.0", default-features = false, features = ["bracketed-paste", "events", "windows"], optional = true }

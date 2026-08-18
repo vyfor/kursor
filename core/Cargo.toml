@@ -1,0 +1,13 @@
+[package]
+name = "libtui-core"
+authors.workspace = true
+categories.workspace = true
+description = "Core runtime and primitives"
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+slab = "0.4"
