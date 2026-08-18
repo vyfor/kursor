@@ -11,3 +11,4 @@ edition.workspace = true
 
 [dependencies]
 slab = "0.4"
+unicode-width = "0.2"

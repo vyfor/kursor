@@ -1,3 +1,5 @@
+use unicode_width::UnicodeWidthChar;
+
 use crate::{
     layout::rect::Rect,
     render::{buffer::Buffer, cell::Cell, style::Style},
@@ -27,13 +29,19 @@ impl<'a> Canvas<'a> {
         }
     }
 
-    pub fn set_str(&mut self, x: u16, y: u16, text: &str, style: Style) {
-        for (i, ch) in text.chars().enumerate() {
-            let cx = x.saturating_add(i as u16);
-            if cx >= self.rect.right() {
+    pub fn set_str(&mut self, mut x: u16, y: u16, text: &str, style: Style) {
+        for ch in text.chars() {
+            if x >= self.rect.right() {
                 break;
             }
-            self.set(cx, y, ch, style);
+            let width = ch.width().unwrap_or(0) as u16;
+            if width > 0 {
+                self.set(x, y, ch, style);
+                if width == 2 && x + 1 < self.rect.right() {
+                    self.set(x + 1, y, ' ', style);
+                }
+                x = x.saturating_add(width);
+            }
         }
     }
 
