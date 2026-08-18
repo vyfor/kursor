@@ -762,6 +762,11 @@ impl Runtime {
     }
 
     fn apply_layout(&mut self, id: NodeId, rect: Rect) {
+        let old_rect = self.tree.get(id).map_or(Rect::default(), |ins| ins.rect);
+        if old_rect != rect {
+            self.paint_all = true;
+        }
+
         let child_ids = self.tree.children(id).to_vec();
         let child_sizes: Vec<Size> = child_ids
             .iter()
