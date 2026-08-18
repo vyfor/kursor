@@ -140,19 +140,21 @@ impl<T> Tree<T> {
         depth
     }
 
-    pub fn subtree(&self, id: NodeId) -> Vec<NodeId> {
-        let mut res = Vec::new();
+    pub fn visit_subtree(&self, id: NodeId, mut f: impl FnMut(NodeId)) {
         let mut stack = vec![id];
         while let Some(current) = stack.pop() {
-            res.push(current);
-            let node = self.node(current);
-            if let Some(node) = node {
+            f(current);
+            if let Some(node) = self.node(current) {
                 for &child in node.children.iter().rev() {
                     stack.push(child);
                 }
             }
         }
+    }
 
+    pub fn subtree(&self, id: NodeId) -> Vec<NodeId> {
+        let mut res = Vec::new();
+        self.visit_subtree(id, |node| res.push(node));
         res
     }
 

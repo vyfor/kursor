@@ -212,15 +212,17 @@ impl Runtime {
         let Some(root) = self.tree.root() else {
             return Vec::new();
         };
-        self.tree
-            .subtree(root)
-            .into_iter()
-            .filter(|id| {
-                self.tree
-                    .get(*id)
-                    .is_some_and(|node| node.component.focus_any(node.props.as_ref()).focusable)
-            })
-            .collect()
+        let mut focusables = Vec::new();
+        self.tree.visit_subtree(root, |id| {
+            if self
+                .tree
+                .get(id)
+                .is_some_and(|node| node.component.focus_any(node.props.as_ref()).focusable)
+            {
+                focusables.push(id);
+            }
+        });
+        focusables
     }
 
     pub fn path_to_root(&self, id: NodeId) -> Vec<NodeId> {
@@ -849,9 +851,9 @@ impl Runtime {
                 break;
             };
 
-            for node in self.tree.subtree(id) {
+            self.tree.visit_subtree(id, |node| {
                 self.paint_dirty.remove(&node);
-            }
+            });
 
             if self.tree.root() == Some(id) {
                 self.back.clear();
