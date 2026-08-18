@@ -8,8 +8,8 @@ use crate::state::{deps, id::AtomId, queue::dirty_queue, spin::SpinLock};
 
 pub static CURRENT_FRAME_EPOCH: AtomicU32 = AtomicU32::new(1);
 
-pub trait State: Clone + Send + Sync + 'static {}
-impl<T: Clone + Send + Sync + 'static> State for T {}
+pub trait State: Clone + PartialEq + Send + Sync + 'static {}
+impl<T: Clone + PartialEq + Send + Sync + 'static> State for T {}
 
 #[repr(align(64))]
 pub struct Slot<T: State> {
@@ -71,6 +71,12 @@ impl<T: State> Slot<T> {
 
     #[inline(always)]
     pub fn set(&self, val: T) {
+        let read_idx = self.read_idx.load(Ordering::Acquire) as usize;
+        let current = unsafe { &*self.buffers[read_idx].get() };
+        if *current == val {
+            return;
+        }
+
         self.lock.lock();
         let read_idx = self.read_idx.load(Ordering::Relaxed);
         let target_idx = ((read_idx + 1) % 3) as usize;
@@ -86,6 +92,9 @@ impl<T: State> Slot<T> {
 
     #[inline(always)]
     pub fn update<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
+        let read_idx = self.read_idx.load(Ordering::Acquire) as usize;
+        let before = unsafe { (*self.buffers[read_idx].get()).clone() };
+
         self.lock.lock();
         let read_idx = self.read_idx.load(Ordering::Relaxed);
         let target_idx = ((read_idx + 1) % 3) as usize;
@@ -96,9 +105,15 @@ impl<T: State> Slot<T> {
 
         let res = f(target_buf);
 
+        let changed = *target_buf != before;
+
         self.read_idx.store(target_idx as u8, Ordering::Release);
         self.lock.unlock();
-        self.mark_dirty();
+
+        if changed {
+            self.mark_dirty();
+        }
+
         res
     }
 
