@@ -640,10 +640,6 @@ impl Runtime {
                 break;
             };
 
-            for node in self.tree.subtree(id) {
-                self.layout_dirty.remove(&node);
-            }
-
             let rect = if self.tree.root() == Some(id) {
                 self.rect
             } else {
@@ -776,7 +772,13 @@ impl Runtime {
     }
 
     fn apply_layout(&mut self, id: NodeId, rect: Rect) {
+        let is_dirty = self.layout_dirty.remove(&id);
         let old_rect = self.tree.get(id).map_or(Rect::default(), |ins| ins.rect);
+
+        if !is_dirty && old_rect == rect {
+            return;
+        }
+
         if old_rect != rect {
             self.paint_all = true;
         }
