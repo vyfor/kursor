@@ -612,6 +612,7 @@ impl Runtime {
             type_id: bp.type_id,
             rect: Rect::new(0, 0, 0, 0),
             measured: Size::default(),
+            available: None,
             env: inherited.clone(),
             inherited,
         };
@@ -704,12 +705,24 @@ impl Runtime {
             ins.component = component;
             ins.props = props;
             ins.measured = measured;
+            ins.available = Some(available);
         }
     }
 
     fn measure_node(tree: &mut Tree<Instance>, id: NodeId, available: Size) -> Size {
         let child_ids = tree.children(id).to_vec();
         let child_count = child_ids.len();
+
+        if child_count == 0 {
+            if let Some(cached) = tree.get(id).and_then(|ins| ins.available) {
+                if cached == available {
+                    if let Some(ins) = tree.get(id) {
+                        return ins.measured;
+                    }
+                }
+            }
+        }
+
         let env = tree.get(id).unwrap().env.clone();
         let rect = tree.get(id).unwrap().rect;
 
@@ -757,6 +770,7 @@ impl Runtime {
             ins.component = component;
             ins.props = props;
             ins.measured = measured;
+            ins.available = Some(available);
         }
         measured
     }

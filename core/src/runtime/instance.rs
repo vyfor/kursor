@@ -12,6 +12,7 @@ pub struct Instance {
     pub type_id: TypeId,
     pub rect: Rect,
     pub measured: Size,
+    pub available: Option<Size>,
     pub env: Environment,
     pub inherited: Environment,
 }
