@@ -447,25 +447,36 @@ impl Runtime {
         self.paint_dirty.insert(id);
     }
 
-    fn do_deps(&mut self, id: NodeId, dep_reads: Vec<AtomId>) {
-        if let Some(atoms) = self.node_deps.remove(&id) {
-            for atom in atoms {
-                if let Some(nodes) = self.deps.get_mut(&atom) {
+    fn do_deps(&mut self, id: NodeId, mut dep_reads: Vec<AtomId>) {
+        dep_reads.sort_unstable();
+        dep_reads.dedup();
+
+        let old_deps = self.node_deps.get(&id).cloned().unwrap_or_default();
+        if old_deps == dep_reads {
+            return;
+        }
+
+        for old_atom in &old_deps {
+            if !dep_reads.contains(old_atom) {
+                if let Some(nodes) = self.deps.get_mut(old_atom) {
                     nodes.retain(|&n| n != id);
                     if nodes.is_empty() {
-                        self.deps.remove(&atom);
+                        self.deps.remove(old_atom);
                     }
                 }
             }
         }
 
-        let mut reads = dep_reads;
-        reads.sort_unstable();
-        reads.dedup();
+        for new_atom in &dep_reads {
+            if !old_deps.contains(new_atom) {
+                self.deps.entry(*new_atom).or_default().push(id);
+            }
+        }
 
-        for atom in reads {
-            self.deps.entry(atom).or_default().push(id);
-            self.node_deps.entry(id).or_default().push(atom);
+        if dep_reads.is_empty() {
+            self.node_deps.remove(&id);
+        } else {
+            self.node_deps.insert(id, dep_reads);
         }
     }
 
