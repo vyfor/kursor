@@ -65,6 +65,7 @@ version = "0.0.0"
 dependencies = [
  "crossterm",
  "kursor-core",
+ "unicode-width",
 ]
 
 [[package]]
