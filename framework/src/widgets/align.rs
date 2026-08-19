@@ -1,0 +1,107 @@
+use kursor_core::{
+    component::{
+        Component,
+        blueprint::{Blueprint, IntoBlueprint},
+        context::Cx,
+    },
+    layout::{
+        Alignment, HAlign, VAlign,
+        context::{LayoutCx, MeasureCx},
+        rect::Rect,
+        size::Size,
+    },
+};
+
+#[derive(Clone, Copy)]
+pub struct AlignProps {
+    pub alignment: Alignment,
+}
+
+pub struct Align;
+
+impl Align {
+    pub fn new(alignment: Alignment, child: impl IntoBlueprint) -> Blueprint {
+        Blueprint::new::<Self>(AlignProps { alignment }).child(child)
+    }
+
+    pub fn top_left(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::TOP_LEFT, child)
+    }
+
+    pub fn top_center(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::TOP_CENTER, child)
+    }
+
+    pub fn top_right(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::TOP_RIGHT, child)
+    }
+
+    pub fn center_left(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::CENTER_LEFT, child)
+    }
+
+    pub fn center(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::CENTER, child)
+    }
+
+    pub fn center_right(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::CENTER_RIGHT, child)
+    }
+
+    pub fn bottom_left(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::BOTTOM_LEFT, child)
+    }
+
+    pub fn bottom_center(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::BOTTOM_CENTER, child)
+    }
+
+    pub fn bottom_right(child: impl IntoBlueprint) -> Blueprint {
+        Self::new(Alignment::BOTTOM_RIGHT, child)
+    }
+}
+
+impl Component for Align {
+    type Props = AlignProps;
+
+    fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
+        Self
+    }
+
+    fn measure(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        available: Size,
+        children: &mut MeasureCx,
+    ) -> Size {
+        let Some(size) = (!children.is_empty()).then(|| children.size(0)) else {
+            return Size::default();
+        };
+        Size::new(
+            size.width.min(available.width),
+            size.height.min(available.height),
+        )
+    }
+
+    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+        for index in 0..children.len() {
+            let size = children.size(index);
+            let width = size.width.min(area.width);
+            let height = size.height.min(area.height);
+            let x = match props.alignment.horizontal {
+                HAlign::Left => area.x,
+                HAlign::Center => area.x.saturating_add(area.width.saturating_sub(width) / 2),
+                HAlign::Right => area.x.saturating_add(area.width.saturating_sub(width)),
+            };
+            let y = match props.alignment.vertical {
+                VAlign::Top => area.y,
+                VAlign::Center => area
+                    .y
+                    .saturating_add(area.height.saturating_sub(height) / 2),
+                VAlign::Bottom => area.y.saturating_add(area.height.saturating_sub(height)),
+            };
+            children.set(index, Rect::new(x, y, width, height));
+        }
+    }
+}
