@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use libtui_core::{
+use kursor_core::{
     component::blueprint::Blueprint,
     event::{Event, EventResult, mouse::MouseKind},
     render::buffer::{Buffer, CellDiff},

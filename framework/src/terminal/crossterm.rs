@@ -16,7 +16,7 @@ use crossterm::{
     },
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use libtui_core::{
+use kursor_core::{
     component::blueprint::Blueprint,
     event::{
         Event, Modifiers,

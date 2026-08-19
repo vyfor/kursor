@@ -1,5 +1,5 @@
 [package]
-name = "libtui"
+name = "kursor"
 authors.workspace = true
 categories.workspace = true
 description = "A modern retained-mode TUI library with fine-grained reactivity"
@@ -17,7 +17,7 @@ default = ["crossterm"]
 crossterm = ["dep:crossterm"]
 
 [dependencies]
-libtui-core = { path = "../core" }
+kursor-core = { version = "0.0.0", path = "../core" }
 crossterm = { version = "0.29.0", default-features = false, features = ["bracketed-paste", "events"], optional = true }
 
 [target.'cfg(windows)'.dependencies]

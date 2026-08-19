@@ -1,4 +1,4 @@
-use libtui_core::runtime::Runtime;
+use kursor_core::runtime::Runtime;
 
 pub fn next(runtime: &mut Runtime) -> bool {
     towards(runtime, 1)

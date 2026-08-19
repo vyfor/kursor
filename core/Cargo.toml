@@ -1,8 +1,8 @@
 [package]
-name = "libtui-core"
+name = "kursor-core"
 authors.workspace = true
 categories.workspace = true
-description = "Core runtime and primitives"
+description = "Core runtime and primitives for Kursor"
 keywords.workspace = true
 license.workspace = true
 repository.workspace = true

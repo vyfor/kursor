@@ -1,6 +1,6 @@
 use std::{error::Error, time::Duration};
 
-use libtui_core::{event::Event, layout::size::Size, render::buffer::CellDiff};
+use kursor_core::{event::Event, layout::size::Size, render::buffer::CellDiff};
 
 #[cfg(feature = "crossterm")]
 pub mod crossterm;

@@ -1,5 +1,10 @@
 use std::{
-    cell::UnsafeCell, marker::PhantomData, mem::MaybeUninit, ops::Deref, ptr, sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+    cell::UnsafeCell,
+    marker::PhantomData,
+    mem::MaybeUninit,
+    ops::Deref,
+    ptr,
+    sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
 
 use crate::state::{deps, id::AtomId, queue::dirty_queue, scope};
