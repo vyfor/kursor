@@ -72,5 +72,14 @@ impl<T: State> Clone for Atom<T> {
 
 impl<T: State> Copy for Atom<T> {}
 
+impl<T: State> PartialEq for Atom<T> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.slot == other.slot
+    }
+}
+
+impl<T: State> Eq for Atom<T> {}
+
 unsafe impl<T: State> Send for Atom<T> {}
 unsafe impl<T: State> Sync for Atom<T> {}
