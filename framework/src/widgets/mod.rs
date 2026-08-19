@@ -1,4 +1,5 @@
 pub mod align;
+pub mod block;
 pub mod divider;
 pub mod padding;
 pub mod spacer;
@@ -6,6 +7,7 @@ pub mod stack;
 pub mod text;
 
 pub use align::{Align, AlignProps};
+pub use block::{Block, BlockProps, Border, BorderChars};
 pub use divider::{Divider, DividerProps};
 pub use padding::{Padding, PaddingProps};
 pub use spacer::{Spacer, SpacerProps};
