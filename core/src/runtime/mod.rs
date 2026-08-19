@@ -19,7 +19,7 @@ use crate::{
     },
     render::{buffer::Buffer, buffer::CellDiff, canvas::Canvas},
     runtime::instance::Instance,
-    state::{deps, id::AtomId, queue::dirty_queue},
+    state::{deps, id::AtomId, queue::dirty_queue, scope},
     tree::{Tree, id::NodeId},
 };
 
@@ -189,11 +189,13 @@ impl Runtime {
     }
 
     pub fn flush(&mut self) {
+        let _scope = scope::enter();
         self.do_update();
         self.do_layout();
     }
 
     pub fn render(&mut self) -> Vec<CellDiff> {
+        let _scope = scope::enter();
         self.flush();
         self.do_paint();
         self.back_buffer().diff(self.front_buffer())
@@ -454,10 +456,10 @@ impl Runtime {
         dep_reads.sort_unstable();
         dep_reads.dedup();
 
-        if self.node_deps.get(&id).is_some_and(|v| v == &dep_reads)
-            || (self.node_deps.get(&id).is_none() && dep_reads.is_empty())
-        {
-            return;
+        match self.node_deps.get(&id) {
+            Some(v) if v == &dep_reads => return,
+            None if dep_reads.is_empty() => return,
+            _ => {}
         }
 
         let old_deps = self.node_deps.remove(&id).unwrap_or_default();
@@ -746,14 +748,12 @@ impl Runtime {
         let child_ids = tree.children(id).to_vec();
         let child_count = child_ids.len();
 
-        if child_count == 0 {
-            if let Some(cached) = tree.get(id).and_then(|ins| ins.available) {
-                if cached == available {
-                    if let Some(ins) = tree.get(id) {
-                        return ins.measured;
-                    }
-                }
-            }
+        if child_count == 0
+            && let Some(cached) = tree.get(id).and_then(|ins| ins.available)
+            && cached == available
+            && let Some(ins) = tree.get(id)
+        {
+            return ins.measured;
         }
 
         let env = tree.get(id).unwrap().env.clone();
