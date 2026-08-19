@@ -1,5 +1,6 @@
 pub mod instance;
 use std::{
+    cmp::Ordering,
     collections::{HashMap, HashSet},
     mem,
     time::{Duration, Instant},
@@ -453,31 +454,54 @@ impl Runtime {
         dep_reads.sort_unstable();
         dep_reads.dedup();
 
-        let old_deps = self.node_deps.get(&id).cloned().unwrap_or_default();
-        if old_deps == dep_reads {
+        if self.node_deps.get(&id).is_some_and(|v| v == &dep_reads)
+            || (self.node_deps.get(&id).is_none() && dep_reads.is_empty())
+        {
             return;
         }
 
-        for old_atom in &old_deps {
-            if !dep_reads.contains(old_atom) {
-                if let Some(nodes) = self.deps.get_mut(old_atom) {
-                    nodes.retain(|&n| n != id);
-                    if nodes.is_empty() {
-                        self.deps.remove(old_atom);
+        let old_deps = self.node_deps.remove(&id).unwrap_or_default();
+
+        let mut i = 0;
+        let mut j = 0;
+        while i < old_deps.len() && j < dep_reads.len() {
+            match old_deps[i].cmp(&dep_reads[j]) {
+                Ordering::Less => {
+                    let old_atom = &old_deps[i];
+                    if let Some(nodes) = self.deps.get_mut(old_atom) {
+                        nodes.retain(|&n| n != id);
+                        if nodes.is_empty() {
+                            self.deps.remove(old_atom);
+                        }
                     }
+                    i += 1;
+                }
+                Ordering::Greater => {
+                    self.deps.entry(dep_reads[j]).or_default().push(id);
+                    j += 1;
+                }
+                Ordering::Equal => {
+                    i += 1;
+                    j += 1;
                 }
             }
         }
-
-        for new_atom in &dep_reads {
-            if !old_deps.contains(new_atom) {
-                self.deps.entry(*new_atom).or_default().push(id);
+        while i < old_deps.len() {
+            let old_atom = &old_deps[i];
+            if let Some(nodes) = self.deps.get_mut(old_atom) {
+                nodes.retain(|&n| n != id);
+                if nodes.is_empty() {
+                    self.deps.remove(old_atom);
+                }
             }
+            i += 1;
+        }
+        while j < dep_reads.len() {
+            self.deps.entry(dep_reads[j]).or_default().push(id);
+            j += 1;
         }
 
-        if dep_reads.is_empty() {
-            self.node_deps.remove(&id);
-        } else {
+        if !dep_reads.is_empty() {
             self.node_deps.insert(id, dep_reads);
         }
     }
