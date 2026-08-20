@@ -1,4 +1,4 @@
-use crate::layout::{rect::Rect, size::Size};
+use crate::layout::{offset::Offset, rect::Rect, size::Size};
 
 pub struct MeasureCx<'a> {
     measure: &'a mut dyn FnMut(usize, Size) -> Size,
@@ -39,12 +39,18 @@ impl<'a> MeasureCx<'a> {
 pub struct LayoutCx<'a> {
     sizes: &'a [Size],
     rects: &'a mut [Rect],
+    offsets: &'a mut [Offset],
 }
 
 impl<'a> LayoutCx<'a> {
-    pub(crate) fn new(sizes: &'a [Size], rects: &'a mut [Rect]) -> Self {
+    pub(crate) fn new(sizes: &'a [Size], rects: &'a mut [Rect], offsets: &'a mut [Offset]) -> Self {
         assert_eq!(sizes.len(), rects.len());
-        Self { sizes, rects }
+        assert_eq!(rects.len(), offsets.len());
+        Self {
+            sizes,
+            rects,
+            offsets,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -67,7 +73,15 @@ impl<'a> LayoutCx<'a> {
         self.rects[index] = rect;
     }
 
+    pub fn translate(&mut self, index: usize, offset: Offset) {
+        self.offsets[index] = offset;
+    }
+
     pub fn rects(&self) -> &[Rect] {
         self.rects
+    }
+
+    pub fn offsets(&self) -> &[Offset] {
+        self.offsets
     }
 }

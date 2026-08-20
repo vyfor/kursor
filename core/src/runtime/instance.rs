@@ -2,7 +2,7 @@ use std::any::{Any, TypeId};
 
 use crate::{
     component::{AnyComponent, blueprint::Blueprint, environment::Environment},
-    layout::{rect::Rect, size::Size},
+    layout::{offset::Offset, rect::Rect, size::Size},
 };
 
 pub struct Instance {
@@ -11,6 +11,7 @@ pub struct Instance {
     pub children: Vec<Blueprint>,
     pub type_id: TypeId,
     pub rect: Rect,
+    pub offset: Offset,
     pub measured: Size,
     pub available: Option<Size>,
     pub env: Environment,

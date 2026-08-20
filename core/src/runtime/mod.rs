@@ -14,6 +14,7 @@ use crate::{
     },
     layout::{
         context::{LayoutCx, MeasureCx},
+        offset::Offset,
         rect::Rect,
         size::Size,
     },
@@ -69,7 +70,11 @@ impl Runtime {
     }
 
     pub fn cursor(&self) -> Option<(u16, u16)> {
-        self.cursor.map(|(_, x, y)| (x, y))
+        let (node, x, y) = self.cursor?;
+        let (origin, clip) = self.resolve(node)?;
+        let x = origin.x.saturating_add(i32::from(x));
+        let y = origin.y.saturating_add(i32::from(y));
+        (x >= 0 && y >= 0 && clip.contains(x as u16, y as u16)).then_some((x as u16, y as u16))
     }
 
     pub fn back_buffer(&self) -> &Buffer {
@@ -89,6 +94,58 @@ impl Runtime {
         self.paint_all = true;
         self.do_create(blueprint, None);
         self.flush();
+    }
+
+    fn local_rect(rect: Rect) -> Rect {
+        Rect::new(0, 0, rect.width, rect.height)
+    }
+
+    fn translate(parent: Offset, rect: Rect, offset: Offset) -> Offset {
+        Offset::new(
+            parent
+                .x
+                .saturating_add(i32::from(rect.x))
+                .saturating_add(offset.x),
+            parent
+                .y
+                .saturating_add(i32::from(rect.y))
+                .saturating_add(offset.y),
+        )
+    }
+
+    fn clip(origin: Offset, size: Size, parent_clip: Rect) -> Option<Rect> {
+        let left = origin.x.max(i32::from(parent_clip.left()));
+        let top = origin.y.max(i32::from(parent_clip.top()));
+        let right = origin
+            .x
+            .saturating_add(i32::from(size.width))
+            .min(i32::from(parent_clip.right()));
+        let bottom = origin
+            .y
+            .saturating_add(i32::from(size.height))
+            .min(i32::from(parent_clip.bottom()));
+
+        (left < right && top < bottom).then(|| {
+            Rect::new(
+                left as u16,
+                top as u16,
+                (right - left) as u16,
+                (bottom - top) as u16,
+            )
+        })
+    }
+
+    fn resolve(&self, id: NodeId) -> Option<(Offset, Rect)> {
+        let mut origin = Offset::ZERO;
+        let mut clip = self.rect;
+
+        for node in self.tree.path_to_root(id).into_iter().rev() {
+            let ins = self.tree.get(node)?;
+            origin = Self::translate(origin, ins.rect, ins.offset);
+            clip = Self::clip(origin, Size::new(ins.rect.width, ins.rect.height), clip)?;
+        }
+
+        Some((origin, clip))
     }
 
     pub fn handle_event(&mut self, event: Event) -> EventResult {
@@ -121,9 +178,8 @@ impl Runtime {
                             && pressed_button == button
                             && self.tree.contains(id)
                             && self
-                                .tree
-                                .get(id)
-                                .is_some_and(|node| node.rect.contains(mouse.column, mouse.row))
+                                .resolve(id)
+                                .is_some_and(|(_, clip)| clip.contains(mouse.column, mouse.row))
                         {
                             let now = Instant::now();
                             let double =
@@ -273,17 +329,29 @@ impl Runtime {
 
     fn pick(&self, mouse: &MouseEvent) -> Option<NodeId> {
         let root = self.tree.root()?;
-        self.hit(root, self.rect, mouse.column, mouse.row)
+        self.hit(root, Offset::ZERO, self.rect, mouse.column, mouse.row)
     }
 
-    fn hit(&self, id: NodeId, clip: Rect, x: u16, y: u16) -> Option<NodeId> {
-        let rect = self.tree.get(id)?.rect;
-        let clip = clip.intersection(&rect)?;
+    fn hit(
+        &self,
+        id: NodeId,
+        parent_origin: Offset,
+        parent_clip: Rect,
+        x: u16,
+        y: u16,
+    ) -> Option<NodeId> {
+        let ins = self.tree.get(id)?;
+        let origin = Self::translate(parent_origin, ins.rect, ins.offset);
+        let clip = Self::clip(
+            origin,
+            Size::new(ins.rect.width, ins.rect.height),
+            parent_clip,
+        )?;
         if !clip.contains(x, y) {
             return None;
         }
         for &child in self.tree.children(id).iter().rev() {
-            if let Some(target) = self.hit(child, clip, x, y) {
+            if let Some(target) = self.hit(child, origin, clip, x, y) {
                 return Some(target);
             }
         }
@@ -337,7 +405,7 @@ impl Runtime {
             let ins = self.tree.get_mut(id).unwrap();
             let mut pending = Vec::new();
             let mut cx = Cx {
-                rect: ins.rect,
+                rect: Self::local_rect(ins.rect),
                 node: Some(id),
                 actions: Some(&mut pending),
                 env: ins.env.clone(),
@@ -433,7 +501,7 @@ impl Runtime {
             let ins = self.tree.get_mut(id).unwrap();
             let children = ins.children.clone();
             let mut cx = Cx {
-                rect: ins.rect,
+                rect: Self::local_rect(ins.rect),
                 node: Some(id),
                 actions: None,
                 env: inherited.clone(),
@@ -598,7 +666,7 @@ impl Runtime {
             let ins = self.tree.get_mut(node).unwrap();
             let mut cx = Cx {
                 node: Some(node),
-                rect: ins.rect,
+                rect: Self::local_rect(ins.rect),
                 actions: None,
                 env: ins.env.clone(),
             };
@@ -650,6 +718,7 @@ impl Runtime {
             children: bp.children,
             type_id: bp.type_id,
             rect: Rect::new(0, 0, 0, 0),
+            offset: Offset::ZERO,
             measured: Size::default(),
             available: None,
             env: inherited.clone(),
@@ -686,7 +755,12 @@ impl Runtime {
             };
 
             self.apply_measure(id, Size::new(rect.width, rect.height));
-            self.apply_layout(id, rect);
+            let offset = if self.tree.root() == Some(id) {
+                Offset::ZERO
+            } else {
+                self.tree.get(id).map_or(Offset::ZERO, |ins| ins.offset)
+            };
+            self.apply_layout(id, rect, offset);
         }
     }
 
@@ -808,16 +882,25 @@ impl Runtime {
         measured
     }
 
-    fn apply_layout(&mut self, id: NodeId, rect: Rect) {
+    fn apply_layout(&mut self, id: NodeId, rect: Rect, offset: Offset) {
         let is_dirty = self.layout_dirty.remove(&id);
-        let old_rect = self.tree.get(id).map_or(Rect::default(), |ins| ins.rect);
+        let (old_rect, old_offset) = self
+            .tree
+            .get(id)
+            .map_or((Rect::default(), Offset::ZERO), |ins| {
+                (ins.rect, ins.offset)
+            });
+        let size_changed = old_rect.width != rect.width || old_rect.height != rect.height;
 
-        if !is_dirty && old_rect == rect {
-            return;
+        if old_rect != rect || old_offset != offset {
+            self.paint_all = true;
         }
 
-        if old_rect != rect {
-            self.paint_all = true;
+        if !is_dirty && !size_changed {
+            let ins = self.tree.get_mut(id).unwrap();
+            ins.rect = rect;
+            ins.offset = offset;
+            return;
         }
 
         let child_ids = self.tree.children(id).to_vec();
@@ -830,24 +913,30 @@ impl Runtime {
             })
             .collect();
         let mut rects = vec![Rect::default(); child_ids.len()];
+        let mut offsets = vec![Offset::ZERO; child_ids.len()];
         let layouts = {
             let ins = self.tree.get_mut(id).unwrap();
+            let local = Self::local_rect(rect);
             let mut cx = Cx {
                 node: Some(id),
-                rect,
+                rect: local,
                 actions: None,
                 env: ins.env.clone(),
             };
-            let mut children = LayoutCx::new(&child_sizes, &mut rects);
+            let mut children = LayoutCx::new(&child_sizes, &mut rects, &mut offsets);
             ins.component
-                .layout_any(&mut cx, ins.props.as_ref(), rect, &mut children);
-            children.rects().to_vec()
+                .layout_any(&mut cx, ins.props.as_ref(), local, &mut children);
+            (children.rects().to_vec(), children.offsets().to_vec())
         };
-        self.tree.get_mut(id).unwrap().rect = rect;
+        {
+            let ins = self.tree.get_mut(id).unwrap();
+            ins.rect = rect;
+            ins.offset = offset;
+        }
 
-        for (child, layout) in child_ids.iter().zip(layouts) {
+        for ((child, rect), offset) in child_ids.iter().zip(layouts.0).zip(layouts.1) {
             if self.tree.contains(*child) {
-                self.apply_layout(*child, layout);
+                self.apply_layout(*child, rect, offset);
             }
         }
     }
@@ -858,7 +947,7 @@ impl Runtime {
             self.paint_dirty.clear();
             self.back.clear();
             if let Some(root) = self.tree.root() {
-                self.apply_paint(root, self.rect);
+                self.apply_paint(root, Offset::ZERO, self.rect);
             }
             return;
         }
@@ -882,30 +971,37 @@ impl Runtime {
             if self.tree.root() == Some(id) {
                 self.back.clear();
             }
-            self.apply_paint(id, self.rect);
+            let (origin, clip) = self.resolve(id).unwrap();
+            self.apply_paint(id, origin, clip);
         }
     }
 
-    fn apply_paint(&mut self, id: NodeId, parent_clip: Rect) {
-        let (children, clip) = {
+    fn apply_paint(&mut self, id: NodeId, origin: Offset, clip: Rect) {
+        let children = {
             let ins = self.tree.get(id).unwrap();
-            let Some(clip) = parent_clip.intersection(&ins.rect) else {
-                return;
-            };
             let mut cx = Cx {
                 node: Some(id),
-                rect: ins.rect,
+                rect: Self::local_rect(ins.rect),
                 actions: None,
                 env: ins.env.clone(),
             };
-            let mut canvas = Canvas::new(&mut self.back, clip);
+            let mut canvas = Canvas::new(&mut self.back, clip, origin);
             ins.component
                 .paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
-            (self.tree.children(id).to_vec(), clip)
+            self.tree.children(id).to_vec()
         };
         for child in children {
             if self.tree.contains(child) {
-                self.apply_paint(child, clip);
+                let child_ins = self.tree.get(child).unwrap();
+                let child_origin = Self::translate(origin, child_ins.rect, child_ins.offset);
+                let Some(child_clip) = Self::clip(
+                    child_origin,
+                    Size::new(child_ins.rect.width, child_ins.rect.height),
+                    clip,
+                ) else {
+                    continue;
+                };
+                self.apply_paint(child, child_origin, child_clip);
             }
         }
     }
