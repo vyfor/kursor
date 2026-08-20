@@ -13,7 +13,7 @@ pub use block::{Block, BlockProps, Border, BorderChars};
 pub use constraint::{Constraint, ConstraintProps};
 pub use divider::{Divider, DividerProps};
 pub use padding::{Padding, PaddingProps};
-pub use scroll::{Scroll, ScrollProps};
+pub use scroll::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};
 pub use spacer::{Spacer, SpacerProps};
 pub use stack::{Column, Row, StackProps};
 pub use text::{Text, TextProps};
