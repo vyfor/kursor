@@ -4,9 +4,11 @@ pub mod insets;
 pub mod offset;
 pub mod orientation;
 pub mod rect;
+pub mod scroll_direction;
 pub mod size;
 
 pub use alignment::{Alignment, HAlign, VAlign};
 pub use insets::Insets;
 pub use offset::Offset;
 pub use orientation::Orientation;
+pub use scroll_direction::ScrollDirection;
