@@ -7,6 +7,7 @@ pub mod scroll;
 pub mod spacer;
 pub mod stack;
 pub mod text;
+pub mod wrap;
 
 pub use align::{Align, AlignProps};
 pub use block::{Block, BlockProps, Border, BorderChars};
@@ -17,3 +18,4 @@ pub use scroll::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};
 pub use spacer::{Spacer, SpacerProps};
 pub use stack::{Column, Row, StackProps};
 pub use text::{Text, TextProps};
+pub use wrap::{Wrap, WrapProps};
