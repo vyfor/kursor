@@ -14,6 +14,7 @@ pub mod action;
 pub mod blueprint;
 pub mod context;
 pub mod environment;
+pub mod behavior;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct Focus {
