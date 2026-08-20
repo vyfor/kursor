@@ -1,4 +1,7 @@
-use crate::{event::{Event, Phase}, layout::rect::Rect};
+use crate::{
+    event::{Event, Phase},
+    layout::rect::Rect,
+};
 
 pub struct BehaviorCx {
     pub phase: Phase,

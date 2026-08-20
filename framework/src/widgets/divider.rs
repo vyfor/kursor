@@ -29,15 +29,19 @@ impl Divider {
     }
 
     pub fn horizontal() -> Blueprint {
-        Blueprint::new::<Self>(DividerProps::default())
+        Self::with(DividerProps::default())
     }
 
     pub fn vertical() -> Blueprint {
-        Blueprint::new::<Self>(DividerProps {
+        Self::with(DividerProps {
             orientation: Orientation::Vertical,
             glyph: '│',
             ..DividerProps::default()
         })
+    }
+
+    pub fn with(props: DividerProps) -> Blueprint {
+        Blueprint::new::<Self>(props)
     }
 }
 

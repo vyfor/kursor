@@ -20,10 +20,10 @@ pub struct Row;
 
 impl Row {
     pub fn new(children: impl IntoBlueprint) -> Blueprint {
-        Self::spaced(children, 0)
+        Self::spaced(0, children)
     }
 
-    pub fn spaced(children: impl IntoBlueprint, gap: u16) -> Blueprint {
+    pub fn spaced(gap: u16, children: impl IntoBlueprint) -> Blueprint {
         Blueprint::new::<Self>(StackProps { gap }).children(children)
     }
 }
@@ -84,10 +84,10 @@ pub struct Column;
 
 impl Column {
     pub fn new(children: impl IntoBlueprint) -> Blueprint {
-        Self::spaced(children, 0)
+        Self::spaced(0, children)
     }
 
-    pub fn spaced(children: impl IntoBlueprint, gap: u16) -> Blueprint {
+    pub fn spaced(gap: u16, children: impl IntoBlueprint) -> Blueprint {
         Blueprint::new::<Self>(StackProps { gap }).children(children)
     }
 }

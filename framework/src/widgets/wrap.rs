@@ -21,18 +21,14 @@ pub struct Wrap;
 
 impl Wrap {
     pub fn new(children: impl IntoBlueprint) -> Blueprint {
-        Self::uniform(children, 0)
+        Self::uniform(0, children)
     }
 
-    pub fn uniform(children: impl IntoBlueprint, gap: u16) -> Blueprint {
-        Self::spaced(children, gap, gap)
+    pub fn uniform(gap: u16, children: impl IntoBlueprint) -> Blueprint {
+        Self::spaced(gap, gap, children)
     }
 
-    pub fn spaced(
-        children: impl IntoBlueprint,
-        gap: u16,
-        line_gap: u16,
-    ) -> Blueprint {
+    pub fn spaced(gap: u16, line_gap: u16, children: impl IntoBlueprint) -> Blueprint {
         Self::with(WrapProps { gap, line_gap }, children)
     }
 
@@ -69,9 +65,7 @@ impl Component for Wrap {
 
             if !empty && next_w > u32::from(available.width) {
                 w = w.max(lw);
-                h = h
-                    .saturating_add(lh)
-                    .saturating_add(props.line_gap);
+                h = h.saturating_add(lh).saturating_add(props.line_gap);
                 lw = child_w;
                 lh = size.height;
             } else {

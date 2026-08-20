@@ -71,50 +71,50 @@ pub struct Block;
 
 impl Block {
     pub fn new(child: impl IntoBlueprint) -> Blueprint {
-        Self::with(child, BlockProps::default())
+        Self::with(BlockProps::default(), child)
     }
 
     pub fn plain(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            child,
             BlockProps {
                 border: Border::Plain,
                 style: None,
             },
+            child,
         )
     }
 
     pub fn rounded(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            child,
             BlockProps {
                 border: Border::Rounded,
                 style: None,
             },
+            child,
         )
     }
 
     pub fn double(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            child,
             BlockProps {
                 border: Border::Double,
                 style: None,
             },
+            child,
         )
     }
 
-    pub fn styled(child: impl IntoBlueprint, style: Style) -> Blueprint {
+    pub fn styled(style: Style, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            child,
             BlockProps {
                 style: Some(style),
                 ..BlockProps::default()
             },
+            child,
         )
     }
 
-    pub fn with(child: impl IntoBlueprint, props: BlockProps) -> Blueprint {
+    pub fn with(props: BlockProps, child: impl IntoBlueprint) -> Blueprint {
         Blueprint::new::<Self>(props).child(child)
     }
 

@@ -3,9 +3,9 @@ use std::sync::Arc;
 use kursor_core::{
     component::{
         Component,
+        behavior::{Behavior, BehaviorCx},
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
-        behavior::{Behavior, BehaviorCx},
     },
     event::{Event, EventResult, Phase, mouse::MouseKind},
     layout::{
@@ -46,12 +46,7 @@ impl Behavior for WheelScroll {
     type State = ScrollState;
     type Intent = ScrollIntent;
 
-    fn event(
-        &self,
-        cx: &BehaviorCx,
-        event: &Event,
-        _state: &ScrollState,
-    ) -> Option<ScrollIntent> {
+    fn event(&self, cx: &BehaviorCx, event: &Event, _state: &ScrollState) -> Option<ScrollIntent> {
         if cx.phase != Phase::Descending {
             return None;
         }
