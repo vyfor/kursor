@@ -1,5 +1,6 @@
 pub mod align;
 pub mod block;
+pub mod button;
 pub mod constraint;
 pub mod divider;
 pub mod padding;
@@ -12,6 +13,7 @@ pub mod wrap;
 
 pub use align::{Align, AlignProps};
 pub use block::{Block, BlockProps, Border, BorderChars};
+pub use button::{Button, ButtonBehavior, ButtonIntent, ButtonProps, ButtonState, ButtonStyles};
 pub use constraint::{Constraint, ConstraintProps};
 pub use divider::{Divider, DividerProps};
 pub use padding::{Padding, PaddingProps};
