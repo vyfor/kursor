@@ -1,6 +1,6 @@
 use kursor_core::{
     component::{
-        Component,
+        Children, Component,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -26,13 +26,7 @@ impl Component for Themed {
         Self
     }
 
-    fn build(
-        &mut self,
-        cx: &mut Cx,
-        props: &Self::Props,
-        children: Vec<Blueprint>,
-    ) -> Vec<Blueprint> {
+    fn build(&mut self, cx: &mut Cx, props: &Self::Props, _children: &mut Children) {
         cx.provide(*props);
-        children
     }
 }

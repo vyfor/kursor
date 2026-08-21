@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kursor_core::{
     component::{
-        Component, Focus,
+        Children, Component, Focus,
         behavior::{Behavior, BehaviorCx},
         blueprint::Blueprint,
         context::Cx,
@@ -151,21 +151,16 @@ impl Component for Button {
         )
     }
 
-    fn build(
-        &mut self,
-        cx: &mut Cx,
-        props: &Self::Props,
-        _children: Vec<Blueprint>,
-    ) -> Vec<Blueprint> {
+    fn build(&mut self, cx: &mut Cx, props: &Self::Props, children: &mut Children) {
         let theme = cx.get::<Theme>().copied().unwrap_or_default();
         let style = self.style(props, theme);
-        vec![Block::with(
+        children.replace(Block::with(
             BlockProps {
                 border: props.border,
                 style: Some(style),
             },
             Text::styled(props.label.clone(), style),
-        )]
+        ));
     }
 
     fn event(
@@ -182,7 +177,7 @@ impl Component for Button {
         if phase != Phase::Descending {
             return EventResult::Ignored;
         }
-        
+
         let mut state_changed = false;
         match event {
             Event::Mouse(mouse) => match mouse.kind {

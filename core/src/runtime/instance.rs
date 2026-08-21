@@ -1,4 +1,7 @@
-use std::any::{Any, TypeId};
+use std::{
+    any::{Any, TypeId},
+    rc::Rc,
+};
 
 use crate::{
     component::{AnyComponent, blueprint::Blueprint, environment::Environment},
@@ -7,8 +10,8 @@ use crate::{
 
 pub struct Instance {
     pub component: Box<dyn AnyComponent>,
-    pub props: Box<dyn Any>,
-    pub children: Vec<Blueprint>,
+    pub props: Rc<dyn Any>,
+    pub children: Rc<[Blueprint]>,
     pub type_id: TypeId,
     pub rect: Rect,
     pub offset: Offset,

@@ -3,11 +3,12 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
     mem,
+    rc::Rc,
     time::{Duration, Instant},
 };
 
 use crate::{
-    component::{Component, Focus, action::Action, blueprint::Blueprint, context::Cx},
+    component::{Children, Component, Focus, action::Action, blueprint::Blueprint, context::Cx},
     event::{
         Event, EventResult, Phase,
         mouse::{MouseButton, MouseEvent, MouseKind},
@@ -491,33 +492,38 @@ impl Runtime {
         }
     }
 
-    fn do_build(&mut self, id: NodeId) {
+    fn do_build(&mut self, id: NodeId) -> bool {
         let inherited = self
             .tree
             .parent(id)
             .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
             .unwrap_or_default();
-        let (bps, dep_reads) = deps::collect(|| {
+        let (replacement, dep_reads) = deps::collect(|| {
             let ins = self.tree.get_mut(id).unwrap();
-            let children = ins.children.clone();
+            let mut children = Children::new(ins.children.clone());
             let mut cx = Cx {
                 rect: Self::local_rect(ins.rect),
                 node: Some(id),
                 actions: None,
                 env: inherited.clone(),
             };
-            let output = ins
-                .component
-                .build_any(&mut cx, ins.props.as_ref(), children);
+            ins.component
+                .build_any(&mut cx, ins.props.as_ref(), &mut children);
             ins.inherited = inherited.clone();
             ins.env = cx.env.clone();
-            output
+            children.finish()
         });
 
         self.do_deps(id, dep_reads);
-        self.sync(id, bps);
+        let replaced = replacement.is_some();
+        if let Some(blueprints) = replacement {
+            let blueprints: Rc<[Blueprint]> = blueprints.into();
+            self.tree.get_mut(id).unwrap().children = blueprints.clone();
+            self.sync(id, &blueprints);
+        }
         self.layout_dirty.insert(id);
         self.paint_dirty.insert(id);
+        replaced
     }
 
     fn do_deps(&mut self, id: NodeId, mut dep_reads: Vec<AtomId>) {
@@ -576,7 +582,7 @@ impl Runtime {
         }
     }
 
-    fn sync(&mut self, parent: NodeId, blueprints: Vec<Blueprint>) {
+    fn sync(&mut self, parent: NodeId, blueprints: &[Blueprint]) {
         let oldc = self.tree.children(parent).to_vec();
         let parent_env = self.tree.get(parent).unwrap().env.clone();
         let mut used = HashSet::new();
@@ -593,15 +599,26 @@ impl Runtime {
             let child = match m {
                 Some(ch) => {
                     used.insert(ch);
-                    let ins = self.tree.get_mut(ch).unwrap();
-                    let should_update = ins
-                        .component
-                        .changed_any(ins.props.as_ref(), bp.props.as_ref());
-                    let env_changed = !ins.inherited.same(&parent_env);
+                    let (should_update, env_changed, children_changed) = {
+                        let ins = self.tree.get_mut(ch).unwrap();
+                        let should_update = ins
+                            .component
+                            .changed_any(ins.props.as_ref(), bp.props.as_ref());
+                        let env_changed = !ins.inherited.same(&parent_env);
+                        let children_changed = !Rc::ptr_eq(&ins.children, &bp.children);
 
-                    ins.props = bp.props;
-                    ins.inherited = parent_env.clone();
-                    ins.children = bp.children;
+                        ins.props = bp.props.clone();
+                        ins.inherited = parent_env.clone();
+                        if children_changed {
+                            ins.children = bp.children.clone();
+                        }
+
+                        (should_update, env_changed, children_changed)
+                    };
+
+                    if children_changed {
+                        self.sync(ch, &bp.children);
+                    }
 
                     if should_update || env_changed {
                         self.update_dirty.insert(ch);
@@ -609,7 +626,7 @@ impl Runtime {
 
                     ch
                 }
-                None => self.do_create(bp, Some(parent)),
+                None => self.do_create(bp.clone(), Some(parent)),
             };
             newc.push(child);
         }
@@ -730,7 +747,10 @@ impl Runtime {
             None => self.tree.create_root(ins),
         };
 
-        self.do_build(id);
+        if !self.do_build(id) {
+            let children = self.tree.get(id).unwrap().children.clone();
+            self.sync(id, &children);
+        }
         id
     }
 
@@ -778,7 +798,7 @@ impl Runtime {
         };
         let props = {
             let ins = self.tree.get_mut(id).unwrap();
-            mem::replace(&mut ins.props, Box::new(()))
+            mem::replace(&mut ins.props, Rc::new(()))
         };
 
         let mut measure = |index: usize, child_available: Size| -> Size {
@@ -841,7 +861,7 @@ impl Runtime {
         };
         let props = {
             let ins = tree.get_mut(id).unwrap();
-            mem::replace(&mut ins.props, Box::new(()))
+            mem::replace(&mut ins.props, Rc::new(()))
         };
 
         let mut measure = |index: usize, child_available: Size| -> Size {

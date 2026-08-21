@@ -1,5 +1,5 @@
 use kursor_core::{
-    component::{Component, blueprint::Blueprint, context::Cx},
+    component::{Children, Component, blueprint::Blueprint, context::Cx},
     layout::{WrapMode, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
 };
@@ -118,13 +118,8 @@ impl Component for Text {
         Self
     }
 
-    fn build(
-        &mut self,
-        _cx: &mut Cx,
-        _props: &Self::Props,
-        _children: Vec<Blueprint>,
-    ) -> Vec<Blueprint> {
-        Vec::new()
+    fn build(&mut self, _cx: &mut Cx, _props: &Self::Props, children: &mut Children) {
+        children.clear();
     }
 
     fn measure(

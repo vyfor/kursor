@@ -1,13 +1,15 @@
-use std::any::{Any, TypeId};
+use std::{
+    any::{Any, TypeId},
+    rc::Rc,
+};
 
 use crate::component::{AnyComponent, Component, context::Cx};
 
 pub struct Blueprint {
     pub type_id: TypeId,
-    pub props: Box<dyn Any>,
-    pub children: Vec<Blueprint>,
+    pub props: Rc<dyn Any>,
+    pub children: Rc<[Blueprint]>,
     pub create: fn(&mut Cx, &dyn Any) -> Box<dyn AnyComponent>,
-    pub clone: fn(&dyn Any) -> Box<dyn Any>,
 }
 
 impl Blueprint {
@@ -16,26 +18,23 @@ impl Blueprint {
             let props = props.downcast_ref::<C::Props>().unwrap();
             Box::new(C::create(cx, props))
         }
-        fn clone<C: Component>(props: &dyn Any) -> Box<dyn Any> {
-            let props = props.downcast_ref::<C::Props>().unwrap();
-            Box::new(props.clone())
-        }
         Self {
             type_id: TypeId::of::<C>(),
-            props: Box::new(props),
-            children: Vec::new(),
+            props: Rc::new(props),
+            children: Rc::from([]),
             create: create::<C>,
-            clone: clone::<C>,
         }
     }
 
     pub fn child(mut self, child: impl IntoBlueprint) -> Self {
-        self.children.extend(child.into_blueprint());
+        let mut children = self.children.as_ref().to_vec();
+        children.extend(child.into_blueprint());
+        self.children = children.into();
         self
     }
 
     pub fn children(mut self, children: impl IntoBlueprint) -> Self {
-        self.children = children.into_blueprint();
+        self.children = children.into_blueprint().into();
         self
     }
 }
@@ -44,10 +43,9 @@ impl Clone for Blueprint {
     fn clone(&self) -> Self {
         Self {
             type_id: self.type_id,
-            props: (self.clone)(self.props.as_ref()),
+            props: self.props.clone(),
             children: self.children.clone(),
             create: self.create,
-            clone: self.clone,
         }
     }
 }

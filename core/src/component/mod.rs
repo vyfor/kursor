@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use crate::{
-    component::{blueprint::Blueprint, context::Cx},
+    component::context::Cx,
     event::{Event, EventResult, Phase},
     layout::{
         context::{LayoutCx, MeasureCx},
@@ -13,6 +13,8 @@ use crate::{
 pub mod action;
 pub mod behavior;
 pub mod blueprint;
+pub mod children;
+pub use children::Children;
 pub mod context;
 pub mod environment;
 
@@ -27,14 +29,7 @@ pub trait Component: 'static {
 
     fn create(cx: &mut Cx, props: &Self::Props) -> Self;
 
-    fn build(
-        &mut self,
-        _cx: &mut Cx,
-        _props: &Self::Props,
-        children: Vec<Blueprint>,
-    ) -> Vec<Blueprint> {
-        children
-    }
+    fn build(&mut self, _cx: &mut Cx, _props: &Self::Props, _children: &mut Children) {}
 
     fn focus(&self, _props: &Self::Props) -> Focus {
         Focus {
@@ -81,12 +76,7 @@ pub trait Component: 'static {
 }
 
 pub trait AnyComponent {
-    fn build_any(
-        &mut self,
-        cx: &mut Cx,
-        props: &dyn Any,
-        children: Vec<Blueprint>,
-    ) -> Vec<Blueprint>;
+    fn build_any(&mut self, cx: &mut Cx, props: &dyn Any, children: &mut Children);
     fn focus_any(&self, props: &dyn Any) -> Focus;
     fn event_any(
         &mut self,
@@ -109,12 +99,7 @@ pub trait AnyComponent {
 }
 
 impl<C: Component> AnyComponent for C {
-    fn build_any(
-        &mut self,
-        cx: &mut Cx,
-        props: &dyn Any,
-        children: Vec<Blueprint>,
-    ) -> Vec<Blueprint> {
+    fn build_any(&mut self, cx: &mut Cx, props: &dyn Any, children: &mut Children) {
         let props = props.downcast_ref::<C::Props>().unwrap();
         self.build(cx, props, children)
     }
