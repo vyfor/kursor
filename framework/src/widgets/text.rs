@@ -5,7 +5,7 @@ use kursor_core::{
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TextProps {
     pub text: String,
     pub style: Option<Style>,
@@ -116,6 +116,10 @@ impl Component for Text {
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
     }
 
     fn build(&mut self, _cx: &mut Cx, _props: &Self::Props, children: &mut Children) {

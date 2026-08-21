@@ -4,7 +4,7 @@ use kursor_core::{
     render::{canvas::Canvas, style::Style},
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct DividerProps {
     pub orientation: Orientation,
     pub style: Option<Style>,
@@ -50,6 +50,10 @@ impl Component for Divider {
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
     }
 
     fn build(&mut self, _cx: &mut Cx, _props: &Self::Props, children: &mut Children) {

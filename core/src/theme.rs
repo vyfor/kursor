@@ -1,6 +1,6 @@
 use crate::render::{attrs::Attrs, color::Color, style::Style};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Palette {
     pub fg: Color,
     pub bg: Color,
@@ -31,7 +31,7 @@ impl Palette {
     };
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Theme {
     pub palette: Palette,
     pub text: Style,

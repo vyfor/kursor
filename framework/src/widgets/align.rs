@@ -12,7 +12,7 @@ use kursor_core::{
     },
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct AlignProps {
     pub alignment: Alignment,
 }
@@ -66,6 +66,10 @@ impl Component for Align {
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
     }
 
     fn measure(

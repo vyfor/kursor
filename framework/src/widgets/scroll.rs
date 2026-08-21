@@ -167,6 +167,10 @@ impl Component for Scroll {
         }
     }
 
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old.direction != new.direction || !Arc::ptr_eq(&old.behavior, &new.behavior)
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,

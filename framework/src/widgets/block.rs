@@ -61,7 +61,7 @@ pub enum Border {
     Custom(BorderChars),
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct BlockProps {
     pub border: Border,
     pub style: Option<Style>,
@@ -128,6 +128,10 @@ impl Component for Block {
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
     }
 
     fn measure(

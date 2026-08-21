@@ -40,6 +40,18 @@ pub struct ButtonStyles {
     pub disabled: Option<Style>,
 }
 
+impl PartialEq for ButtonStyles {
+    fn eq(&self, other: &Self) -> bool {
+        self.normal == other.normal
+            && self.hovered == other.hovered
+            && self.focused == other.focused
+            && self.pressed == other.pressed
+            && self.disabled == other.disabled
+    }
+}
+
+impl Eq for ButtonStyles {}
+
 #[derive(Default)]
 pub struct ButtonBehavior;
 
@@ -125,6 +137,15 @@ impl Component for Button {
         Self {
             state: ButtonState::default(),
         }
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old.label != new.label
+            || old.border != new.border
+            || old.styles != new.styles
+            || old.disabled != new.disabled
+            || !Arc::ptr_eq(&old.behavior, &new.behavior)
+            || !Arc::ptr_eq(&old.on_press, &new.on_press)
     }
 
     fn focus(&self, props: &Self::Props) -> Focus {

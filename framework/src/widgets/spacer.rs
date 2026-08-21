@@ -3,7 +3,7 @@ use kursor_core::{
     layout::{context::MeasureCx, size::Size},
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct SpacerProps {
     pub size: u16,
 }
@@ -21,6 +21,10 @@ impl Component for Spacer {
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
     }
 
     fn measure(

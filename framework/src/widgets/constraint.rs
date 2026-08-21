@@ -134,6 +134,10 @@ impl Component for Constraint {
         Self
     }
 
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,

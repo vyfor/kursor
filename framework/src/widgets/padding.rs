@@ -12,7 +12,7 @@ use kursor_core::{
     },
 };
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct PaddingProps {
     pub insets: Insets,
 }
@@ -62,6 +62,10 @@ impl Component for Padding {
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
     }
 
     fn measure(

@@ -11,7 +11,7 @@ use kursor_core::{
     },
 };
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct WrapProps {
     pub gap: u16,
     pub line_gap: u16,
@@ -42,6 +42,10 @@ impl Component for Wrap {
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
+    }
+
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
     }
 
     fn measure(

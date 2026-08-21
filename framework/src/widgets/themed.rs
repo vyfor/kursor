@@ -26,7 +26,13 @@ impl Component for Themed {
         Self
     }
 
+    fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
+        old != new
+    }
+
     fn build(&mut self, cx: &mut Cx, props: &Self::Props, _children: &mut Children) {
-        cx.provide(*props);
+        if cx.get::<Theme>() != Some(props) {
+            cx.provide(*props);
+        }
     }
 }

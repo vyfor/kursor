@@ -1,4 +1,4 @@
-#[derive(Default, Clone, Copy, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
 pub struct Attrs {
     pub bold: bool,
     pub dim: bool,
