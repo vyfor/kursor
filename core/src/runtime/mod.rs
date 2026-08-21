@@ -497,6 +497,7 @@ impl Runtime {
             .tree
             .parent(id)
             .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
+            .or_else(|| self.tree.get(id).map(|node| node.inherited.clone()))
             .unwrap_or_default();
         let (replacement, dep_reads) = deps::collect(|| {
             let ins = self.tree.get_mut(id).unwrap();
@@ -774,7 +775,10 @@ impl Runtime {
                 self.tree.get(id).map_or(Rect::new(0, 0, 0, 0), |c| c.rect)
             };
 
-            self.apply_measure(id, Size::new(rect.width, rect.height));
+            let measured_changed = self.apply_measure(id, Size::new(rect.width, rect.height));
+            if measured_changed && let Some(parent) = self.tree.parent(id) {
+                self.layout_dirty.insert(parent);
+            }
             let offset = if self.tree.root() == Some(id) {
                 Offset::ZERO
             } else {
@@ -784,7 +788,7 @@ impl Runtime {
         }
     }
 
-    fn apply_measure(&mut self, id: NodeId, available: Size) {
+    fn apply_measure(&mut self, id: NodeId, available: Size) -> bool {
         let child_ids = self.tree.children(id).to_vec();
         let child_count = child_ids.len();
         let env = self.tree.get(id).unwrap().env.clone();
@@ -829,13 +833,16 @@ impl Runtime {
             component.measure_any(&mut cx, props.as_ref(), available, &mut children)
         };
 
-        {
+        let changed = {
             let ins = self.tree.get_mut(id).unwrap();
+            let changed = ins.measured != measured;
             ins.component = component;
             ins.props = props;
             ins.measured = measured;
             ins.available = Some(available);
-        }
+            changed
+        };
+        changed
     }
 
     fn measure_node(tree: &mut Tree<Instance>, id: NodeId, available: Size) -> Size {
