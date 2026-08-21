@@ -6,3 +6,12 @@ pub struct Attrs {
     pub underline: bool,
     // todo: add rest
 }
+
+impl Attrs {
+    pub const DEFAULT: Self = Self {
+        bold: false,
+        dim: false,
+        italic: false,
+        underline: false,
+    };
+}

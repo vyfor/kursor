@@ -1,6 +1,7 @@
 use crate::{
     component::{action::Action, environment::Environment},
     layout::rect::Rect,
+    theme::Theme,
     tree::id::NodeId,
 };
 
@@ -18,6 +19,13 @@ impl<'a> Cx<'a> {
 
     pub fn provide<T: 'static>(&mut self, value: T) {
         self.env.set(value);
+    }
+
+    pub fn theme(&self) -> &Theme {
+        match self.get() {
+            Some(theme) => theme,
+            None => Theme::default_ref(),
+        }
     }
 
     pub fn focus(&mut self) {

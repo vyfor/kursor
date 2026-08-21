@@ -172,7 +172,7 @@ impl Component for Block {
             return;
         }
 
-        let style = props.style.unwrap_or_default();
+        let style = props.style.unwrap_or(cx.theme().surface);
         canvas.fill(rect, ' ', style);
 
         let chars = match props.border {

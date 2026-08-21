@@ -152,7 +152,7 @@ impl Component for Button {
     }
 
     fn build(&mut self, cx: &mut Cx, props: &Self::Props, children: &mut Children) {
-        let theme = cx.get::<Theme>().copied().unwrap_or_default();
+        let theme = *cx.theme();
         let style = self.style(props, theme);
         children.replace(Block::with(
             BlockProps {

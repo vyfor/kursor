@@ -1,4 +1,4 @@
-use crate::render::{color::Color, style::Style};
+use crate::render::{attrs::Attrs, color::Color, style::Style};
 
 #[derive(Clone, Copy)]
 pub struct Palette {
@@ -14,17 +14,21 @@ pub struct Palette {
 
 impl Default for Palette {
     fn default() -> Self {
-        Self {
-            fg: Color::White,
-            bg: Color::Reset,
-            primary: Color::Cyan,
-            accent: Color::Magenta,
-            muted: Color::LightGray,
-            success: Color::Green,
-            warning: Color::Yellow,
-            error: Color::Red,
-        }
+        Self::DEFAULT
     }
+}
+
+impl Palette {
+    pub const DEFAULT: Self = Self {
+        fg: Color::White,
+        bg: Color::Reset,
+        primary: Color::LightBlue,
+        accent: Color::LightCyan,
+        muted: Color::Gray,
+        success: Color::LightGreen,
+        warning: Color::LightYellow,
+        error: Color::LightRed,
+    };
 }
 
 #[derive(Clone, Copy)]
@@ -39,11 +43,44 @@ pub struct Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::from_palette(Palette::default())
+        Self::DEFAULT
     }
 }
 
 impl Theme {
+    pub const DEFAULT: Self = Self {
+        palette: Palette::DEFAULT,
+        text: Style {
+            fg: Color::White,
+            bg: Color::Reset,
+            attrs: Attrs::DEFAULT,
+        },
+        surface: Style {
+            fg: Color::White,
+            bg: Color::Reset,
+            attrs: Attrs::DEFAULT,
+        },
+        primary: Style {
+            fg: Color::LightBlue,
+            bg: Color::Reset,
+            attrs: Attrs::DEFAULT,
+        },
+        focus: Style {
+            fg: Color::Reset,
+            bg: Color::LightBlue,
+            attrs: Attrs::DEFAULT,
+        },
+        disabled: Style {
+            fg: Color::Gray,
+            bg: Color::Reset,
+            attrs: Attrs::DEFAULT,
+        },
+    };
+
+    pub fn default_ref() -> &'static Self {
+        &Self::DEFAULT
+    }
+
     pub fn from_palette(palette: Palette) -> Self {
         Self {
             palette,

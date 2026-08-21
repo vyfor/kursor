@@ -75,7 +75,7 @@ impl Component for Divider {
             return;
         }
 
-        let style = props.style.unwrap_or_default();
+        let style = props.style.unwrap_or(cx.theme().surface);
         match props.orientation {
             Orientation::Horizontal => {
                 for x in rect.left()..rect.right() {

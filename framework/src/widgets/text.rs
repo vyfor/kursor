@@ -144,7 +144,7 @@ impl Component for Text {
     }
 
     fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
-        let style = props.style.unwrap_or_default();
+        let style = props.style.unwrap_or(cx.theme().text);
         let lines = wrapped_lines(&props.text, props.wrap, cx.rect.width);
         for (row, line) in lines.iter().enumerate() {
             let y = cx.rect.y.saturating_add(row as u16);
