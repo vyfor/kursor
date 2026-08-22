@@ -22,6 +22,10 @@ impl<'a> Cx<'a> {
         self.env.set(value);
     }
 
+    pub fn owned<T: Clone + 'static>(&self) -> Option<T> {
+        self.get::<T>().cloned()
+    }
+
     pub fn theme(&self) -> &Theme {
         match self.get() {
             Some(theme) => theme,
