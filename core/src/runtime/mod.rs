@@ -1038,8 +1038,27 @@ impl Runtime {
             if self.tree.root() == Some(id) {
                 self.back.clear();
             }
-            let (origin, clip) = self.resolve(id).unwrap();
+            self.apply_stacked_paint(id);
+        }
+    }
+
+    fn apply_stacked_paint(&mut self, id: NodeId) {
+        if let Some((origin, clip)) = self.resolve(id) {
             self.apply_paint(id, origin, clip);
+        }
+
+        let mut current = id;
+        while let Some(parent) = self.tree.parent(current) {
+            let siblings = self.tree.children(parent).to_vec();
+            let Some(index) = siblings.iter().position(|&sibling| sibling == current) else {
+                break;
+            };
+            for sibling in siblings.into_iter().skip(index + 1) {
+                if let Some((origin, clip)) = self.resolve(sibling) {
+                    self.apply_paint(sibling, origin, clip);
+                }
+            }
+            current = parent;
         }
     }
 
