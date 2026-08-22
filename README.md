@@ -12,75 +12,32 @@ kursor is an attempt to make that model practical without delegating much of tha
 
 the project is still early and the api is subject to change.
 
-## usage
+## architecture
 
-basic counter example:
+the project is split into two crates:
+- `kursor-core`: a lower-level library that provides mechanisms and primitives.
+- `kursor`: a higher-level framework that builds on top of `kursor-core` and decides how those mechanisms are presented and combined.
 
-```rs
-use kursor::{
-    app::{self, App},
-    core::{
-        component::{Component, blueprint::Blueprint, context::Cx},
-        event::{Event, EventResult, Phase, key::KeyCode},
-        render::{canvas::Canvas, style::Style},
-    },
-    terminal::crossterm::Crossterm,
-};
+## concepts
 
-struct Counter {
-    count: i64,
-}
+### atoms
 
-impl Component for Counter {
-    type Props = ();
+reactive state that can be shared between different parts of an application.
 
-    fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self { count: 0 }
-    }
+### environment
 
-    fn event(
-        &mut self,
-        _cx: &mut Cx,
-        _props: &Self::Props,
-        event: &Event,
-        phase: Phase,
-    ) -> EventResult {
-        if phase == Phase::Bubble
-            && let Event::Key(key) = event
-        {
-            match key.code {
-                KeyCode::Char('q') | KeyCode::Esc => {
-                    app::quit();
-                    return EventResult::Stop;
-                }
-                KeyCode::Char('+') => {
-                    self.count += 1;
-                    return EventResult::Consumed;
-                }
-                KeyCode::Char('-') => {
-                    self.count -= 1;
-                    return EventResult::Consumed;
-                }
-                _ => {}
-            }
-        }
+a typemap for components to provide values to their descendants or retrieve values from their ancestors.
 
-        EventResult::Ignored
-    }
+### widgets
 
-    fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
-        canvas.clear();
+small, composable building blocks. kursor is built on the idea that if a feature can be a widget, it is a widget. themes, overlays, keybindings and such are all simple widgets abstracted over core.
 
-        let text = self.count.to_string();
-        let width = text.chars().count() as u16;
-        let x = cx.rect.x + cx.rect.width.saturating_sub(width) / 2;
-        let y = cx.rect.y + cx.rect.height / 2;
+### input handling
 
-        canvas.set_str(x, y, &text, Style::default());
-    }
-}
+events are dispatched in two phases: capture (root to target) and bubble (target to root). kursor provides a primitive focus mechanism, with the focused component serving as the event target.
 
-fn main() -> std::io::Result<()> {
-    App::<Crossterm>::from(Blueprint::new::<Counter>(()))?.run()
-}
-```
+aside from handling events locally, widgets can opt into global input handling while remaining self-contained.
+
+### behavior & intents
+
+in most cases, it is a bad idea for any widget to hard-code its event handling. instead, kursor exposes a **behavior** that translates raw input into a semantic **intent**. the component then decides how that intent alters its state.
