@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::BlockBuilder;
+
 use kursor_core::{
     component::{
         Component,
@@ -70,6 +73,10 @@ pub struct BlockProps {
 pub struct Block;
 
 impl Block {
+    pub fn builder(child: impl IntoBlueprint) -> BlockBuilder {
+        BlockBuilder::new(child)
+    }
+
     pub fn new(child: impl IntoBlueprint) -> Blueprint {
         Self::with(BlockProps::default(), child)
     }

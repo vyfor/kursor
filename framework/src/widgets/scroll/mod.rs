@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::ScrollBuilder;
+
 use std::sync::Arc;
 
 use kursor_core::{
@@ -87,6 +90,10 @@ pub struct Scroll {
 }
 
 impl Scroll {
+    pub fn builder(child: impl IntoBlueprint) -> ScrollBuilder {
+        ScrollBuilder::new(child)
+    }
+
     pub fn new(child: impl IntoBlueprint) -> Blueprint {
         Self::vertical(child)
     }

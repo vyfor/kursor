@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::ConstraintBuilder;
+
 use kursor_core::{
     component::{
         Component,
@@ -22,6 +25,10 @@ pub struct ConstraintProps {
 pub struct Constraint;
 
 impl Constraint {
+    pub fn builder(child: impl IntoBlueprint) -> ConstraintBuilder {
+        ConstraintBuilder::new(child)
+    }
+
     pub fn exact(width: u16, height: u16, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             ConstraintProps {

@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::ButtonBuilder;
+
 use std::sync::Arc;
 
 use kursor_core::{
@@ -105,6 +108,10 @@ pub struct Button {
 }
 
 impl Button {
+    pub fn builder(label: impl Into<String>) -> ButtonBuilder {
+        ButtonBuilder::new(label)
+    }
+
     pub fn new(label: impl Into<String>, on_press: impl Fn(&mut Cx) + 'static) -> Blueprint {
         Self::with(ButtonProps::new(label, on_press))
     }

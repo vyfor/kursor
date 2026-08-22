@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::PaddingBuilder;
+
 use kursor_core::{
     component::{
         Component,
@@ -20,6 +23,10 @@ pub struct PaddingProps {
 pub struct Padding;
 
 impl Padding {
+    pub fn builder(child: impl IntoBlueprint) -> PaddingBuilder {
+        PaddingBuilder::new(child)
+    }
+
     pub fn all(value: u16, child: impl IntoBlueprint) -> Blueprint {
         Self::new(Insets::all(value), child)
     }

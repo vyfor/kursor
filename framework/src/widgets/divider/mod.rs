@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::DividerBuilder;
+
 use kursor_core::{
     component::{Children, Component, blueprint::Blueprint, context::Cx},
     layout::{Orientation, context::MeasureCx, size::Size},
@@ -24,6 +27,10 @@ impl Default for DividerProps {
 pub struct Divider;
 
 impl Divider {
+    pub fn builder() -> DividerBuilder {
+        DividerBuilder::new()
+    }
+
     pub fn new() -> Blueprint {
         Self::horizontal()
     }

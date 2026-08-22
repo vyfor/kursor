@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::AlignBuilder;
+
 use kursor_core::{
     component::{
         Component,
@@ -20,6 +23,10 @@ pub struct AlignProps {
 pub struct Align;
 
 impl Align {
+    pub fn builder(child: impl IntoBlueprint) -> AlignBuilder {
+        AlignBuilder::new(child)
+    }
+
     pub fn new(alignment: Alignment, child: impl IntoBlueprint) -> Blueprint {
         Blueprint::new::<Self>(AlignProps { alignment }).child(child)
     }

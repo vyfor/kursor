@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::ThemedBuilder;
+
 use kursor_core::{
     component::{
         Children, Component,
@@ -10,6 +13,10 @@ use kursor_core::{
 pub struct Themed;
 
 impl Themed {
+    pub fn builder(child: impl IntoBlueprint) -> ThemedBuilder {
+        ThemedBuilder::new(child)
+    }
+
     pub fn new(theme: Theme, child: impl IntoBlueprint) -> Blueprint {
         Blueprint::new::<Self>(theme).child(child)
     }

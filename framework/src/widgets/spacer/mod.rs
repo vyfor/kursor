@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::SpacerBuilder;
+
 use kursor_core::{
     component::{Component, blueprint::Blueprint, context::Cx},
     layout::{context::MeasureCx, size::Size},
@@ -11,6 +14,10 @@ pub struct SpacerProps {
 pub struct Spacer;
 
 impl Spacer {
+    pub fn builder() -> SpacerBuilder {
+        SpacerBuilder::new()
+    }
+
     pub fn new(size: u16) -> Blueprint {
         Blueprint::new::<Self>(SpacerProps { size })
     }

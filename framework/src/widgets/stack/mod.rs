@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::{ColumnBuilder, RowBuilder};
+
 use kursor_core::{
     component::{
         Component,
@@ -19,6 +22,10 @@ pub struct StackProps {
 pub struct Row;
 
 impl Row {
+    pub fn builder(children: impl IntoBlueprint) -> RowBuilder {
+        RowBuilder::row(children)
+    }
+
     pub fn new(children: impl IntoBlueprint) -> Blueprint {
         Self::spaced(0, children)
     }
@@ -87,6 +94,10 @@ impl Component for Row {
 pub struct Column;
 
 impl Column {
+    pub fn builder(children: impl IntoBlueprint) -> ColumnBuilder {
+        ColumnBuilder::column(children)
+    }
+
     pub fn new(children: impl IntoBlueprint) -> Blueprint {
         Self::spaced(0, children)
     }

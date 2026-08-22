@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::WrapBuilder;
+
 use kursor_core::{
     component::{
         Component,
@@ -20,6 +23,10 @@ pub struct WrapProps {
 pub struct Wrap;
 
 impl Wrap {
+    pub fn builder(children: impl IntoBlueprint) -> WrapBuilder {
+        WrapBuilder::new(children)
+    }
+
     pub fn new(children: impl IntoBlueprint) -> Blueprint {
         Self::uniform(0, children)
     }

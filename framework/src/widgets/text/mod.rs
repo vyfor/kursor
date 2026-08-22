@@ -1,3 +1,6 @@
+pub mod builder;
+pub use builder::TextBuilder;
+
 use kursor_core::{
     component::{Children, Component, blueprint::Blueprint, context::Cx},
     layout::{WrapMode, context::MeasureCx, size::Size},
@@ -15,6 +18,10 @@ pub struct TextProps {
 pub struct Text;
 
 impl Text {
+    pub fn builder(text: impl Into<String>) -> TextBuilder {
+        TextBuilder::new(text)
+    }
+
     pub fn new(text: impl Into<String>) -> Blueprint {
         Self::with(TextProps {
             text: text.into(),
