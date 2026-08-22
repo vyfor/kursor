@@ -60,8 +60,53 @@ impl IntoBlueprint for Blueprint {
     }
 }
 
-impl IntoBlueprint for Vec<Blueprint> {
+impl IntoBlueprint for () {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        self
+        Vec::new()
     }
 }
+
+impl<T: IntoBlueprint> IntoBlueprint for Option<T> {
+    fn into_blueprint(self) -> Vec<Blueprint> {
+        self.map_or_else(Vec::new, IntoBlueprint::into_blueprint)
+    }
+}
+
+impl<T: IntoBlueprint> IntoBlueprint for Vec<T> {
+    fn into_blueprint(self) -> Vec<Blueprint> {
+        self.into_iter()
+            .flat_map(IntoBlueprint::into_blueprint)
+            .collect()
+    }
+}
+
+impl<T: IntoBlueprint, const N: usize> IntoBlueprint for [T; N] {
+    fn into_blueprint(self) -> Vec<Blueprint> {
+        self.into_iter()
+            .flat_map(IntoBlueprint::into_blueprint)
+            .collect()
+    }
+}
+
+macro_rules! into_blueprint_tuple {
+    ($($type:ident: $value:ident),+ $(,)?) => {
+        impl<$($type: IntoBlueprint),+> IntoBlueprint for ($($type,)+) {
+            fn into_blueprint(self) -> Vec<Blueprint> {
+                let ($($value,)+) = self;
+                let mut children = Vec::new();
+                $(children.extend($value.into_blueprint());)+
+                children
+            }
+        }
+    };
+}
+
+into_blueprint_tuple!(A: a, B: b);
+into_blueprint_tuple!(A: a, B: b, C: c);
+into_blueprint_tuple!(A: a, B: b, C: c, D: d);
+into_blueprint_tuple!(A: a, B: b, C: c, D: d, E: e);
+into_blueprint_tuple!(A: a, B: b, C: c, D: d, E: e, F: f);
+into_blueprint_tuple!(A: a, B: b, C: c, D: d, E: e, F: f, G: g);
+into_blueprint_tuple!(A: a, B: b, C: c, D: d, E: e, F: f, G: g, H: h);
+into_blueprint_tuple!(A: a, B: b, C: c, D: d, E: e, F: f, G: g, H: h, I: i);
+into_blueprint_tuple!(A: a, B: b, C: c, D: d, E: e, F: f, G: g, H: h, I: i, J: j);
