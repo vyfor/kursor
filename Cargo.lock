@@ -61,7 +61,7 @@ dependencies = [
 
 [[package]]
 name = "kursor"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "crossterm",
  "kursor-core",
@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "kursor-core"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "slab",
  "unicode-width",
