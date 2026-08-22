@@ -1,6 +1,6 @@
 pub mod instance;
 use std::{
-    cmp::Ordering,
+    cmp::{self, Ordering},
     collections::{HashMap, HashSet},
     mem,
     rc::Rc,
@@ -42,6 +42,7 @@ pub struct Runtime {
     pressed: Option<(NodeId, MouseButton)>,
     cursor: Option<(NodeId, u16, u16)>,
     last_click: Option<(NodeId, MouseButton, Instant)>,
+    global_listeners: Vec<NodeId>,
 }
 
 impl Runtime {
@@ -63,6 +64,7 @@ impl Runtime {
             pressed: None,
             cursor: None,
             last_click: None,
+            global_listeners: Vec::new(),
         }
     }
 
@@ -156,11 +158,18 @@ impl Runtime {
                 .focus
                 .filter(|&id| self.tree.contains(id))
                 .map_or(EventResult::Ignored, |id| self.dispatch(id, &event)),
-            Event::Key(_) | Event::Paste(_) => self
-                .focus
-                .filter(|&id| self.tree.contains(id))
-                .or_else(|| self.tree.root())
-                .map_or(EventResult::Ignored, |id| self.dispatch(id, &event)),
+            Event::Key(_) | Event::Paste(_) => {
+                let result = self
+                    .focus
+                    .filter(|&id| self.tree.contains(id))
+                    .or_else(|| self.tree.root())
+                    .map_or(EventResult::Ignored, |id| self.dispatch(id, &event));
+                if result.is_handled() {
+                    result
+                } else {
+                    self.dispatch_global_listener(&event)
+                }
+            }
             Event::Mouse(mouse) => {
                 self.update_hover(mouse);
                 let target = self
@@ -397,6 +406,21 @@ impl Runtime {
         res
     }
 
+    fn dispatch_global_listener(&mut self, event: &Event) -> EventResult {
+        let mut listeners = self.global_listeners.clone();
+        listeners.sort_by_key(|&id| cmp::Reverse(self.tree.depth(id)));
+
+        for id in listeners {
+            let result = self.send_event(id, event, Phase::Global);
+            if result.is_handled() {
+                self.update_dirty.insert(id);
+                return result;
+            }
+        }
+
+        EventResult::Ignored
+    }
+
     fn send_event(&mut self, id: NodeId, event: &Event, phase: Phase) -> EventResult {
         if !self.tree.contains(id) {
             return EventResult::Ignored;
@@ -409,6 +433,7 @@ impl Runtime {
                 rect: Self::local_rect(ins.rect),
                 node: Some(id),
                 actions: Some(&mut pending),
+                global_input: None,
                 env: ins.env.clone(),
             };
             let result = ins
@@ -499,23 +524,32 @@ impl Runtime {
             .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
             .or_else(|| self.tree.get(id).map(|node| node.inherited.clone()))
             .unwrap_or_default();
-        let (replacement, dep_reads) = deps::collect(|| {
+        let ((replacement, global_key_listener), dep_reads) = deps::collect(|| {
             let ins = self.tree.get_mut(id).unwrap();
             let mut children = Children::new(ins.children.clone());
+            let mut global_key_listener = false;
             let mut cx = Cx {
                 rect: Self::local_rect(ins.rect),
                 node: Some(id),
                 actions: None,
+                global_input: Some(&mut global_key_listener),
                 env: inherited.clone(),
             };
             ins.component
                 .build_any(&mut cx, ins.props.as_ref(), &mut children);
             ins.inherited = inherited.clone();
             ins.env = cx.env.clone();
-            children.finish()
+            (children.finish(), global_key_listener)
         });
 
         self.do_deps(id, dep_reads);
+        if global_key_listener {
+            if !self.global_listeners.contains(&id) {
+                self.global_listeners.push(id);
+            }
+        } else {
+            self.global_listeners.retain(|&node| node != id);
+        }
         let replaced = replacement.is_some();
         if let Some(blueprints) = replacement {
             let blueprints: Rc<[Blueprint]> = blueprints.into();
@@ -675,6 +709,7 @@ impl Runtime {
 
         for &node in &subtree {
             self.unsub(node);
+            self.global_listeners.retain(|&listener| listener != node);
             self.update_dirty.remove(&node);
             self.layout_dirty.remove(&node);
             self.paint_dirty.remove(&node);
@@ -686,6 +721,7 @@ impl Runtime {
                 node: Some(node),
                 rect: Self::local_rect(ins.rect),
                 actions: None,
+                global_input: None,
                 env: ins.env.clone(),
             };
 
@@ -725,6 +761,7 @@ impl Runtime {
                 node: None,
                 rect: Rect::new(0, 0, 0, 0),
                 actions: None,
+                global_input: None,
                 env: inherited.clone(),
             },
             bp.props.as_ref(),
@@ -827,6 +864,7 @@ impl Runtime {
                 node: Some(id),
                 rect,
                 actions: None,
+                global_input: None,
                 env,
             };
             let mut children = MeasureCx::new(&mut measure, child_count, available);
@@ -893,6 +931,7 @@ impl Runtime {
                 node: Some(id),
                 rect,
                 actions: None,
+                global_input: None,
                 env,
             };
             let mut children = MeasureCx::new(&mut measure, child_count, available);
@@ -948,6 +987,7 @@ impl Runtime {
                 node: Some(id),
                 rect: local,
                 actions: None,
+                global_input: None,
                 env: ins.env.clone(),
             };
             let mut children = LayoutCx::new(&child_sizes, &mut rects, &mut offsets);
@@ -1010,6 +1050,7 @@ impl Runtime {
                 node: Some(id),
                 rect: Self::local_rect(ins.rect),
                 actions: None,
+                global_input: None,
                 env: ins.env.clone(),
             };
             let mut canvas = Canvas::new(&mut self.back, clip, origin);

@@ -10,6 +10,7 @@ pub struct Cx<'a> {
     pub node: Option<NodeId>,
     pub env: Environment,
     pub(crate) actions: Option<&'a mut Vec<Action>>,
+    pub(crate) global_input: Option<&'a mut bool>,
 }
 
 impl<'a> Cx<'a> {
@@ -67,6 +68,12 @@ impl<'a> Cx<'a> {
     pub fn clear_cursor(&mut self) {
         if let (Some(actions), Some(node)) = (self.actions.as_deref_mut(), self.node) {
             actions.push(Action::Cursor(node, None));
+        }
+    }
+
+    pub fn global_input(&mut self) {
+        if let Some(global_input) = self.global_input.as_deref_mut() {
+            *global_input = true;
         }
     }
 }

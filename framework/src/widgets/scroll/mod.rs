@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use kursor_core::{
     component::{
-        Component,
+        Component, Focus,
         behavior::{Behavior, BehaviorCx},
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
@@ -26,6 +26,7 @@ pub struct ScrollState {
     pub content_height: u16,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ScrollIntent {
     By { x: i32, y: i32 },
@@ -171,6 +172,13 @@ impl Component for Scroll {
                 content_width: 0,
                 content_height: 0,
             },
+        }
+    }
+
+    fn focus(&self, _props: &Self::Props) -> Focus {
+        Focus {
+            focusable: true,
+            trap: false,
         }
     }
 

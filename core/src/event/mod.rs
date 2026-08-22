@@ -41,4 +41,5 @@ pub struct Modifiers {
 pub enum Phase {
     Descending,
     Ascending,
+    Global,
 }
