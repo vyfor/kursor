@@ -24,7 +24,12 @@ use kursor_core::{
         mouse::{MouseButton, MouseEvent, MouseKind},
     },
     layout::size::Size,
-    render::{attrs::Attrs, buffer::CellDiff, color::Color, style::Style},
+    render::{
+        attrs::{Attrs, Blink, Underline},
+        buffer::CellDiff,
+        color::Color,
+        style::Style,
+    },
     runtime::Runtime,
 };
 
@@ -82,6 +87,7 @@ impl Terminal for Crossterm {
         if let Err(error) = execute!(
             self.stdout,
             EnterAlternateScreen,
+            event::EnableFocusChange,
             event::EnableMouseCapture,
             cursor::Hide
         ) {
@@ -99,6 +105,7 @@ impl Terminal for Crossterm {
         let _ = execute!(
             self.stdout,
             event::DisableMouseCapture,
+            event::DisableFocusChange,
             cursor::Show,
             LeaveAlternateScreen,
             SetAttribute(Attribute::Reset)
@@ -151,11 +158,7 @@ pub fn translate(event: CtEvent) -> Option<Event> {
     match event {
         CtEvent::Key(key) if key.kind != KeyEventKind::Release => Some(Event::Key(KeyEvent {
             code: translate_code(key.code)?,
-            modifiers: Modifiers {
-                shift: key.modifiers.contains(KeyModifiers::SHIFT),
-                ctrl: key.modifiers.contains(KeyModifiers::CONTROL),
-                alt: key.modifiers.contains(KeyModifiers::ALT),
-            },
+            modifiers: translate_modifiers(key.modifiers),
         })),
         CtEvent::Key(_) => None,
         CtEvent::Mouse(mouse) => {
@@ -172,16 +175,24 @@ pub fn translate(event: CtEvent) -> Option<Event> {
                 kind,
                 column: mouse.column,
                 row: mouse.row,
-                modifiers: Modifiers {
-                    shift: mouse.modifiers.contains(KeyModifiers::SHIFT),
-                    ctrl: mouse.modifiers.contains(KeyModifiers::CONTROL),
-                    alt: mouse.modifiers.contains(KeyModifiers::ALT),
-                },
+                modifiers: translate_modifiers(mouse.modifiers),
             }))
         }
         CtEvent::Resize(width, height) => Some(Event::Resize(width, height)),
         CtEvent::Paste(text) => Some(Event::Paste(text)),
-        _ => None,
+        CtEvent::FocusGained => Some(Event::WindowFocus(true)),
+        CtEvent::FocusLost => Some(Event::WindowFocus(false)),
+    }
+}
+
+fn translate_modifiers(modifiers: KeyModifiers) -> Modifiers {
+    Modifiers {
+        ctrl: modifiers.contains(KeyModifiers::CONTROL),
+        alt: modifiers.contains(KeyModifiers::ALT),
+        shift: modifiers.contains(KeyModifiers::SHIFT),
+        system: modifiers.contains(KeyModifiers::SUPER),
+        meta: modifiers.contains(KeyModifiers::META),
+        hyper: modifiers.contains(KeyModifiers::HYPER),
     }
 }
 
@@ -268,8 +279,27 @@ fn map_attrs(attrs: Attrs) -> crossterm::style::Attributes {
     if attrs.italic {
         res.set(Attribute::Italic);
     }
-    if attrs.underline {
-        res.set(Attribute::Underlined);
+    match attrs.underline {
+        Underline::None => {}
+        Underline::Single => res.set(Attribute::Underlined),
+        Underline::Double => res.set(Attribute::DoubleUnderlined),
+    }
+    match attrs.blink {
+        Blink::None => {}
+        Blink::Slow => res.set(Attribute::SlowBlink),
+        Blink::Rapid => res.set(Attribute::RapidBlink),
+    }
+    if attrs.reverse {
+        res.set(Attribute::Reverse);
+    }
+    if attrs.hidden {
+        res.set(Attribute::Hidden);
+    }
+    if attrs.strikethrough {
+        res.set(Attribute::CrossedOut);
+    }
+    if attrs.overline {
+        res.set(Attribute::OverLined);
     }
 
     res

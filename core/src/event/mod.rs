@@ -9,6 +9,7 @@ pub enum Event {
     Resize(u16, u16),
     FocusIn,
     FocusOut,
+    WindowFocus(bool),
     Paste(String),
 }
 
@@ -32,9 +33,12 @@ impl EventResult {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Modifiers {
-    pub shift: bool,
     pub ctrl: bool,
     pub alt: bool,
+    pub shift: bool,
+    pub system: bool,
+    pub meta: bool,
+    pub hyper: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

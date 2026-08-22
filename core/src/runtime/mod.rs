@@ -154,7 +154,7 @@ impl Runtime {
     pub fn handle_event(&mut self, event: Event) -> EventResult {
         let event = self.normalize(event);
         let result = match &event {
-            Event::FocusIn | Event::FocusOut => self
+            Event::FocusIn | Event::FocusOut | Event::WindowFocus(_) => self
                 .focus
                 .filter(|&id| self.tree.contains(id))
                 .map_or(EventResult::Ignored, |id| self.dispatch(id, &event)),

@@ -78,6 +78,21 @@ impl Bind {
         self
     }
 
+    pub fn system(mut self) -> Self {
+        self.modifiers_mut().system = true;
+        self
+    }
+
+    pub fn meta(mut self) -> Self {
+        self.modifiers_mut().meta = true;
+        self
+    }
+
+    pub fn hyper(mut self) -> Self {
+        self.modifiers_mut().hyper = true;
+        self
+    }
+
     fn modifiers_mut(&mut self) -> &mut Modifiers {
         match self {
             Self::Key { modifiers, .. } | Self::Mouse { modifiers, .. } => modifiers,
