@@ -656,6 +656,7 @@ impl Runtime {
                     }
 
                     if should_update || env_changed {
+                        self.tree.get_mut(ch).unwrap().available = None;
                         self.update_dirty.insert(ch);
                     }
 
