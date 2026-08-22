@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use kursor_core::component::{
-    behavior::Behavior,
+    behavior::{Behavior, BehaviorBuilder},
     blueprint::{Blueprint, IntoBlueprint},
     context::Cx,
 };
@@ -50,6 +50,18 @@ impl ButtonBuilder {
     pub fn on_press(mut self, on_press: impl Fn(&mut Cx) + 'static) -> Self {
         self.props.on_press = Arc::new(on_press);
         self
+    }
+}
+
+impl BehaviorBuilder for ButtonBuilder {
+    type State = ButtonState;
+    type Intent = ButtonIntent;
+
+    fn behavior<B>(self, behavior: B) -> Self
+    where
+        B: Behavior<State = Self::State, Intent = Self::Intent>,
+    {
+        self.behavior(behavior)
     }
 }
 

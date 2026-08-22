@@ -1,7 +1,10 @@
 use std::marker::PhantomData;
 
 use kursor_core::{
-    component::behavior::{Behavior, BehaviorCx},
+    component::{
+        behavior::{Behavior, BehaviorBuilder, BehaviorCx},
+        blueprint::IntoBlueprint,
+    },
     event::{
         Event, Modifiers, Phase,
         key::KeyCode,
@@ -104,6 +107,11 @@ pub struct Bindings<S, I> {
     state: PhantomData<fn() -> S>,
 }
 
+pub struct Bound<B, S, I> {
+    builder: B,
+    bindings: Bindings<S, I>,
+}
+
 impl<S, I> Bindings<S, I> {
     pub fn new() -> Self {
         Self {
@@ -115,6 +123,34 @@ impl<S, I> Bindings<S, I> {
     pub fn bind(mut self, bind: Bind, intent: I) -> Self {
         self.entries.push(Binding { bind, intent });
         self
+    }
+
+    pub fn with<B>(builder: B) -> Bound<B, S, I>
+    where
+        B: BehaviorBuilder<State = S, Intent = I>,
+    {
+        Bound {
+            builder,
+            bindings: Self::new(),
+        }
+    }
+}
+
+impl<B, S, I> Bound<B, S, I> {
+    pub fn bind(mut self, bind: Bind, intent: I) -> Self {
+        self.bindings = self.bindings.bind(bind, intent);
+        self
+    }
+}
+
+impl<B, S, I> IntoBlueprint for Bound<B, S, I>
+where
+    B: BehaviorBuilder<State = S, Intent = I> + IntoBlueprint,
+    S: 'static,
+    I: Clone + Send + Sync + 'static,
+{
+    fn into_blueprint(self) -> Vec<kursor_core::component::blueprint::Blueprint> {
+        self.builder.behavior(self.bindings).into_blueprint()
     }
 }
 

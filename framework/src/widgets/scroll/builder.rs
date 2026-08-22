@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kursor_core::{
     component::{
-        behavior::Behavior,
+        behavior::{Behavior, BehaviorBuilder},
         blueprint::{Blueprint, IntoBlueprint},
     },
     layout::ScrollDirection,
@@ -37,6 +37,18 @@ impl ScrollBuilder {
     {
         self.props.behavior = Arc::new(behavior);
         self
+    }
+}
+
+impl BehaviorBuilder for ScrollBuilder {
+    type State = ScrollState;
+    type Intent = ScrollIntent;
+
+    fn behavior<B>(self, behavior: B) -> Self
+    where
+        B: Behavior<State = Self::State, Intent = Self::Intent>,
+    {
+        self.behavior(behavior)
     }
 }
 

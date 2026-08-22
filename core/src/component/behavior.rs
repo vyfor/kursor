@@ -14,3 +14,12 @@ pub trait Behavior: Send + Sync + 'static {
 
     fn event(&self, cx: &BehaviorCx, event: &Event, state: &Self::State) -> Option<Self::Intent>;
 }
+
+pub trait BehaviorBuilder: Sized {
+    type State;
+    type Intent;
+
+    fn behavior<B>(self, behavior: B) -> Self
+    where
+        B: Behavior<State = Self::State, Intent = Self::Intent>;
+}
