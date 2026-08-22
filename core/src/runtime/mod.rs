@@ -374,7 +374,7 @@ impl Runtime {
         let mut res = EventResult::Ignored;
 
         for &node in path.iter().rev() {
-            let current = self.send_event(node, event, Phase::Ascending);
+            let current = self.send_event(node, event, Phase::Capture);
             if current.is_handled() {
                 sent.push(node);
                 res = current;
@@ -386,7 +386,7 @@ impl Runtime {
 
         if !res.should_stop() {
             for &node in &path {
-                let current = self.send_event(node, event, Phase::Descending);
+                let current = self.send_event(node, event, Phase::Bubble);
                 if current.is_handled() {
                     sent.push(node);
                     res = current;

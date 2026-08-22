@@ -51,7 +51,7 @@ impl Behavior for WheelScroll {
     type Intent = ScrollIntent;
 
     fn event(&self, cx: &BehaviorCx, event: &Event, _state: &ScrollState) -> Option<ScrollIntent> {
-        if cx.phase != Phase::Descending {
+        if cx.phase != Phase::Bubble {
             return None;
         }
         let Event::Mouse(mouse) = event else {

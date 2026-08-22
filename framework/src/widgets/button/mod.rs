@@ -63,7 +63,7 @@ impl Behavior for ButtonBehavior {
     type Intent = ButtonIntent;
 
     fn event(&self, cx: &BehaviorCx, event: &Event, _state: &ButtonState) -> Option<ButtonIntent> {
-        if cx.phase != Phase::Descending {
+        if cx.phase != Phase::Bubble {
             return None;
         }
 
@@ -202,7 +202,7 @@ impl Component for Button {
             return EventResult::Ignored;
         }
 
-        if phase != Phase::Descending {
+        if phase != Phase::Bubble {
             return EventResult::Ignored;
         }
 

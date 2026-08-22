@@ -43,7 +43,7 @@ pub struct Modifiers {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
-    Descending,
-    Ascending,
+    Capture,
+    Bubble,
     Global,
 }

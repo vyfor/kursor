@@ -184,7 +184,7 @@ where
     type Intent = I;
 
     fn event(&self, cx: &BehaviorCx, event: &Event, _state: &S) -> Option<I> {
-        if cx.phase != Phase::Descending {
+        if cx.phase != Phase::Bubble {
             return None;
         }
         self.entries
