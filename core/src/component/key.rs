@@ -1,7 +1,9 @@
+use std::rc::Rc;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Key {
     Integer(u64),
-    String(String),
+    String(Rc<str>),
 }
 
 impl From<u64> for Key {
@@ -24,12 +26,12 @@ impl From<usize> for Key {
 
 impl From<String> for Key {
     fn from(value: String) -> Self {
-        Self::String(value)
+        Self::String(Rc::from(value))
     }
 }
 
 impl From<&str> for Key {
     fn from(value: &str) -> Self {
-        Self::String(value.to_owned())
+        Self::String(Rc::from(value))
     }
 }

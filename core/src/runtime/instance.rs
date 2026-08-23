@@ -12,7 +12,9 @@ pub struct Instance {
     pub key: Option<Key>,
     pub component: Box<dyn AnyComponent>,
     pub props: Rc<dyn Any>,
+    pub declared_children: Rc<[Blueprint]>,
     pub children: Rc<[Blueprint]>,
+    pub child_memo: Option<u64>,
     pub type_id: TypeId,
     pub rect: Rect,
     pub offset: Offset,
@@ -20,4 +22,6 @@ pub struct Instance {
     pub available: Option<Size>,
     pub env: Environment,
     pub inherited: Environment,
+    pub origin: Offset,
+    pub clip: Rect,
 }

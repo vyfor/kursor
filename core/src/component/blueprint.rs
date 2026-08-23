@@ -19,11 +19,17 @@ impl Blueprint {
             let props = props.downcast_ref::<C::Props>().unwrap();
             Box::new(C::create(cx, props))
         }
+        let props = if TypeId::of::<C::Props>() == TypeId::of::<()>() {
+            drop(props);
+            empty_props()
+        } else {
+            Rc::new(props)
+        };
         Self {
             key: None,
             type_id: TypeId::of::<C>(),
-            props: Rc::new(props),
-            children: Rc::from([]),
+            props,
+            children: empty_children(),
             create: create::<C>,
         }
     }
@@ -44,6 +50,19 @@ impl Blueprint {
         self.children = children.into_blueprint().into();
         self
     }
+}
+
+thread_local! {
+    static EMPTY_CHILDREN: Rc<[Blueprint]> = Rc::from(Vec::new());
+    static EMPTY_PROPS: Rc<dyn Any> = Rc::new(());
+}
+
+pub(crate) fn empty_children() -> Rc<[Blueprint]> {
+    EMPTY_CHILDREN.with(|children| children.clone())
+}
+
+pub(crate) fn empty_props() -> Rc<dyn Any> {
+    EMPTY_PROPS.with(|props| props.clone())
 }
 
 impl Clone for Blueprint {

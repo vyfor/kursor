@@ -8,7 +8,13 @@ use std::{
 };
 
 use crate::{
-    component::{Children, Component, Focus, action::Action, blueprint::Blueprint, context::Cx},
+    component::{
+        Children, Component, Focus,
+        action::Action,
+        blueprint::{Blueprint, empty_children},
+        context::Cx,
+        environment::Environment,
+    },
     event::{
         Event, EventResult, Phase,
         mouse::{MouseButton, MouseEvent, MouseKind},
@@ -24,6 +30,50 @@ use crate::{
     state::{deps, id::AtomId, queue::dirty_queue, scope},
     tree::{Tree, id::NodeId},
 };
+
+struct Scratch {
+    dirty_nodes: Vec<NodeId>,
+    layout_pending: Vec<(NodeId, Rect, Offset)>,
+    child_ids: Vec<NodeId>,
+    child_sizes: Vec<Size>,
+    rects: Vec<Rect>,
+    offsets: Vec<Offset>,
+    new_children: Vec<NodeId>,
+    old_children: Vec<NodeId>,
+    unkeyed: Vec<Option<NodeId>>,
+    path: Vec<NodeId>,
+    sent_nodes: Vec<NodeId>,
+    listeners: Vec<NodeId>,
+    paint_dirty: Vec<NodeId>,
+    painted: HashSet<NodeId>,
+    removed_nodes: HashSet<NodeId>,
+    dep_atoms: HashSet<AtomId>,
+    actions: Vec<Action>,
+}
+
+impl Scratch {
+    fn new() -> Self {
+        Self {
+            dirty_nodes: Vec::new(),
+            layout_pending: Vec::new(),
+            child_ids: Vec::new(),
+            child_sizes: Vec::new(),
+            rects: Vec::new(),
+            offsets: Vec::new(),
+            new_children: Vec::new(),
+            old_children: Vec::new(),
+            unkeyed: Vec::new(),
+            path: Vec::new(),
+            sent_nodes: Vec::new(),
+            listeners: Vec::new(),
+            paint_dirty: Vec::new(),
+            painted: HashSet::new(),
+            removed_nodes: HashSet::new(),
+            dep_atoms: HashSet::new(),
+            actions: Vec::new(),
+        }
+    }
+}
 
 pub struct Runtime {
     tree: Tree<Instance>,
@@ -43,6 +93,7 @@ pub struct Runtime {
     cursor: Option<(NodeId, u16, u16)>,
     last_click: Option<(NodeId, MouseButton, Instant)>,
     global_listeners: Vec<NodeId>,
+    scratch: Scratch,
 }
 
 impl Runtime {
@@ -65,6 +116,7 @@ impl Runtime {
             cursor: None,
             last_click: None,
             global_listeners: Vec::new(),
+            scratch: Scratch::new(),
         }
     }
 
@@ -139,16 +191,8 @@ impl Runtime {
     }
 
     fn resolve(&self, id: NodeId) -> Option<(Offset, Rect)> {
-        let mut origin = Offset::ZERO;
-        let mut clip = self.rect;
-
-        for node in self.tree.path_to_root(id).into_iter().rev() {
-            let ins = self.tree.get(node)?;
-            origin = Self::translate(origin, ins.rect, ins.offset);
-            clip = Self::clip(origin, Size::new(ins.rect.width, ins.rect.height), clip)?;
-        }
-
-        Some((origin, clip))
+        let ins = self.tree.get(id)?;
+        Some((ins.origin, ins.clip))
     }
 
     pub fn handle_event(&mut self, event: Event) -> EventResult {
@@ -360,7 +404,8 @@ impl Runtime {
         if !clip.contains(x, y) {
             return None;
         }
-        for &child in self.tree.children(id).iter().rev() {
+        let children = self.tree.children(id);
+        for &child in children.iter().rev() {
             if let Some(target) = self.hit(child, origin, clip, x, y) {
                 return Some(target);
             }
@@ -369,35 +414,49 @@ impl Runtime {
     }
 
     fn dispatch(&mut self, target: NodeId, event: &Event) -> EventResult {
-        let path = self.tree.path_to_root(target);
-        let mut sent = Vec::with_capacity(path.len());
-        let mut res = EventResult::Ignored;
-
-        for &node in path.iter().rev() {
-            let current = self.send_event(node, event, Phase::Capture);
-            if current.is_handled() {
-                sent.push(node);
-                res = current;
+        self.scratch.path.clear();
+        let mut current = target;
+        while self.tree.contains(current) {
+            self.scratch.path.push(current);
+            match self.tree.parent(current) {
+                Some(p) => current = p,
+                None => break,
             }
-            if current.should_stop() {
+        }
+
+        self.scratch.sent_nodes.clear();
+        let mut res = EventResult::Ignored;
+        let path_len = self.scratch.path.len();
+
+        for i in (0..path_len).rev() {
+            let node = self.scratch.path[i];
+            let cur_res = self.send_event(node, event, Phase::Capture);
+            if cur_res.is_handled() {
+                self.scratch.sent_nodes.push(node);
+                res = cur_res;
+            }
+            if cur_res.should_stop() {
                 break;
             }
         }
 
         if !res.should_stop() {
-            for &node in &path {
-                let current = self.send_event(node, event, Phase::Bubble);
-                if current.is_handled() {
-                    sent.push(node);
-                    res = current;
+            for i in 0..path_len {
+                let node = self.scratch.path[i];
+                let cur_res = self.send_event(node, event, Phase::Bubble);
+                if cur_res.is_handled() {
+                    self.scratch.sent_nodes.push(node);
+                    res = cur_res;
                 }
-                if current.should_stop() {
+                if cur_res.should_stop() {
                     break;
                 }
             }
         }
 
-        for node in sent {
+        let sent_len = self.scratch.sent_nodes.len();
+        for i in 0..sent_len {
+            let node = self.scratch.sent_nodes[i];
             if self.tree.contains(node) {
                 self.update_dirty.insert(node);
             }
@@ -407,10 +466,17 @@ impl Runtime {
     }
 
     fn dispatch_global_listener(&mut self, event: &Event) -> EventResult {
-        let mut listeners = self.global_listeners.clone();
-        listeners.sort_by_key(|&id| cmp::Reverse(self.tree.depth(id)));
+        self.scratch.listeners.clear();
+        self.scratch
+            .listeners
+            .extend_from_slice(&self.global_listeners);
+        self.scratch
+            .listeners
+            .sort_by_key(|&id| cmp::Reverse(self.tree.depth(id)));
 
-        for id in listeners {
+        let lc = self.scratch.listeners.len();
+        for i in 0..lc {
+            let id = self.scratch.listeners[i];
             let result = self.send_event(id, event, Phase::Global);
             if result.is_handled() {
                 self.update_dirty.insert(id);
@@ -426,21 +492,20 @@ impl Runtime {
             return EventResult::Ignored;
         }
 
-        let (result, actions) = {
+        let result = {
             let ins = self.tree.get_mut(id).unwrap();
-            let mut pending = Vec::new();
+            self.scratch.actions.clear();
             let mut cx = Cx {
                 rect: Self::local_rect(ins.rect),
                 node: Some(id),
-                actions: Some(&mut pending),
+                actions: Some(&mut self.scratch.actions),
                 global_input: None,
                 env: ins.env.clone(),
             };
-            let result = ins
-                .component
-                .event_any(&mut cx, ins.props.as_ref(), event, phase);
-            (result, pending)
+            ins.component
+                .event_any(&mut cx, ins.props.as_ref(), event, phase)
         };
+        let actions = mem::take(&mut self.scratch.actions);
         self.apply_actions(actions);
         result
     }
@@ -500,20 +565,25 @@ impl Runtime {
         }
 
         loop {
-            self.update_dirty.retain(|&n| self.tree.contains(n));
-
-            let Some(id) = self
-                .update_dirty
-                .iter()
-                .copied()
-                .filter(|&id| self.tree.contains(id))
-                .min_by_key(|&id| self.tree.depth(id))
-            else {
+            self.scratch.dirty_nodes.clear();
+            self.scratch.dirty_nodes.extend(
+                self.update_dirty
+                    .drain()
+                    .filter(|&id| self.tree.contains(id)),
+            );
+            if self.scratch.dirty_nodes.is_empty() {
                 break;
-            };
+            }
 
-            self.update_dirty.remove(&id);
-            self.do_build(id);
+            self.scratch
+                .dirty_nodes
+                .sort_unstable_by_key(|&id| (self.tree.depth(id), id));
+            let dirty = mem::take(&mut self.scratch.dirty_nodes);
+            for id in dirty {
+                if self.tree.contains(id) {
+                    self.do_build(id);
+                }
+            }
         }
     }
 
@@ -524,41 +594,63 @@ impl Runtime {
             .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
             .or_else(|| self.tree.get(id).map(|node| node.inherited.clone()))
             .unwrap_or_default();
-        let ((replacement, global_key_listener), dep_reads) = deps::collect(|| {
-            let ins = self.tree.get_mut(id).unwrap();
-            let mut children = Children::new(ins.children.clone());
-            let mut global_key_listener = false;
-            let mut cx = Cx {
-                rect: Self::local_rect(ins.rect),
-                node: Some(id),
-                actions: None,
-                global_input: Some(&mut global_key_listener),
-                env: inherited.clone(),
-            };
-            ins.component
-                .build_any(&mut cx, ins.props.as_ref(), &mut children);
-            ins.inherited = inherited.clone();
-            ins.env = cx.env.clone();
-            (children.finish(), global_key_listener)
-        });
+        let (dc, cc, child_memo) = self
+            .tree
+            .get(id)
+            .map(|instance| {
+                (
+                    instance.declared_children.clone(),
+                    instance.children.clone(),
+                    instance.child_memo,
+                )
+            })
+            .unwrap();
+        let (((replacement, next_memo, memo_hit), global_listener), dep_reads) =
+            deps::collect(|| {
+                let ins = self.tree.get_mut(id).unwrap();
+                let mut children = Children::new(cc.clone(), child_memo);
+                let mut global_key_listener = false;
+                let mut cx = Cx {
+                    rect: Self::local_rect(ins.rect),
+                    node: Some(id),
+                    actions: None,
+                    global_input: Some(&mut global_key_listener),
+                    env: inherited.clone(),
+                };
+                ins.component
+                    .build_any(&mut cx, ins.props.as_ref(), &mut children);
+                ins.inherited = inherited.clone();
+                ins.env = cx.env.clone();
+                (children.finish(), global_key_listener)
+            });
 
         self.do_deps(id, dep_reads);
-        if global_key_listener {
+        if global_listener {
             if !self.global_listeners.contains(&id) {
                 self.global_listeners.push(id);
             }
         } else {
             self.global_listeners.retain(|&node| node != id);
         }
-        let replaced = replacement.is_some();
-        if let Some(blueprints) = replacement {
-            let blueprints: Rc<[Blueprint]> = blueprints.into();
-            self.tree.get_mut(id).unwrap().children = blueprints.clone();
-            self.sync(id, &blueprints);
+        let next_children: Rc<[Blueprint]> = replacement
+            .map(Into::into)
+            .unwrap_or_else(|| if memo_hit { cc } else { dc });
+        let children_changed = {
+            let ins = self.tree.get_mut(id).unwrap();
+            ins.child_memo = next_memo;
+            let changed = !Rc::ptr_eq(&ins.children, &next_children);
+            if changed {
+                ins.children = next_children.clone();
+            }
+            changed
+        };
+        if children_changed {
+            self.sync(id, &next_children);
         }
         self.layout_dirty.insert(id);
         self.paint_dirty.insert(id);
-        replaced
+
+        children_changed
     }
 
     fn do_deps(&mut self, id: NodeId, mut dep_reads: Vec<AtomId>) {
@@ -578,11 +670,11 @@ impl Runtime {
         while i < old_deps.len() && j < dep_reads.len() {
             match old_deps[i].cmp(&dep_reads[j]) {
                 Ordering::Less => {
-                    let old_atom = &old_deps[i];
-                    if let Some(nodes) = self.deps.get_mut(old_atom) {
+                    let old_atom = old_deps[i];
+                    if let Some(nodes) = self.deps.get_mut(&old_atom) {
                         nodes.retain(|&n| n != id);
                         if nodes.is_empty() {
-                            self.deps.remove(old_atom);
+                            self.deps.remove(&old_atom);
                         }
                     }
                     i += 1;
@@ -598,11 +690,11 @@ impl Runtime {
             }
         }
         while i < old_deps.len() {
-            let old_atom = &old_deps[i];
-            if let Some(nodes) = self.deps.get_mut(old_atom) {
+            let old_atom = old_deps[i];
+            if let Some(nodes) = self.deps.get_mut(&old_atom) {
                 nodes.retain(|&n| n != id);
                 if nodes.is_empty() {
-                    self.deps.remove(old_atom);
+                    self.deps.remove(&old_atom);
                 }
             }
             i += 1;
@@ -618,36 +710,57 @@ impl Runtime {
     }
 
     fn sync(&mut self, parent: NodeId, blueprints: &[Blueprint]) {
-        let oldc = self.tree.children(parent).to_vec();
+        self.scratch.old_children.clear();
+        self.scratch
+            .old_children
+            .extend_from_slice(self.tree.children(parent));
         let parent_env = self.tree.get(parent).unwrap().env.clone();
-        let mut keyed = HashMap::new();
-        let mut unkeyed = Vec::new();
 
-        for child in oldc.iter().copied() {
+        let ordered = self.scratch.old_children.len() == blueprints.len()
+            && self
+                .scratch
+                .old_children
+                .iter()
+                .zip(blueprints)
+                .all(|(&child, blueprint)| {
+                    self.tree.get(child).is_some_and(|instance| {
+                        instance.type_id == blueprint.type_id && instance.key == blueprint.key
+                    })
+                });
+
+        if ordered {
+            let oldc = mem::take(&mut self.scratch.old_children);
+            for (&child, blueprint) in oldc.iter().zip(blueprints) {
+                self.sync_existing(child, blueprint, &parent_env);
+            }
+            self.tree.set_children(parent, oldc);
+            return;
+        }
+
+        let mut keyed = HashMap::new();
+        self.scratch.unkeyed.clear();
+
+        for &child in self.scratch.old_children.iter() {
             let key = self.tree.get(child).unwrap().key.clone();
             if let Some(key) = key {
-                assert!(keyed.insert(key, child).is_none(), "duplicate key");
+                keyed.insert(key, child);
             } else {
-                unkeyed.push(child);
+                self.scratch.unkeyed.push(Some(child));
             }
         }
-
-        let mut next = HashSet::new();
-        for blueprint in blueprints {
-            if let Some(key) = &blueprint.key {
-                assert!(next.insert(key), "duplicate key: {key:?}");
-            }
-        }
-
-        let mut used = HashSet::new();
-        let mut newc = Vec::new();
+        self.scratch.new_children.clear();
+        self.scratch.new_children.reserve(blueprints.len());
         let mut unkeyed_index = 0;
 
         for bp in blueprints {
             let m = match &bp.key {
-                Some(key) => keyed.get(key).copied(),
+                Some(key) => keyed.remove(key),
                 None => {
-                    let child = unkeyed.get(unkeyed_index).copied();
+                    let child = self
+                        .scratch
+                        .unkeyed
+                        .get_mut(unkeyed_index)
+                        .and_then(Option::take);
                     unkeyed_index += 1;
                     child
                 }
@@ -659,49 +772,60 @@ impl Runtime {
                         .get(ch)
                         .is_some_and(|ins| ins.type_id == bp.type_id) =>
                 {
-                    used.insert(ch);
-                    let (should_update, env_changed, children_changed) = {
-                        let ins = self.tree.get_mut(ch).unwrap();
-                        let should_update = ins
-                            .component
-                            .changed_any(ins.props.as_ref(), bp.props.as_ref());
-                        let env_changed = !ins.inherited.same(&parent_env);
-                        let children_changed = !Rc::ptr_eq(&ins.children, &bp.children);
-
-                        ins.props = bp.props.clone();
-                        ins.key = bp.key.clone();
-                        ins.inherited = parent_env.clone();
-                        if children_changed {
-                            ins.children = bp.children.clone();
-                        }
-
-                        (should_update, env_changed, children_changed)
-                    };
-
-                    if children_changed {
-                        self.sync(ch, &bp.children);
-                    }
-
-                    if should_update || env_changed {
-                        self.tree.get_mut(ch).unwrap().available = None;
-                        self.update_dirty.insert(ch);
-                    }
-
+                    self.sync_existing(ch, bp, &parent_env);
                     ch
                 }
-                Some(_) => self.do_create(bp.clone(), Some(parent)),
+                Some(ch) => {
+                    self.drop_node(ch);
+                    self.do_create(bp.clone(), Some(parent))
+                }
                 None => self.do_create(bp.clone(), Some(parent)),
             };
-            newc.push(child);
+            self.scratch.new_children.push(child);
         }
 
-        for old in oldc {
-            if !used.contains(&old) {
-                self.drop_node(old);
+        for child in keyed.into_values() {
+            if self.tree.contains(child) {
+                self.drop_node(child);
+            }
+        }
+        let unkeyed = mem::take(&mut self.scratch.unkeyed);
+        for child in unkeyed.into_iter().flatten() {
+            if self.tree.contains(child) {
+                self.drop_node(child);
             }
         }
 
-        self.tree.set_children(parent, &newc);
+        let newc = mem::take(&mut self.scratch.new_children);
+        self.tree.set_children(parent, newc);
+    }
+
+    fn sync_existing(&mut self, child: NodeId, blueprint: &Blueprint, parent_env: &Environment) {
+        let (should_update, env_changed, declared_changed) = {
+            let instance = self.tree.get_mut(child).unwrap();
+            let should_update = instance
+                .component
+                .changed_any(instance.props.as_ref(), blueprint.props.as_ref());
+            let env_changed = !instance.inherited.same(parent_env);
+            let declared_changed = !Rc::ptr_eq(&instance.declared_children, &blueprint.children);
+
+            if should_update {
+                instance.props = blueprint.props.clone();
+            }
+            instance.key = blueprint.key.clone();
+            instance.inherited = parent_env.clone();
+            if declared_changed {
+                instance.declared_children = blueprint.children.clone();
+            }
+
+            (should_update, env_changed, declared_changed)
+        };
+
+        if should_update || env_changed || declared_changed {
+            let instance = self.tree.get_mut(child).unwrap();
+            instance.available = None;
+            self.update_dirty.insert(child);
+        }
     }
 
     fn drop_node(&mut self, id: NodeId) {
@@ -736,9 +860,11 @@ impl Runtime {
             self.last_click = None;
         }
 
+        self.unsub_subtree(&subtree);
+        let st = subtree.clone();
+        self.global_listeners
+            .retain(|listener| !st.contains(listener));
         for &node in &subtree {
-            self.unsub(node);
-            self.global_listeners.retain(|&listener| listener != node);
             self.update_dirty.remove(&node);
             self.layout_dirty.remove(&node);
             self.paint_dirty.remove(&node);
@@ -766,16 +892,23 @@ impl Runtime {
             self.layout_dirty.insert(parent);
             self.paint_dirty.insert(parent);
         }
+        self.scratch.removed_nodes.clear();
     }
 
-    fn unsub(&mut self, id: NodeId) {
-        if let Some(atoms) = self.node_deps.remove(&id) {
-            for atom in atoms {
-                if let Some(nodes) = self.deps.get_mut(&atom) {
-                    nodes.retain(|&n| n != id);
-                    if nodes.is_empty() {
-                        self.deps.remove(&atom);
-                    }
+    fn unsub_subtree(&mut self, subtree: &[NodeId]) {
+        self.scratch.dep_atoms.clear();
+
+        for &node in subtree {
+            if let Some(node_atoms) = self.node_deps.remove(&node) {
+                self.scratch.dep_atoms.extend(node_atoms);
+            }
+        }
+
+        for atom in self.scratch.dep_atoms.iter().copied() {
+            if let Some(nodes) = self.deps.get_mut(&atom) {
+                nodes.retain(|node| !subtree.contains(node));
+                if nodes.is_empty() {
+                    self.deps.remove(&atom);
                 }
             }
         }
@@ -800,7 +933,9 @@ impl Runtime {
             key: bp.key,
             component,
             props: bp.props,
-            children: bp.children,
+            declared_children: bp.children,
+            children: empty_children(),
+            child_memo: None,
             type_id: bp.type_id,
             rect: Rect::new(0, 0, 0, 0),
             offset: Offset::ZERO,
@@ -808,6 +943,8 @@ impl Runtime {
             available: None,
             env: inherited.clone(),
             inherited,
+            origin: Offset::ZERO,
+            clip: Rect::new(0, 0, 0, 0),
         };
 
         let id = match parent {
@@ -815,107 +952,171 @@ impl Runtime {
             None => self.tree.create_root(ins),
         };
 
-        if !self.do_build(id) {
-            let children = self.tree.get(id).unwrap().children.clone();
-            self.sync(id, &children);
-        }
+        self.update_dirty.insert(id);
         id
     }
 
     fn do_layout(&mut self) {
         loop {
-            self.layout_dirty.retain(|&n| self.tree.contains(n));
-
-            let Some(id) = self
-                .layout_dirty
-                .iter()
-                .copied()
-                .filter(|&id| self.tree.contains(id))
-                .min_by_key(|&id| self.tree.depth(id))
-            else {
+            self.scratch.dirty_nodes.clear();
+            self.scratch.dirty_nodes.extend(
+                self.layout_dirty
+                    .drain()
+                    .filter(|&id| self.tree.contains(id)),
+            );
+            if self.scratch.dirty_nodes.is_empty() {
                 break;
-            };
-
-            let rect = if self.tree.root() == Some(id) {
-                self.rect
-            } else {
-                self.tree.get(id).map_or(Rect::new(0, 0, 0, 0), |c| c.rect)
-            };
-
-            let measured_changed = self.apply_measure(id, Size::new(rect.width, rect.height));
-            if measured_changed && let Some(parent) = self.tree.parent(id) {
-                self.layout_dirty.insert(parent);
             }
-            let offset = if self.tree.root() == Some(id) {
-                Offset::ZERO
-            } else {
-                self.tree.get(id).map_or(Offset::ZERO, |ins| ins.offset)
-            };
-            self.apply_layout(id, rect, offset);
+
+            self.scratch
+                .dirty_nodes
+                .sort_unstable_by_key(|&id| (self.tree.depth(id), id));
+            self.layout_dirty
+                .extend(self.scratch.dirty_nodes.iter().copied());
+
+            let dirty = mem::take(&mut self.scratch.dirty_nodes);
+            for id in dirty {
+                if !self.tree.contains(id) || !self.layout_dirty.contains(&id) {
+                    continue;
+                }
+
+                let rect = if self.tree.root() == Some(id) {
+                    self.rect
+                } else {
+                    self.tree.get(id).map_or(Rect::new(0, 0, 0, 0), |c| c.rect)
+                };
+
+                let measured_changed = self.apply_measure(id, Size::new(rect.width, rect.height));
+                if measured_changed && let Some(parent) = self.tree.parent(id) {
+                    self.layout_dirty.insert(parent);
+                }
+                let offset = if self.tree.root() == Some(id) {
+                    Offset::ZERO
+                } else {
+                    self.tree.get(id).map_or(Offset::ZERO, |ins| ins.offset)
+                };
+                self.apply_layout(id, rect, offset);
+            }
         }
     }
 
     fn apply_measure(&mut self, id: NodeId, available: Size) -> bool {
-        let child_ids = self.tree.children(id).to_vec();
-        let child_count = child_ids.len();
+        self.scratch.child_ids.clear();
+        self.scratch
+            .child_ids
+            .extend_from_slice(self.tree.children(id));
+        let child_count = self.scratch.child_ids.len();
         let env = self.tree.get(id).unwrap().env.clone();
         let rect = self.tree.get(id).unwrap().rect;
 
-        let mut measures: Vec<Option<Size>> = vec![None; child_count];
+        self.scratch.child_sizes.clear();
+        if child_count <= 32 {
+            self.scratch
+                .child_sizes
+                .resize(child_count, Size::default());
+            let use_cache = true;
+            let mut measures: Vec<Option<Size>> = vec![None; child_count];
 
-        let mut component = {
-            let ins = self.tree.get_mut(id).unwrap();
-            mem::replace(&mut ins.component, Box::new(Placeholder))
-        };
-        let props = {
-            let ins = self.tree.get_mut(id).unwrap();
-            mem::replace(&mut ins.props, Rc::new(()))
-        };
-
-        let mut measure = |index: usize, child_available: Size| -> Size {
-            if index >= child_count {
-                return Size::default();
-            }
-            match measures[index] {
-                Some(size) if child_available == available => return size,
-                _ => {}
-            }
-            let child_id = child_ids[index];
-            if !self.tree.contains(child_id) {
-                return Size::default();
-            }
-            let size = Self::measure_node(&mut self.tree, child_id, child_available);
-            measures[index] = Some(size);
-            size
-        };
-
-        let measured = {
-            let mut cx = Cx {
-                node: Some(id),
-                rect,
-                actions: None,
-                global_input: None,
-                env,
+            let mut component = {
+                let ins = self.tree.get_mut(id).unwrap();
+                mem::replace(&mut ins.component, Box::new(Placeholder))
             };
-            let mut children = MeasureCx::new(&mut measure, child_count, available);
-            component.measure_any(&mut cx, props.as_ref(), available, &mut children)
-        };
+            let props = {
+                let ins = self.tree.get_mut(id).unwrap();
+                mem::replace(&mut ins.props, Rc::new(()))
+            };
 
-        let changed = {
-            let ins = self.tree.get_mut(id).unwrap();
-            let changed = ins.measured != measured;
-            ins.component = component;
-            ins.props = props;
-            ins.measured = measured;
-            ins.available = Some(available);
+            let child_ids = &self.scratch.child_ids;
+            let mut measure = |index: usize, child_available: Size| -> Size {
+                if index >= child_count {
+                    return Size::default();
+                }
+                if let Some(size) = measures[index]
+                    && child_available == available
+                {
+                    return size;
+                }
+                let child_id = child_ids[index];
+                if !self.tree.contains(child_id) {
+                    return Size::default();
+                }
+                let size = Self::measure_node(&mut self.tree, child_id, child_available);
+                measures[index] = Some(size);
+                size
+            };
+
+            let measured = {
+                let mut cx = Cx {
+                    node: Some(id),
+                    rect,
+                    actions: None,
+                    global_input: None,
+                    env,
+                };
+                let mut children = MeasureCx::new(&mut measure, child_count, available);
+                component.measure_any(&mut cx, props.as_ref(), available, &mut children)
+            };
+
+            let changed = {
+                let ins = self.tree.get_mut(id).unwrap();
+                let changed = ins.measured != measured;
+                ins.component = component;
+                ins.props = props;
+                ins.measured = measured;
+                ins.available = Some(available);
+                changed
+            };
+            let _ = use_cache;
             changed
-        };
-        changed
+        } else {
+            let mut component = {
+                let ins = self.tree.get_mut(id).unwrap();
+                mem::replace(&mut ins.component, Box::new(Placeholder))
+            };
+            let props = {
+                let ins = self.tree.get_mut(id).unwrap();
+                mem::replace(&mut ins.props, Rc::new(()))
+            };
+
+            let child_ids = &self.scratch.child_ids;
+            let mut measure = |index: usize, child_available: Size| -> Size {
+                if index >= child_count {
+                    return Size::default();
+                }
+                let child_id = child_ids[index];
+                if !self.tree.contains(child_id) {
+                    return Size::default();
+                }
+                Self::measure_node(&mut self.tree, child_id, child_available)
+            };
+
+            let measured = {
+                let mut cx = Cx {
+                    node: Some(id),
+                    rect,
+                    actions: None,
+                    global_input: None,
+                    env,
+                };
+                let mut children = MeasureCx::new(&mut measure, child_count, available);
+                component.measure_any(&mut cx, props.as_ref(), available, &mut children)
+            };
+
+            let changed = {
+                let ins = self.tree.get_mut(id).unwrap();
+                let changed = ins.measured != measured;
+                ins.component = component;
+                ins.props = props;
+                ins.measured = measured;
+                ins.available = Some(available);
+                changed
+            };
+            changed
+        }
     }
 
     fn measure_node(tree: &mut Tree<Instance>, id: NodeId, available: Size) -> Size {
-        let child_ids = tree.children(id).to_vec();
-        let child_count = child_ids.len();
+        let child_count = tree.children(id).len();
 
         if child_count == 0
             && let Some(cached) = tree.get(id).and_then(|ins| ins.available)
@@ -928,7 +1129,7 @@ impl Runtime {
         let env = tree.get(id).unwrap().env.clone();
         let rect = tree.get(id).unwrap().rect;
 
-        let mut measures: Vec<Option<Size>> = vec![None; child_count];
+        let mut measures = (child_count <= 32).then(|| vec![None; child_count]);
 
         let mut component = {
             let ins = tree.get_mut(id).unwrap();
@@ -939,20 +1140,26 @@ impl Runtime {
             mem::replace(&mut ins.props, Rc::new(()))
         };
 
+        let mut child_ids = Vec::new();
+        child_ids.extend_from_slice(tree.children(id));
         let mut measure = |index: usize, child_available: Size| -> Size {
             if index >= child_count {
                 return Size::default();
             }
-            match measures[index] {
-                Some(size) if child_available == available => return size,
-                _ => {}
+            if let Some(measures) = measures.as_ref()
+                && let Some(size) = measures[index]
+                && child_available == available
+            {
+                return size;
             }
             let child_id = child_ids[index];
             if !tree.contains(child_id) {
                 return Size::default();
             }
             let size = Self::measure_node(tree, child_id, child_available);
-            measures[index] = Some(size);
+            if let Some(measures) = measures.as_mut() {
+                measures[index] = Some(size);
+            }
             size
         };
 
@@ -979,61 +1186,115 @@ impl Runtime {
     }
 
     fn apply_layout(&mut self, id: NodeId, rect: Rect, offset: Offset) {
-        let is_dirty = self.layout_dirty.remove(&id);
-        let (old_rect, old_offset) = self
-            .tree
-            .get(id)
-            .map_or((Rect::default(), Offset::ZERO), |ins| {
-                (ins.rect, ins.offset)
-            });
-        let size_changed = old_rect.width != rect.width || old_rect.height != rect.height;
+        self.scratch.layout_pending.clear();
+        self.scratch.layout_pending.push((id, rect, offset));
 
-        if old_rect != rect || old_offset != offset {
-            self.paint_all = true;
-        }
+        while let Some((id, rect, offset)) = self.scratch.layout_pending.pop() {
+            let is_dirty = self.layout_dirty.remove(&id);
+            let (old_rect, old_offset) = self
+                .tree
+                .get(id)
+                .map_or((Rect::default(), Offset::ZERO), |ins| {
+                    (ins.rect, ins.offset)
+                });
+            let size_changed = old_rect.width != rect.width || old_rect.height != rect.height;
 
-        if !is_dirty && !size_changed {
-            let ins = self.tree.get_mut(id).unwrap();
-            ins.rect = rect;
-            ins.offset = offset;
-            return;
-        }
+            if old_rect != rect || old_offset != offset {
+                self.paint_all = true;
+            }
 
-        let child_ids = self.tree.children(id).to_vec();
-        let child_sizes: Vec<Size> = child_ids
-            .iter()
-            .map(|child| {
-                self.tree
-                    .get(*child)
-                    .map_or(Size::default(), |node| node.measured)
-            })
-            .collect();
-        let mut rects = vec![Rect::default(); child_ids.len()];
-        let mut offsets = vec![Offset::ZERO; child_ids.len()];
-        let layouts = {
-            let ins = self.tree.get_mut(id).unwrap();
-            let local = Self::local_rect(rect);
-            let mut cx = Cx {
-                node: Some(id),
-                rect: local,
-                actions: None,
-                global_input: None,
-                env: ins.env.clone(),
-            };
-            let mut children = LayoutCx::new(&child_sizes, &mut rects, &mut offsets);
-            ins.component
-                .layout_any(&mut cx, ins.props.as_ref(), local, &mut children);
-            (children.rects().to_vec(), children.offsets().to_vec())
-        };
-        {
-            let ins = self.tree.get_mut(id).unwrap();
-            ins.rect = rect;
-            ins.offset = offset;
-        }
+            if !is_dirty && !size_changed {
+                let (parent_origin, parent_clip) = match self.tree.parent(id) {
+                    Some(p) => match self.tree.get(p) {
+                        Some(p_ins) => (p_ins.origin, p_ins.clip),
+                        None => (Offset::ZERO, self.rect),
+                    },
+                    None => (Offset::ZERO, self.rect),
+                };
+                let origin = Self::translate(parent_origin, rect, offset);
+                let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
+                    .unwrap_or(Rect::new(0, 0, 0, 0));
+                let ins = self.tree.get_mut(id).unwrap();
+                ins.rect = rect;
+                ins.offset = offset;
+                ins.origin = origin;
+                ins.clip = clip;
+                continue;
+            }
 
-        for ((child, rect), offset) in child_ids.iter().zip(layouts.0).zip(layouts.1) {
-            if self.tree.contains(*child) {
-                self.apply_layout(*child, rect, offset);
+            self.scratch.child_ids.clear();
+            self.scratch
+                .child_ids
+                .extend_from_slice(self.tree.children(id));
+            let child_count = self.scratch.child_ids.len();
+
+            self.scratch.child_sizes.clear();
+            self.scratch
+                .child_sizes
+                .resize(child_count, Size::default());
+            for (i, &child) in self.scratch.child_ids.iter().enumerate() {
+                if let Some(node) = self.tree.get(child) {
+                    self.scratch.child_sizes[i] = node.measured;
+                }
+            }
+
+            self.scratch.rects.clear();
+            self.scratch.rects.resize(child_count, Rect::default());
+            self.scratch.offsets.clear();
+            self.scratch.offsets.resize(child_count, Offset::ZERO);
+
+            {
+                let ins = self.tree.get_mut(id).unwrap();
+                let local = Self::local_rect(rect);
+                let mut cx = Cx {
+                    node: Some(id),
+                    rect: local,
+                    actions: None,
+                    global_input: None,
+                    env: ins.env.clone(),
+                };
+                let mut children = LayoutCx::new(
+                    &self.scratch.child_sizes,
+                    &mut self.scratch.rects,
+                    &mut self.scratch.offsets,
+                );
+                ins.component
+                    .layout_any(&mut cx, ins.props.as_ref(), local, &mut children);
+            }
+
+            let parent_origin = self
+                .tree
+                .parent(id)
+                .and_then(|p| self.tree.get(p))
+                .map_or(Offset::ZERO, |p| p.origin);
+            let parent_clip = self
+                .tree
+                .parent(id)
+                .and_then(|p| self.tree.get(p))
+                .map_or(self.rect, |p| p.clip);
+            let origin = Self::translate(parent_origin, rect, offset);
+            let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
+                .unwrap_or(Rect::new(0, 0, 0, 0));
+
+            {
+                let ins = self.tree.get_mut(id).unwrap();
+                ins.rect = rect;
+                ins.offset = offset;
+                ins.origin = origin;
+                ins.clip = clip;
+            }
+
+            let child_ids = mem::take(&mut self.scratch.child_ids);
+            let rects = mem::take(&mut self.scratch.rects);
+            let offsets = mem::take(&mut self.scratch.offsets);
+            for ((&child, &child_rect), &child_offset) in
+                child_ids.iter().zip(rects.iter()).zip(offsets.iter()).rev()
+            {
+                if self.tree.contains(child) {
+                    self.scratch
+                        .layout_pending
+                        .push((child, child_rect, child_offset));
+                }
             }
         }
     }
@@ -1049,43 +1310,63 @@ impl Runtime {
             return;
         }
         loop {
-            self.paint_dirty.retain(|&n| self.tree.contains(n));
-
-            let Some(id) = self
-                .paint_dirty
-                .iter()
-                .copied()
-                .filter(|&id| self.tree.contains(id))
-                .min_by_key(|&id| self.tree.depth(id))
-            else {
+            self.scratch.paint_dirty.clear();
+            self.scratch.paint_dirty.extend(
+                self.paint_dirty
+                    .drain()
+                    .filter(|&id| self.tree.contains(id)),
+            );
+            if self.scratch.paint_dirty.is_empty() {
                 break;
-            };
-
-            self.tree.visit_subtree(id, |node| {
-                self.paint_dirty.remove(&node);
-            });
-
-            if self.tree.root() == Some(id) {
-                self.back.clear();
             }
-            self.apply_stacked_paint(id);
+
+            self.scratch
+                .paint_dirty
+                .sort_unstable_by_key(|&id| (self.tree.depth(id), id));
+            self.scratch.painted.clear();
+
+            let dirty_count = self.scratch.paint_dirty.len();
+            for i in 0..dirty_count {
+                let id = self.scratch.paint_dirty[i];
+                if !self.tree.contains(id) || self.scratch.painted.contains(&id) {
+                    continue;
+                }
+
+                self.tree.visit_subtree(id, |node| {
+                    self.scratch.painted.insert(node);
+                });
+
+                if self.tree.root() == Some(id) {
+                    self.back.clear();
+                }
+                self.apply_stacked_paint(id);
+            }
+            self.scratch.painted.clear();
         }
     }
 
     fn apply_stacked_paint(&mut self, id: NodeId) {
-        if let Some((origin, clip)) = self.resolve(id) {
-            self.apply_paint(id, origin, clip);
-        }
+        let (origin, clip) = match self.resolve(id) {
+            Some(resolved) => resolved,
+            None => return,
+        };
+        self.apply_paint(id, origin, clip);
 
         let mut current = id;
-        while let Some(parent) = self.tree.parent(current) {
-            let siblings = self.tree.children(parent).to_vec();
-            let Some(index) = siblings.iter().position(|&sibling| sibling == current) else {
-                break;
+        loop {
+            let parent = match self.tree.parent(current) {
+                Some(p) => p,
+                None => break,
             };
-            for sibling in siblings.into_iter().skip(index + 1) {
-                if let Some((origin, clip)) = self.resolve(sibling) {
-                    self.apply_paint(sibling, origin, clip);
+            let siblings = self.tree.children(parent);
+            let index = match siblings.iter().position(|&s| s == current) {
+                Some(i) => i,
+                None => break,
+            };
+            let siblings_after: Vec<NodeId> = siblings[index + 1..].to_vec();
+            for sibling in siblings_after {
+                if let Some((sibling_origin, sibling_clip)) = self.resolve(sibling) {
+                    self.apply_paint(sibling, sibling_origin, sibling_clip);
                 }
             }
             current = parent;
@@ -1093,7 +1374,7 @@ impl Runtime {
     }
 
     fn apply_paint(&mut self, id: NodeId, origin: Offset, clip: Rect) {
-        let children = {
+        {
             let ins = self.tree.get(id).unwrap();
             let mut cx = Cx {
                 node: Some(id),
@@ -1105,21 +1386,28 @@ impl Runtime {
             let mut canvas = Canvas::new(&mut self.back, clip, origin);
             ins.component
                 .paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
-            self.tree.children(id).to_vec()
-        };
+        }
+
+        let children: Vec<NodeId> = self.tree.children(id).to_vec();
         for child in children {
-            if self.tree.contains(child) {
-                let child_ins = self.tree.get(child).unwrap();
-                let child_origin = Self::translate(origin, child_ins.rect, child_ins.offset);
-                let Some(child_clip) = Self::clip(
-                    child_origin,
-                    Size::new(child_ins.rect.width, child_ins.rect.height),
-                    clip,
-                ) else {
-                    continue;
-                };
-                self.apply_paint(child, child_origin, child_clip);
+            if !self.tree.contains(child) {
+                continue;
             }
+            let (child_rect, child_offset, child_w, child_h) = {
+                let child_ins = self.tree.get(child).unwrap();
+                (
+                    child_ins.rect,
+                    child_ins.offset,
+                    child_ins.rect.width,
+                    child_ins.rect.height,
+                )
+            };
+            let child_origin = Self::translate(origin, child_rect, child_offset);
+            let Some(child_clip) = Self::clip(child_origin, Size::new(child_w, child_h), clip)
+            else {
+                continue;
+            };
+            self.apply_paint(child, child_origin, child_clip);
         }
     }
 }

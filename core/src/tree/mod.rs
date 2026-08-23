@@ -100,17 +100,15 @@ impl<T> Tree<T> {
         self.node(id).map(|n| n.children.as_slice()).unwrap_or(&[])
     }
 
-    pub fn set_children(&mut self, parent: NodeId, from: &[NodeId]) {
-        let oldc = mem::replace(
-            &mut self.nodes[parent.index as usize].children,
-            from.to_vec(),
-        );
-        for child in oldc {
-            if !from.contains(&child) {
-                self.nodes[child.index as usize].parent = None;
-            }
+    pub fn set_children(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        if self.nodes[parent.index as usize].children == children {
+            return;
         }
-        for &child in from {
+
+        self.nodes[parent.index as usize].children = children;
+        let child_count = self.nodes[parent.index as usize].children.len();
+        for index in 0..child_count {
+            let child = self.nodes[parent.index as usize].children[index];
             self.nodes[child.index as usize].parent = Some(parent);
         }
     }
@@ -130,14 +128,7 @@ impl<T> Tree<T> {
     }
 
     pub fn depth(&self, id: NodeId) -> usize {
-        let mut depth = 0;
-        let mut current = id;
-        while let Some(parent) = self.parent(current) {
-            depth += 1;
-            current = parent;
-        }
-
-        depth
+        self.node(id).map_or(0, |node| node.depth)
     }
 
     pub fn visit_subtree(&self, id: NodeId, mut f: impl FnMut(NodeId)) {
@@ -181,6 +172,7 @@ impl<T> Tree<T> {
             generation,
             data,
             parent,
+            depth: parent.map_or(0, |parent| self.depth(parent) + 1),
             children: Vec::new(),
         });
 

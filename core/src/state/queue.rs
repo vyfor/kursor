@@ -51,10 +51,7 @@ impl DirtyQueue {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.pending
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .is_empty()
+        self.len() == 0
     }
 }
 

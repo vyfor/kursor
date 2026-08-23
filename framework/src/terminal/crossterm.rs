@@ -132,9 +132,23 @@ impl Terminal for Crossterm {
         changes: &[CellDiff],
         cursor: Option<(u16, u16)>,
     ) -> Result<(), Self::Error> {
+        let mut last_pos: Option<(u16, u16)> = None;
+        let mut last_style: Option<Style> = None;
+
         for change in changes {
-            crossterm::queue!(self.stdout, cursor::MoveTo(change.x, change.y))?;
-            apply_style(&mut self.stdout, change.cell.style)?;
+            let need_move = match last_pos {
+                Some((lx, ly)) => ly != change.y || lx.saturating_add(1) != change.x,
+                None => true,
+            };
+            if need_move {
+                crossterm::queue!(self.stdout, cursor::MoveTo(change.x, change.y))?;
+            }
+            last_pos = Some((change.x, change.y));
+
+            if last_style != Some(change.cell.style) {
+                apply_style(&mut self.stdout, change.cell.style)?;
+                last_style = Some(change.cell.style);
+            }
             crossterm::queue!(self.stdout, Print(change.cell.ch))?;
         }
         if !changes.is_empty() {

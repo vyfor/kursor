@@ -1,41 +1,32 @@
 use std::{
     any::{Any, TypeId},
-    collections::HashMap,
-    hash::{BuildHasherDefault, Hasher},
     rc::Rc,
 };
 
-#[derive(Default)]
-struct TypeIdHasher(u64);
-
-impl Hasher for TypeIdHasher {
-    fn write(&mut self, _bytes: &[u8]) {
-        unreachable!("it's over");
-    }
-
-    fn write_u64(&mut self, id: u64) {
-        self.0 = id;
-    }
-
-    fn finish(&self) -> u64 {
-        self.0
-    }
-}
-
-type TypeMap = HashMap<TypeId, Rc<dyn Any>, BuildHasherDefault<TypeIdHasher>>;
+type Entry = (TypeId, Rc<dyn Any>);
 
 #[derive(Clone, Default)]
 pub struct Environment {
-    values: Rc<TypeMap>,
+    values: Rc<[Entry]>,
 }
 
 impl Environment {
     pub fn get<T: 'static>(&self) -> Option<&T> {
-        self.values.get(&TypeId::of::<T>())?.downcast_ref()
+        let id = TypeId::of::<T>();
+        self.values
+            .iter()
+            .find_map(|(tid, val)| (*tid == id).then(|| val.downcast_ref::<T>().unwrap()))
     }
 
     pub fn set<T: 'static>(&mut self, value: T) {
-        Rc::make_mut(&mut self.values).insert(TypeId::of::<T>(), Rc::new(value));
+        let id = TypeId::of::<T>();
+        let mut existing = self.values.to_vec();
+        if let Some(pos) = existing.iter().position(|(tid, _)| *tid == id) {
+            existing[pos].1 = Rc::new(value);
+        } else {
+            existing.push((id, Rc::new(value)));
+        }
+        self.values = existing.into();
     }
 
     pub fn same(&self, other: &Self) -> bool {

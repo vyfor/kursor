@@ -38,7 +38,11 @@ impl<'a> Canvas<'a> {
 
     pub fn set_str(&mut self, mut x: u16, y: u16, text: &str, style: Style) {
         for ch in text.chars() {
-            let width = ch.width().unwrap_or(0) as u16;
+            let width = if ch.is_ascii() && ch >= ' ' {
+                1
+            } else {
+                ch.width().unwrap_or(0) as u16
+            };
             if width > 0 {
                 self.set(x, y, ch, style);
                 if width == 2 {

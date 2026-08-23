@@ -42,30 +42,32 @@ impl Buffer {
     }
 
     pub fn diff(&self, old: &Buffer) -> Vec<CellDiff> {
-        if self.size() != old.size() {
-            return self
-                .cells
-                .iter()
-                .enumerate()
-                .map(|(i, &cell)| CellDiff {
-                    x: (i as u32 % self.width as u32) as u16,
-                    y: (i as u32 / self.width as u32) as u16,
-                    cell,
-                })
-                .collect();
-        }
+        let mut out = Vec::new();
+        self.diff_into(old, &mut out);
+        out
+    }
 
-        self.cells
-            .iter()
-            .zip(&old.cells)
-            .enumerate()
-            .filter(|(_, (old, new))| new != old)
-            .map(|(i, (&cell, _))| CellDiff {
+    pub fn diff_into(&self, old: &Buffer, out: &mut Vec<CellDiff>) {
+        if self.size() != old.size() {
+            out.clear();
+            out.extend(self.cells.iter().enumerate().map(|(i, &cell)| CellDiff {
                 x: (i as u32 % self.width as u32) as u16,
                 y: (i as u32 / self.width as u32) as u16,
                 cell,
-            })
-            .collect()
+            }));
+            return;
+        }
+
+        out.clear();
+        for (i, (&new, &old_cell)) in self.cells.iter().zip(&old.cells).enumerate() {
+            if new != old_cell {
+                out.push(CellDiff {
+                    x: (i as u32 % self.width as u32) as u16,
+                    y: (i as u32 / self.width as u32) as u16,
+                    cell: new,
+                });
+            }
+        }
     }
 }
 
