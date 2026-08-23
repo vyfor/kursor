@@ -40,4 +40,4 @@ aside from handling events locally, widgets can opt into global input handling w
 
 ### behavior & intents
 
-in most cases, it is a bad idea for any widget to hard-code its event handling. instead, kursor exposes a **behavior** that translates raw input into a semantic **intent**. the component then decides how that intent alters its state.
+it is generally a bad idea for a widget to hard-code the interpretation of its input. instead, kursor exposes a **behavior** that translates raw input into a semantic **intent**. the component then decides how that intent alters its state.
