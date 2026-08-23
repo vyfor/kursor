@@ -620,19 +620,45 @@ impl Runtime {
     fn sync(&mut self, parent: NodeId, blueprints: &[Blueprint]) {
         let oldc = self.tree.children(parent).to_vec();
         let parent_env = self.tree.get(parent).unwrap().env.clone();
+        let mut keyed = HashMap::new();
+        let mut unkeyed = Vec::new();
+
+        for child in oldc.iter().copied() {
+            let key = self.tree.get(child).unwrap().key.clone();
+            if let Some(key) = key {
+                assert!(keyed.insert(key, child).is_none(), "duplicate key");
+            } else {
+                unkeyed.push(child);
+            }
+        }
+
+        let mut next = HashSet::new();
+        for blueprint in blueprints {
+            if let Some(key) = &blueprint.key {
+                assert!(next.insert(key), "duplicate key: {key:?}");
+            }
+        }
+
         let mut used = HashSet::new();
         let mut newc = Vec::new();
+        let mut unkeyed_index = 0;
 
         for bp in blueprints {
-            let m = oldc.iter().copied().find(|&c| {
-                !used.contains(&c)
-                    && self
-                        .tree
-                        .get(c)
-                        .is_some_and(|ins| ins.type_id == bp.type_id)
-            });
+            let m = match &bp.key {
+                Some(key) => keyed.get(key).copied(),
+                None => {
+                    let child = unkeyed.get(unkeyed_index).copied();
+                    unkeyed_index += 1;
+                    child
+                }
+            };
             let child = match m {
-                Some(ch) => {
+                Some(ch)
+                    if self
+                        .tree
+                        .get(ch)
+                        .is_some_and(|ins| ins.type_id == bp.type_id) =>
+                {
                     used.insert(ch);
                     let (should_update, env_changed, children_changed) = {
                         let ins = self.tree.get_mut(ch).unwrap();
@@ -643,6 +669,7 @@ impl Runtime {
                         let children_changed = !Rc::ptr_eq(&ins.children, &bp.children);
 
                         ins.props = bp.props.clone();
+                        ins.key = bp.key.clone();
                         ins.inherited = parent_env.clone();
                         if children_changed {
                             ins.children = bp.children.clone();
@@ -662,6 +689,7 @@ impl Runtime {
 
                     ch
                 }
+                Some(_) => self.do_create(bp.clone(), Some(parent)),
                 None => self.do_create(bp.clone(), Some(parent)),
             };
             newc.push(child);
@@ -769,6 +797,7 @@ impl Runtime {
         );
 
         let ins = Instance {
+            key: bp.key,
             component,
             props: bp.props,
             children: bp.children,

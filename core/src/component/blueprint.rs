@@ -3,9 +3,10 @@ use std::{
     rc::Rc,
 };
 
-use crate::component::{AnyComponent, Component, context::Cx};
+use crate::component::{AnyComponent, Component, context::Cx, key::Key};
 
 pub struct Blueprint {
+    pub key: Option<Key>,
     pub type_id: TypeId,
     pub props: Rc<dyn Any>,
     pub children: Rc<[Blueprint]>,
@@ -19,11 +20,17 @@ impl Blueprint {
             Box::new(C::create(cx, props))
         }
         Self {
+            key: None,
             type_id: TypeId::of::<C>(),
             props: Rc::new(props),
             children: Rc::from([]),
             create: create::<C>,
         }
+    }
+
+    pub fn key(mut self, key: impl Into<Key>) -> Self {
+        self.key = Some(key.into());
+        self
     }
 
     pub fn child(mut self, child: impl IntoBlueprint) -> Self {
@@ -42,6 +49,7 @@ impl Blueprint {
 impl Clone for Blueprint {
     fn clone(&self) -> Self {
         Self {
+            key: self.key.clone(),
             type_id: self.type_id,
             props: self.props.clone(),
             children: self.children.clone(),

@@ -4,11 +4,12 @@ use std::{
 };
 
 use crate::{
-    component::{AnyComponent, blueprint::Blueprint, environment::Environment},
+    component::{AnyComponent, blueprint::Blueprint, environment::Environment, key::Key},
     layout::{offset::Offset, rect::Rect, size::Size},
 };
 
 pub struct Instance {
+    pub key: Option<Key>,
     pub component: Box<dyn AnyComponent>,
     pub props: Rc<dyn Any>,
     pub children: Rc<[Blueprint]>,
