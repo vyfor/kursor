@@ -27,7 +27,7 @@ use crate::{
     },
     render::{buffer::Buffer, buffer::CellDiff, canvas::Canvas},
     runtime::instance::Instance,
-    state::{deps, id::AtomId, queue::dirty_queue, scope},
+    state::{deps, id::AtomId, memo, queue::dirty_queue, scope},
     tree::{Tree, id::NodeId},
 };
 
@@ -556,12 +556,29 @@ impl Runtime {
     }
 
     fn do_update(&mut self) {
-        for atom_id in dirty_queue().drain() {
+        let dirty_atoms = dirty_queue().drain();
+        for &atom_id in &dirty_atoms {
             if let Some(nodes) = self.deps.get(&atom_id) {
                 for &node in nodes {
                     self.update_dirty.insert(node);
                 }
             }
+        }
+
+        let mut sources = dirty_atoms;
+        while !sources.is_empty() {
+            let changed = memo::refresh_dependents(&sources);
+            if changed.is_empty() {
+                break;
+            }
+            for &memo_id in &changed {
+                if let Some(nodes) = self.deps.get(&memo_id) {
+                    for &node in nodes {
+                        self.update_dirty.insert(node);
+                    }
+                }
+            }
+            sources = changed;
         }
 
         loop {

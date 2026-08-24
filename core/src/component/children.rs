@@ -39,6 +39,18 @@ impl Children {
         self.replacement = Some(Vec::new());
     }
 
+    pub fn memo<T>(&mut self, key: u64, build: impl FnOnce() -> T)
+    where
+        T: IntoBlueprint,
+    {
+        if self.rev == Some(key) {
+            self.hit = true;
+            return;
+        }
+        self.rev = Some(key);
+        self.replacement = Some(build().into_blueprint());
+    }
+
     pub(crate) fn finish(self) -> (Option<Vec<Blueprint>>, Option<u64>, bool) {
         (self.replacement, self.rev, self.hit)
     }
