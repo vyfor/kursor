@@ -13,14 +13,17 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
+    state::{IntoValue, Value},
 };
 
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct PaddingProps {
-    pub insets: Insets,
+    pub insets: Value<Insets>,
 }
 
-pub struct Padding;
+pub struct Padding {
+    insets: Insets,
+}
 
 impl Padding {
     pub fn builder(child: impl IntoBlueprint) -> PaddingBuilder {
@@ -59,8 +62,11 @@ impl Padding {
         Self::new(Insets::right(value), child)
     }
 
-    pub fn new(insets: Insets, child: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(PaddingProps { insets }).child(child)
+    pub fn new(insets: impl IntoValue<Insets>, child: impl IntoBlueprint) -> Blueprint {
+        Blueprint::new::<Self>(PaddingProps {
+            insets: insets.into_value(),
+        })
+        .child(child)
     }
 }
 
@@ -68,17 +74,23 @@ impl Component for Padding {
     type Props = PaddingProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self {
+            insets: Insets::default(),
+        }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.insets = props.insets.get();
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
@@ -86,8 +98,8 @@ impl Component for Padding {
             return Size::default();
         }
 
-        let horizontal = props.insets.width();
-        let vertical = props.insets.height();
+        let horizontal = self.insets.width();
+        let vertical = self.insets.height();
 
         let child_available = Size::new(
             available.width.saturating_sub(horizontal),
@@ -107,12 +119,12 @@ impl Component for Padding {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
         if children.is_empty() {
             return;
         }
 
-        let insets = props.insets;
+        let insets = self.insets;
         let horizontal = insets.width();
         let vertical = insets.height();
 

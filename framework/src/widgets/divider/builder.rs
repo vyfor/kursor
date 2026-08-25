@@ -2,6 +2,7 @@ use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
     layout::Orientation,
     render::style::Style,
+    state::IntoValue,
 };
 
 use super::{Divider, DividerProps};
@@ -17,18 +18,18 @@ impl DividerBuilder {
         }
     }
 
-    pub fn orientation(mut self, orientation: Orientation) -> Self {
-        self.props.orientation = orientation;
+    pub fn orientation(mut self, orientation: impl IntoValue<Orientation>) -> Self {
+        self.props.orientation = orientation.into_value();
         self
     }
 
-    pub fn glyph(mut self, glyph: char) -> Self {
-        self.props.glyph = glyph;
+    pub fn glyph(mut self, glyph: impl IntoValue<char>) -> Self {
+        self.props.glyph = glyph.into_value();
         self
     }
 
     pub fn style(mut self, style: Style) -> Self {
-        self.props.style = Some(style);
+        self.props.style = Some(style).into_value();
         self
     }
 }

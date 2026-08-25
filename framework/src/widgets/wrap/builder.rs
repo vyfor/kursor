@@ -1,4 +1,7 @@
-use kursor_core::component::blueprint::{Blueprint, IntoBlueprint};
+use kursor_core::{
+    component::blueprint::{Blueprint, IntoBlueprint},
+    state::IntoValue,
+};
 
 use super::{Wrap, WrapProps};
 
@@ -15,13 +18,13 @@ impl WrapBuilder {
         }
     }
 
-    pub fn gap(mut self, gap: u16) -> Self {
-        self.props.gap = gap;
+    pub fn gap(mut self, gap: impl IntoValue<u16>) -> Self {
+        self.props.gap = gap.into_value();
         self
     }
 
-    pub fn line_gap(mut self, gap: u16) -> Self {
-        self.props.line_gap = gap;
+    pub fn line_gap(mut self, gap: impl IntoValue<u16>) -> Self {
+        self.props.line_gap = gap.into_value();
         self
     }
 }

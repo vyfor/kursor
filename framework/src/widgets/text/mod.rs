@@ -5,36 +5,41 @@ use kursor_core::{
     component::{Children, Component, blueprint::Blueprint, context::Cx},
     layout::{WrapMode, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
+    state::value::{IntoValue, Value},
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 #[derive(Clone, PartialEq)]
 pub struct TextProps {
-    pub text: String,
-    pub style: Option<Style>,
-    pub wrap: WrapMode,
+    pub text: Value<String>,
+    pub style: Value<Option<Style>>,
+    pub wrap: Value<WrapMode>,
 }
 
-pub struct Text;
+pub struct Text {
+    text: String,
+    style: Option<Style>,
+    wrap: WrapMode,
+}
 
 impl Text {
-    pub fn builder(text: impl Into<String>) -> TextBuilder {
+    pub fn builder(text: impl IntoValue<String>) -> TextBuilder {
         TextBuilder::new(text)
     }
 
-    pub fn new(text: impl Into<String>) -> Blueprint {
+    pub fn new(text: impl IntoValue<String>) -> Blueprint {
         Self::with(TextProps {
-            text: text.into(),
-            style: None,
-            wrap: WrapMode::None,
+            text: text.into_value(),
+            style: Value::plain(None),
+            wrap: Value::plain(WrapMode::None),
         })
     }
 
-    pub fn styled(text: impl Into<String>, style: Style) -> Blueprint {
+    pub fn styled(text: impl IntoValue<String>, style: Style) -> Blueprint {
         Self::with(TextProps {
-            text: text.into(),
-            style: Some(style),
-            wrap: WrapMode::None,
+            text: text.into_value(),
+            style: Value::plain(Some(style)),
+            wrap: Value::plain(WrapMode::None),
         })
     }
 
@@ -122,25 +127,31 @@ impl Component for Text {
     type Props = TextProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self {
+            text: String::new(),
+            style: None,
+            wrap: WrapMode::None,
+        }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, _props: &Self::Props, children: &mut Children) {
-        children.clear();
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut Children) {
+        self.text = props.text.get();
+        self.style = props.style.get();
+        self.wrap = props.wrap.get();
     }
 
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         _children: &mut MeasureCx,
     ) -> Size {
-        let lines = wrapped_lines(&props.text, props.wrap, available.width);
+        let lines = wrapped_lines(&self.text, self.wrap, available.width);
         let width = lines
             .iter()
             .map(|line| UnicodeWidthStr::width(*line))
@@ -154,9 +165,9 @@ impl Component for Text {
         )
     }
 
-    fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
-        let style = props.style.unwrap_or(cx.theme().text);
-        let lines = wrapped_lines(&props.text, props.wrap, cx.rect.width);
+    fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
+        let style = self.style.unwrap_or(cx.theme().text);
+        let lines = wrapped_lines(&self.text, self.wrap, cx.rect.width);
         for (row, line) in lines.iter().enumerate() {
             let y = cx.rect.y.saturating_add(row as u16);
             if y >= cx.rect.bottom() {

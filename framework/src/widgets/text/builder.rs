@@ -2,6 +2,7 @@ use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
     layout::WrapMode,
     render::style::Style,
+    state::value::{IntoValue, Value},
 };
 
 use super::{Text, TextProps};
@@ -11,23 +12,23 @@ pub struct TextBuilder {
 }
 
 impl TextBuilder {
-    pub(crate) fn new(text: impl Into<String>) -> Self {
+    pub(crate) fn new(text: impl IntoValue<String>) -> Self {
         Self {
             props: TextProps {
-                text: text.into(),
-                style: None,
-                wrap: WrapMode::None,
+                text: text.into_value(),
+                style: Value::plain(None),
+                wrap: Value::plain(WrapMode::None),
             },
         }
     }
 
     pub fn style(mut self, style: Style) -> Self {
-        self.props.style = Some(style);
+        self.props.style = Value::plain(Some(style));
         self
     }
 
-    pub fn wrap(mut self, mode: WrapMode) -> Self {
-        self.props.wrap = mode;
+    pub fn wrap(mut self, mode: impl IntoValue<WrapMode>) -> Self {
+        self.props.wrap = mode.into_value();
         self
     }
 }

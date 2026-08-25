@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
-use kursor_core::component::{
-    behavior::{Behavior, BehaviorBuilder},
-    blueprint::{Blueprint, IntoBlueprint},
-    context::Cx,
+use kursor_core::{
+    component::{
+        behavior::{Behavior, BehaviorBuilder},
+        blueprint::{Blueprint, IntoBlueprint},
+        context::Cx,
+    },
+    state::IntoValue,
 };
 
 use super::{Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles};
@@ -13,29 +16,29 @@ pub struct ButtonBuilder {
 }
 
 impl ButtonBuilder {
-    pub(crate) fn new(label: impl Into<String>) -> Self {
+    pub(crate) fn new(label: impl IntoValue<String>) -> Self {
         Self {
             props: ButtonProps::new(label, |_| {}),
         }
     }
 
-    pub fn label(mut self, label: impl Into<String>) -> Self {
-        self.props.label = label.into();
+    pub fn label(mut self, label: impl IntoValue<String>) -> Self {
+        self.props.label = label.into_value();
         self
     }
 
-    pub fn border(mut self, border: Border) -> Self {
-        self.props.border = border;
+    pub fn border(mut self, border: impl IntoValue<Border>) -> Self {
+        self.props.border = border.into_value();
         self
     }
 
-    pub fn styles(mut self, styles: ButtonStyles) -> Self {
-        self.props.styles = styles;
+    pub fn styles(mut self, styles: impl IntoValue<ButtonStyles>) -> Self {
+        self.props.styles = styles.into_value();
         self
     }
 
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.props.disabled = disabled;
+    pub fn disabled(mut self, disabled: impl IntoValue<bool>) -> Self {
+        self.props.disabled = disabled.into_value();
         self
     }
 

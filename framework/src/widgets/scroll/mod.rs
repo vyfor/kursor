@@ -17,6 +17,7 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
+    state::Value,
 };
 
 pub struct ScrollState {
@@ -82,12 +83,13 @@ impl Behavior for WheelScroll {
 
 #[derive(Clone)]
 pub struct ScrollProps {
-    pub direction: ScrollDirection,
+    pub direction: Value<ScrollDirection>,
     pub behavior: Arc<dyn Behavior<State = ScrollState, Intent = ScrollIntent>>,
 }
 
 pub struct Scroll {
     state: ScrollState,
+    direction: ScrollDirection,
 }
 
 impl Scroll {
@@ -102,7 +104,7 @@ impl Scroll {
     pub fn vertical(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             ScrollProps {
-                direction: ScrollDirection::Vertical,
+                direction: Value::plain(ScrollDirection::Vertical),
                 behavior: Arc::new(WheelScroll::default()),
             },
             child,
@@ -112,7 +114,7 @@ impl Scroll {
     pub fn horizontal(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             ScrollProps {
-                direction: ScrollDirection::Horizontal,
+                direction: Value::plain(ScrollDirection::Horizontal),
                 behavior: Arc::new(WheelScroll::default()),
             },
             child,
@@ -122,7 +124,7 @@ impl Scroll {
     pub fn both(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             ScrollProps {
-                direction: ScrollDirection::Both,
+                direction: Value::plain(ScrollDirection::Both),
                 behavior: Arc::new(WheelScroll::default()),
             },
             child,
@@ -172,6 +174,7 @@ impl Component for Scroll {
                 content_width: 0,
                 content_height: 0,
             },
+            direction: ScrollDirection::Vertical,
         }
     }
 
@@ -186,17 +189,21 @@ impl Component for Scroll {
         old.direction != new.direction || !Arc::ptr_eq(&old.behavior, &new.behavior)
     }
 
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.direction = props.direction.get();
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
         if children.is_empty() {
             return Size::default();
         }
-        let child_available = match props.direction {
+        let child_available = match self.direction {
             ScrollDirection::Vertical => Size::new(available.width, u16::MAX),
             ScrollDirection::Horizontal => Size::new(u16::MAX, available.height),
             ScrollDirection::Both => Size::new(u16::MAX, u16::MAX),
@@ -207,13 +214,13 @@ impl Component for Scroll {
         available
     }
 
-    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
         if children.is_empty() {
             return;
         }
         let max_x = self.state.content_width.saturating_sub(area.width);
         let max_y = self.state.content_height.saturating_sub(area.height);
-        match props.direction {
+        match self.direction {
             ScrollDirection::Vertical => {
                 self.state.offset_y = self.state.offset_y.min(max_y);
                 self.state.offset_x = 0;
@@ -255,7 +262,7 @@ impl Component for Scroll {
             return EventResult::Ignored;
         };
         let viewport = Size::new(cx.rect.width, cx.rect.height);
-        if self.apply(intent, props.direction, viewport) {
+        if self.apply(intent, self.direction, viewport) {
             EventResult::Consumed
         } else {
             EventResult::Ignored

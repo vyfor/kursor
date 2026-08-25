@@ -1,18 +1,23 @@
-use kursor_core::component::blueprint::{Blueprint, IntoBlueprint};
+use kursor_core::{
+    component::blueprint::{Blueprint, IntoBlueprint},
+    state::{IntoValue, Value},
+};
 
 use super::{Spacer, SpacerProps};
 
 pub struct SpacerBuilder {
-    size: u16,
+    size: Value<u16>,
 }
 
 impl SpacerBuilder {
     pub(crate) fn new() -> Self {
-        Self { size: 0 }
+        Self {
+            size: Value::plain(0),
+        }
     }
 
-    pub fn size(mut self, size: u16) -> Self {
-        self.size = size;
+    pub fn size(mut self, size: impl IntoValue<u16>) -> Self {
+        self.size = size.into_value();
         self
     }
 }

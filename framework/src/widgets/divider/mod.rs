@@ -5,26 +5,31 @@ use kursor_core::{
     component::{Children, Component, blueprint::Blueprint, context::Cx},
     layout::{Orientation, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
+    state::Value,
 };
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct DividerProps {
-    pub orientation: Orientation,
-    pub style: Option<Style>,
-    pub glyph: char,
+    pub orientation: Value<Orientation>,
+    pub style: Value<Option<Style>>,
+    pub glyph: Value<char>,
 }
 
 impl Default for DividerProps {
     fn default() -> Self {
         Self {
-            orientation: Orientation::Horizontal,
-            style: None,
-            glyph: '─',
+            orientation: Value::plain(Orientation::Horizontal),
+            style: Value::plain(None),
+            glyph: Value::plain('─'),
         }
     }
 }
 
-pub struct Divider;
+pub struct Divider {
+    orientation: Orientation,
+    style: Option<Style>,
+    glyph: char,
+}
 
 impl Divider {
     pub fn builder() -> DividerBuilder {
@@ -41,8 +46,8 @@ impl Divider {
 
     pub fn vertical() -> Blueprint {
         Self::with(DividerProps {
-            orientation: Orientation::Vertical,
-            glyph: '│',
+            orientation: Value::plain(Orientation::Vertical),
+            glyph: Value::plain('│'),
             ..DividerProps::default()
         })
     }
@@ -56,46 +61,53 @@ impl Component for Divider {
     type Props = DividerProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self {
+            orientation: Orientation::Horizontal,
+            style: None,
+            glyph: '─',
+        }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, _props: &Self::Props, children: &mut Children) {
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, children: &mut Children) {
+        self.orientation = props.orientation.get();
+        self.style = props.style.get();
+        self.glyph = props.glyph.get();
         children.clear();
     }
 
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         _children: &mut MeasureCx,
     ) -> Size {
-        match props.orientation {
+        match self.orientation {
             Orientation::Horizontal => Size::new(available.width, available.height.min(1)),
             Orientation::Vertical => Size::new(available.width.min(1), available.height),
         }
     }
 
-    fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
+    fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
         let rect = cx.rect;
         if rect.width == 0 || rect.height == 0 {
             return;
         }
 
-        let style = props.style.unwrap_or(cx.theme().surface);
-        match props.orientation {
+        let style = self.style.unwrap_or(cx.theme().surface);
+        match self.orientation {
             Orientation::Horizontal => {
                 for x in rect.left()..rect.right() {
-                    canvas.set(x, rect.top(), props.glyph, style);
+                    canvas.set(x, rect.top(), self.glyph, style);
                 }
             }
             Orientation::Vertical => {
                 for y in rect.top()..rect.bottom() {
-                    canvas.set(rect.left(), y, props.glyph, style);
+                    canvas.set(rect.left(), y, self.glyph, style);
                 }
             }
         }

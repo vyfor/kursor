@@ -12,96 +12,52 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
+    state::{IntoValue, Value},
 };
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct ConstraintProps {
-    pub min_width: Option<u16>,
-    pub max_width: Option<u16>,
-    pub min_height: Option<u16>,
-    pub max_height: Option<u16>,
+    pub min_width: Option<Value<u16>>,
+    pub max_width: Option<Value<u16>>,
+    pub min_height: Option<Value<u16>>,
+    pub max_height: Option<Value<u16>>,
 }
 
-pub struct Constraint;
+pub struct Constraint {
+    min_width: Option<u16>,
+    max_width: Option<u16>,
+    min_height: Option<u16>,
+    max_height: Option<u16>,
+}
 
 impl Constraint {
     pub fn builder(child: impl IntoBlueprint) -> ConstraintBuilder {
         ConstraintBuilder::new(child)
     }
 
-    pub fn exact(width: u16, height: u16, child: impl IntoBlueprint) -> Blueprint {
+    pub fn exact(
+        width: impl IntoValue<u16>,
+        height: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
+        let width = width.into_value();
+        let height = height.into_value();
         Self::with(
             ConstraintProps {
-                min_width: Some(width),
+                min_width: Some(width.clone()),
                 max_width: Some(width),
-                min_height: Some(height),
+                min_height: Some(height.clone()),
                 max_height: Some(height),
             },
             child,
         )
     }
 
-    pub fn width(width: u16, child: impl IntoBlueprint) -> Blueprint {
+    pub fn width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+        let width = width.into_value();
         Self::with(
             ConstraintProps {
-                min_width: Some(width),
-                max_width: Some(width),
-                ..Default::default()
-            },
-            child,
-        )
-    }
-
-    pub fn height(height: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ConstraintProps {
-                min_height: Some(height),
-                max_height: Some(height),
-                ..Default::default()
-            },
-            child,
-        )
-    }
-
-    pub fn square(size: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::exact(size, size, child)
-    }
-
-    pub fn min(width: u16, height: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ConstraintProps {
-                min_width: Some(width),
-                min_height: Some(height),
-                ..Default::default()
-            },
-            child,
-        )
-    }
-
-    pub fn max(width: u16, height: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ConstraintProps {
-                max_width: Some(width),
-                max_height: Some(height),
-                ..Default::default()
-            },
-            child,
-        )
-    }
-
-    pub fn min_width(width: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ConstraintProps {
-                min_width: Some(width),
-                ..Default::default()
-            },
-            child,
-        )
-    }
-
-    pub fn max_width(width: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ConstraintProps {
+                min_width: Some(width.clone()),
                 max_width: Some(width),
                 ..Default::default()
             },
@@ -109,20 +65,87 @@ impl Constraint {
         )
     }
 
-    pub fn min_height(height: u16, child: impl IntoBlueprint) -> Blueprint {
+    pub fn height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+        let height = height.into_value();
         Self::with(
             ConstraintProps {
-                min_height: Some(height),
+                min_height: Some(height.clone()),
+                max_height: Some(height),
                 ..Default::default()
             },
             child,
         )
     }
 
-    pub fn max_height(height: u16, child: impl IntoBlueprint) -> Blueprint {
+    pub fn square(size: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+        let size = size.into_value();
+        Self::exact(size.clone(), size, child)
+    }
+
+    pub fn min(
+        width: impl IntoValue<u16>,
+        height: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Self::with(
             ConstraintProps {
-                max_height: Some(height),
+                min_width: Some(width.into_value()),
+                min_height: Some(height.into_value()),
+                ..Default::default()
+            },
+            child,
+        )
+    }
+
+    pub fn max(
+        width: impl IntoValue<u16>,
+        height: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
+        Self::with(
+            ConstraintProps {
+                max_width: Some(width.into_value()),
+                max_height: Some(height.into_value()),
+                ..Default::default()
+            },
+            child,
+        )
+    }
+
+    pub fn min_width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+        Self::with(
+            ConstraintProps {
+                min_width: Some(width.into_value()),
+                ..Default::default()
+            },
+            child,
+        )
+    }
+
+    pub fn max_width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+        Self::with(
+            ConstraintProps {
+                max_width: Some(width.into_value()),
+                ..Default::default()
+            },
+            child,
+        )
+    }
+
+    pub fn min_height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+        Self::with(
+            ConstraintProps {
+                min_height: Some(height.into_value()),
+                ..Default::default()
+            },
+            child,
+        )
+    }
+
+    pub fn max_height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+        Self::with(
+            ConstraintProps {
+                max_height: Some(height.into_value()),
                 ..Default::default()
             },
             child,
@@ -138,24 +161,36 @@ impl Component for Constraint {
     type Props = ConstraintProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self {
+            min_width: None,
+            max_width: None,
+            min_height: None,
+            max_height: None,
+        }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.min_width = props.min_width.as_ref().map(Value::get);
+        self.max_width = props.max_width.as_ref().map(Value::get);
+        self.min_height = props.min_height.as_ref().map(Value::get);
+        self.max_height = props.max_height.as_ref().map(Value::get);
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
-        let child_avail_width = props
+        let child_avail_width = self
             .max_width
             .map_or(available.width, |m| m.min(available.width));
-        let child_avail_height = props
+        let child_avail_height = self
             .max_height
             .map_or(available.height, |m| m.min(available.height));
 
@@ -166,18 +201,18 @@ impl Component for Constraint {
         };
 
         let mut width = child_size.width;
-        if let Some(min) = props.min_width {
+        if let Some(min) = self.min_width {
             width = width.max(min);
         }
-        if let Some(max) = props.max_width {
+        if let Some(max) = self.max_width {
             width = width.min(max);
         }
 
         let mut height = child_size.height;
-        if let Some(min) = props.min_height {
+        if let Some(min) = self.min_height {
             height = height.max(min);
         }
-        if let Some(max) = props.max_height {
+        if let Some(max) = self.max_height {
             height = height.min(max);
         }
 

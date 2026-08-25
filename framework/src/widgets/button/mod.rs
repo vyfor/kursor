@@ -17,6 +17,7 @@ use kursor_core::{
     },
     layout::{context::MeasureCx, size::Size},
     render::style::Style,
+    state::{IntoValue, Value},
     theme::Theme,
 };
 
@@ -42,6 +43,8 @@ pub struct ButtonStyles {
     pub pressed: Option<Style>,
     pub disabled: Option<Style>,
 }
+
+kursor_core::into_value!(ButtonStyles);
 
 impl PartialEq for ButtonStyles {
     fn eq(&self, other: &Self) -> bool {
@@ -82,21 +85,21 @@ impl Behavior for ButtonBehavior {
 
 #[derive(Clone)]
 pub struct ButtonProps {
-    pub label: String,
-    pub border: Border,
-    pub styles: ButtonStyles,
-    pub disabled: bool,
+    pub label: Value<String>,
+    pub border: Value<Border>,
+    pub styles: Value<ButtonStyles>,
+    pub disabled: Value<bool>,
     pub behavior: Arc<dyn Behavior<State = ButtonState, Intent = ButtonIntent>>,
     pub on_press: Arc<dyn Fn(&mut Cx)>,
 }
 
 impl ButtonProps {
-    pub fn new(label: impl Into<String>, on_press: impl Fn(&mut Cx) + 'static) -> Self {
+    pub fn new(label: impl IntoValue<String>, on_press: impl Fn(&mut Cx) + 'static) -> Self {
         Self {
-            label: label.into(),
-            border: Border::Rounded,
-            styles: ButtonStyles::default(),
-            disabled: false,
+            label: label.into_value(),
+            border: Value::plain(Border::Rounded),
+            styles: Value::plain(ButtonStyles::default()),
+            disabled: Value::plain(false),
             behavior: Arc::new(ButtonBehavior),
             on_press: Arc::new(on_press),
         }
@@ -105,14 +108,18 @@ impl ButtonProps {
 
 pub struct Button {
     state: ButtonState,
+    label: String,
+    border: Border,
+    styles: ButtonStyles,
+    disabled: bool,
 }
 
 impl Button {
-    pub fn builder(label: impl Into<String>) -> ButtonBuilder {
+    pub fn builder(label: impl IntoValue<String>) -> ButtonBuilder {
         ButtonBuilder::new(label)
     }
 
-    pub fn new(label: impl Into<String>, on_press: impl Fn(&mut Cx) + 'static) -> Blueprint {
+    pub fn new(label: impl IntoValue<String>, on_press: impl Fn(&mut Cx) + 'static) -> Blueprint {
         Self::with(ButtonProps::new(label, on_press))
     }
 
@@ -120,20 +127,20 @@ impl Button {
         Blueprint::new::<Self>(props)
     }
 
-    fn style(&self, props: &ButtonProps, theme: Theme) -> Style {
-        if props.disabled {
-            return props.styles.disabled.unwrap_or(theme.disabled);
+    fn style(&self, theme: Theme) -> Style {
+        if self.disabled {
+            return self.styles.disabled.unwrap_or(theme.disabled);
         }
         if self.state.pressed {
-            return props.styles.pressed.unwrap_or(theme.focus);
+            return self.styles.pressed.unwrap_or(theme.focus);
         }
         if self.state.focused {
-            return props.styles.focused.unwrap_or(theme.focus);
+            return self.styles.focused.unwrap_or(theme.focus);
         }
         if self.state.hovered {
-            return props.styles.hovered.unwrap_or(theme.primary);
+            return self.styles.hovered.unwrap_or(theme.primary);
         }
-        props.styles.normal.unwrap_or(theme.surface)
+        self.styles.normal.unwrap_or(theme.surface)
     }
 }
 
@@ -143,6 +150,10 @@ impl Component for Button {
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self {
             state: ButtonState::default(),
+            label: String::new(),
+            border: Border::Rounded,
+            styles: ButtonStyles::default(),
+            disabled: false,
         }
     }
 
@@ -155,9 +166,9 @@ impl Component for Button {
             || !Arc::ptr_eq(&old.on_press, &new.on_press)
     }
 
-    fn focus(&self, props: &Self::Props) -> Focus {
+    fn focus(&self, _props: &Self::Props) -> Focus {
         Focus {
-            focusable: !props.disabled,
+            focusable: !self.disabled,
             trap: false,
         }
     }
@@ -180,14 +191,18 @@ impl Component for Button {
     }
 
     fn build(&mut self, cx: &mut Cx, props: &Self::Props, children: &mut Children) {
+        self.label = props.label.get();
+        self.border = props.border.get();
+        self.styles = props.styles.get();
+        self.disabled = props.disabled.get();
         let theme = *cx.theme();
-        let style = self.style(props, theme);
+        let style = self.style(theme);
         children.replace(Block::with(
             BlockProps {
-                border: props.border,
-                style: Some(style),
+                border: Value::plain(self.border),
+                style: kursor_core::state::Value::plain(Some(style)),
             },
-            Text::styled(props.label.clone(), style),
+            Text::styled(self.label.clone(), style),
         ));
     }
 
@@ -198,7 +213,7 @@ impl Component for Button {
         event: &Event,
         phase: Phase,
     ) -> EventResult {
-        if props.disabled {
+        if self.disabled {
             return EventResult::Ignored;
         }
 

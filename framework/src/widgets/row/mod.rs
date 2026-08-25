@@ -12,14 +12,25 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
+    state::{IntoValue, Value},
 };
 
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct RowProps {
-    pub gap: u16,
+    pub gap: Value<u16>,
 }
 
-pub struct Row;
+impl Default for RowProps {
+    fn default() -> Self {
+        Self {
+            gap: Value::plain(0),
+        }
+    }
+}
+
+pub struct Row {
+    gap: u16,
+}
 
 impl Row {
     pub fn builder(children: impl IntoBlueprint) -> RowBuilder {
@@ -30,8 +41,11 @@ impl Row {
         Self::spaced(0, children)
     }
 
-    pub fn spaced(gap: u16, children: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(RowProps { gap }).children(children)
+    pub fn spaced(gap: impl IntoValue<u16>, children: impl IntoBlueprint) -> Blueprint {
+        Blueprint::new::<Self>(RowProps {
+            gap: gap.into_value(),
+        })
+        .children(children)
     }
 }
 
@@ -39,17 +53,21 @@ impl Component for Row {
     type Props = RowProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self { gap: 0 }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.gap = props.gap.get();
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
@@ -58,7 +76,7 @@ impl Component for Row {
             return Size::default();
         }
 
-        let gaps = usize::from(props.gap).saturating_mul(count.saturating_sub(1));
+        let gaps = usize::from(self.gap).saturating_mul(count.saturating_sub(1));
         let sizes: Vec<Size> = (0..count).map(|index| children.size(index)).collect();
         let width = sizes
             .iter()
@@ -76,15 +94,14 @@ impl Component for Row {
         Size::new(width, height)
     }
 
-    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
         let mut x = area.x;
         for index in 0..children.len() {
             let size = children.size(index);
             let width = size.width.min(area.right().saturating_sub(x));
             children.set(index, Rect::new(x, area.y, width, area.height));
             x = x.saturating_add(width).saturating_add(
-                props
-                    .gap
+                self.gap
                     .min(area.right().saturating_sub(x.saturating_add(width))),
             );
         }

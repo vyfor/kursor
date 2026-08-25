@@ -1,42 +1,53 @@
 use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
     layout::Insets,
+    state::{IntoValue, Value},
 };
 
 use super::{Padding, PaddingProps};
 
 pub struct PaddingBuilder {
-    insets: Insets,
+    insets: Value<Insets>,
     children: Vec<Blueprint>,
 }
 
 impl PaddingBuilder {
     pub(crate) fn new(child: impl IntoBlueprint) -> Self {
         Self {
-            insets: Insets::default(),
+            insets: Value::plain(Insets::default()),
             children: child.into_blueprint(),
         }
     }
 
-    pub fn insets(mut self, insets: Insets) -> Self {
-        self.insets = insets;
+    pub fn insets(mut self, insets: impl IntoValue<Insets>) -> Self {
+        self.insets = insets.into_value();
         self
     }
 
     pub fn all(mut self, value: u16) -> Self {
-        self.insets = Insets::all(value);
+        self.insets = Value::plain(Insets::all(value));
         self
     }
 
     pub fn horizontal(mut self, value: u16) -> Self {
-        self.insets.left = value;
-        self.insets.right = value;
+        let mut insets = match self.insets {
+            Value::Plain(insets) => insets,
+            _ => Insets::default(),
+        };
+        insets.left = value;
+        insets.right = value;
+        self.insets = Value::plain(insets);
         self
     }
 
     pub fn vertical(mut self, value: u16) -> Self {
-        self.insets.top = value;
-        self.insets.bottom = value;
+        let mut insets = match self.insets {
+            Value::Plain(insets) => insets,
+            _ => Insets::default(),
+        };
+        insets.top = value;
+        insets.bottom = value;
+        self.insets = Value::plain(insets);
         self
     }
 }

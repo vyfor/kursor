@@ -13,6 +13,7 @@ use kursor_core::{
         size::Size,
     },
     render::{canvas::Canvas, style::Style},
+    state::Value,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -64,13 +65,27 @@ pub enum Border {
     Custom(BorderChars),
 }
 
-#[derive(Clone, Default, PartialEq, Eq)]
+crate::core::into_value!(Border);
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct BlockProps {
-    pub border: Border,
-    pub style: Option<Style>,
+    pub border: Value<Border>,
+    pub style: Value<Option<Style>>,
 }
 
-pub struct Block;
+impl Default for BlockProps {
+    fn default() -> Self {
+        Self {
+            border: Value::plain(Border::Plain),
+            style: Value::plain(None),
+        }
+    }
+}
+
+pub struct Block {
+    border: Border,
+    style: Option<Style>,
+}
 
 impl Block {
     pub fn builder(child: impl IntoBlueprint) -> BlockBuilder {
@@ -84,8 +99,8 @@ impl Block {
     pub fn plain(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             BlockProps {
-                border: Border::Plain,
-                style: None,
+                border: Value::plain(Border::Plain),
+                style: Value::plain(None),
             },
             child,
         )
@@ -94,8 +109,8 @@ impl Block {
     pub fn rounded(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             BlockProps {
-                border: Border::Rounded,
-                style: None,
+                border: Value::plain(Border::Rounded),
+                style: Value::plain(None),
             },
             child,
         )
@@ -104,8 +119,8 @@ impl Block {
     pub fn double(child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             BlockProps {
-                border: Border::Double,
-                style: None,
+                border: Value::plain(Border::Double),
+                style: Value::plain(None),
             },
             child,
         )
@@ -114,7 +129,7 @@ impl Block {
     pub fn styled(style: Style, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             BlockProps {
-                style: Some(style),
+                style: Value::plain(Some(style)),
                 ..BlockProps::default()
             },
             child,
@@ -125,8 +140,8 @@ impl Block {
         Blueprint::new::<Self>(props).child(child)
     }
 
-    fn inset(props: &BlockProps) -> u16 {
-        u16::from(!matches!(props.border, Border::None))
+    fn inset(border: Border) -> u16 {
+        u16::from(!matches!(border, Border::None))
     }
 }
 
@@ -134,21 +149,29 @@ impl Component for Block {
     type Props = BlockProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self {
+            border: Border::Plain,
+            style: None,
+        }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.border = props.border.get();
+        self.style = props.style.get();
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
-        let inset = Self::inset(props).saturating_mul(2);
+        let inset = Self::inset(self.border).saturating_mul(2);
         let child = if children.is_empty() {
             Size::default()
         } else {
@@ -160,11 +183,11 @@ impl Component for Block {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
         if children.is_empty() {
             return;
         }
-        let inset = Self::inset(props);
+        let inset = Self::inset(self.border);
         let double = inset.saturating_mul(2);
         children.set(
             0,
@@ -177,16 +200,16 @@ impl Component for Block {
         );
     }
 
-    fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
+    fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
         let rect = cx.rect;
         if rect.width == 0 || rect.height == 0 {
             return;
         }
 
-        let style = props.style.unwrap_or(cx.theme().surface);
+        let style = self.style.unwrap_or(cx.theme().surface);
         canvas.fill(rect, ' ', style);
 
-        let chars = match props.border {
+        let chars = match self.border {
             Border::None => return,
             Border::Plain => BorderChars::PLAIN,
             Border::Rounded => BorderChars::ROUNDED,

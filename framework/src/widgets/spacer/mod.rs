@@ -4,22 +4,27 @@ pub use builder::SpacerBuilder;
 use kursor_core::{
     component::{Component, blueprint::Blueprint, context::Cx},
     layout::{context::MeasureCx, size::Size},
+    state::{IntoValue, Value},
 };
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct SpacerProps {
-    pub size: u16,
+    pub size: Value<u16>,
 }
 
-pub struct Spacer;
+pub struct Spacer {
+    size: u16,
+}
 
 impl Spacer {
     pub fn builder() -> SpacerBuilder {
         SpacerBuilder::new()
     }
 
-    pub fn new(size: u16) -> Blueprint {
-        Blueprint::new::<Self>(SpacerProps { size })
+    pub fn new(size: impl IntoValue<u16>) -> Blueprint {
+        Blueprint::new::<Self>(SpacerProps {
+            size: size.into_value(),
+        })
     }
 }
 
@@ -27,21 +32,25 @@ impl Component for Spacer {
     type Props = SpacerProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self { size: 0 }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.size = props.size.get();
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         _children: &mut MeasureCx,
     ) -> Size {
-        let size = props.size.min(available.width).min(available.height);
+        let size = self.size.min(available.width).min(available.height);
         Size::new(size, size)
     }
 }

@@ -70,12 +70,6 @@ pub(crate) fn refresh_dependents(sources: &[AtomId]) -> Vec<AtomId> {
 
 pub struct Memo<T: State> {
     inner: Rc<Inner<T>>,
-    node: Rc<Node<T>>,
-}
-
-struct Node<T: State> {
-    id: AtomId,
-    inner: Weak<Inner<T>>,
 }
 
 struct Inner<T: State> {
@@ -108,12 +102,7 @@ impl<T: State> Memo<T> {
             depth: Cell::new(0),
             dependencies: UnsafeCell::new(Vec::new()),
         });
-        let node = Rc::new(Node {
-            id,
-            inner: Rc::downgrade(&inner),
-        });
-
-        Self { inner, node }
+        Self { inner }
     }
 
     pub fn id(&self) -> AtomId {
@@ -127,8 +116,8 @@ impl<T: State> Memo<T> {
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
         deps::record(self.id());
         if scope::is_active() {
-            let node: Rc<dyn MemoNode> = self.node.clone();
-            self.inner.refresh(&node);
+            let node: Rc<dyn MemoNode> = self.inner.clone();
+            Inner::refresh(&self.inner, &node);
         }
         let val = unsafe {
             (*self.inner.value.get())
@@ -144,7 +133,6 @@ impl<T: State> Clone for Memo<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
-            node: self.node.clone(),
         }
     }
 }
@@ -157,24 +145,18 @@ impl<T: State> PartialEq for Memo<T> {
 
 impl<T: State> Eq for Memo<T> {}
 
-impl<T: State> MemoNode for Node<T> {
+impl<T: State> MemoNode for Inner<T> {
     fn id(&self) -> AtomId {
         self.id
     }
 
     fn depth(&self) -> usize {
-        self.inner
-            .upgrade()
-            .map_or(0, |inner| inner.depth.get())
+        self.depth.get()
     }
 
     fn refresh(self: Rc<Self>) -> bool {
-        let Some(inner) = self.inner.upgrade() else {
-            return false;
-        };
-        let node: Rc<dyn MemoNode> = self;
-
-        inner.refresh(&node)
+        let node: Rc<dyn MemoNode> = self.clone();
+        Inner::refresh(&self, &node)
     }
 }
 

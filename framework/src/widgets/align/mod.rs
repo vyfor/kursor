@@ -13,22 +13,28 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
+    state::{IntoValue, Value},
 };
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct AlignProps {
-    pub alignment: Alignment,
+    pub alignment: Value<Alignment>,
 }
 
-pub struct Align;
+pub struct Align {
+    alignment: Alignment,
+}
 
 impl Align {
     pub fn builder(child: impl IntoBlueprint) -> AlignBuilder {
         AlignBuilder::new(child)
     }
 
-    pub fn new(alignment: Alignment, child: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(AlignProps { alignment }).child(child)
+    pub fn new(alignment: impl IntoValue<Alignment>, child: impl IntoBlueprint) -> Blueprint {
+        Blueprint::new::<Self>(AlignProps {
+            alignment: alignment.into_value(),
+        })
+        .child(child)
     }
 
     pub fn top_left(child: impl IntoBlueprint) -> Blueprint {
@@ -72,11 +78,17 @@ impl Component for Align {
     type Props = AlignProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self {
+            alignment: Alignment::TOP_LEFT,
+        }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
+    }
+
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.alignment = props.alignment.get();
     }
 
     fn measure(
@@ -95,17 +107,17 @@ impl Component for Align {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
         for index in 0..children.len() {
             let size = children.size(index);
             let width = size.width.min(area.width);
             let height = size.height.min(area.height);
-            let x = match props.alignment.horizontal {
+            let x = match self.alignment.horizontal {
                 HAlign::Left => area.x,
                 HAlign::Center => area.x.saturating_add(area.width.saturating_sub(width) / 2),
                 HAlign::Right => area.x.saturating_add(area.width.saturating_sub(width)),
             };
-            let y = match props.alignment.vertical {
+            let y = match self.alignment.vertical {
                 VAlign::Top => area.y,
                 VAlign::Center => area
                     .y

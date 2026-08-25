@@ -12,14 +12,25 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
+    state::{IntoValue, Value},
 };
 
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ColumnProps {
-    pub gap: u16,
+    pub gap: Value<u16>,
 }
 
-pub struct Column;
+impl Default for ColumnProps {
+    fn default() -> Self {
+        Self {
+            gap: Value::plain(0),
+        }
+    }
+}
+
+pub struct Column {
+    gap: u16,
+}
 
 impl Column {
     pub fn builder(children: impl IntoBlueprint) -> ColumnBuilder {
@@ -30,8 +41,11 @@ impl Column {
         Self::spaced(0, children)
     }
 
-    pub fn spaced(gap: u16, children: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(ColumnProps { gap }).children(children)
+    pub fn spaced(gap: impl IntoValue<u16>, children: impl IntoBlueprint) -> Blueprint {
+        Blueprint::new::<Self>(ColumnProps {
+            gap: gap.into_value(),
+        })
+        .children(children)
     }
 }
 
@@ -39,17 +53,21 @@ impl Component for Column {
     type Props = ColumnProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
-        Self
+        Self { gap: 0 }
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
         old != new
     }
 
+    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
+        self.gap = props.gap.get();
+    }
+
     fn measure(
         &mut self,
         _cx: &mut Cx,
-        props: &Self::Props,
+        _props: &Self::Props,
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
@@ -58,7 +76,7 @@ impl Component for Column {
             return Size::default();
         }
 
-        let gaps = usize::from(props.gap).saturating_mul(count.saturating_sub(1));
+        let gaps = usize::from(self.gap).saturating_mul(count.saturating_sub(1));
         let sizes: Vec<Size> = (0..count).map(|index| children.size(index)).collect();
         let height = sizes
             .iter()
@@ -76,15 +94,14 @@ impl Component for Column {
         Size::new(width, height)
     }
 
-    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
         let mut y = area.y;
         for index in 0..children.len() {
             let size = children.size(index);
             let height = size.height.min(area.bottom().saturating_sub(y));
             children.set(index, Rect::new(area.x, y, area.width, height));
             y = y.saturating_add(height).saturating_add(
-                props
-                    .gap
+                self.gap
                     .min(area.bottom().saturating_sub(y.saturating_add(height))),
             );
         }

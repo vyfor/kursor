@@ -8,6 +8,7 @@ use kursor_core::{
         context::Cx,
     },
     theme::Theme,
+    state::{IntoValue, Value},
 };
 
 pub struct Themed;
@@ -17,8 +18,8 @@ impl Themed {
         ThemedBuilder::new(child)
     }
 
-    pub fn new(theme: Theme, child: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(theme).child(child)
+    pub fn new(theme: impl IntoValue<Theme>, child: impl IntoBlueprint) -> Blueprint {
+        Blueprint::new::<Self>(theme.into_value()).child(child)
     }
 
     pub fn default(child: impl IntoBlueprint) -> Blueprint {
@@ -27,7 +28,7 @@ impl Themed {
 }
 
 impl Component for Themed {
-    type Props = Theme;
+    type Props = Value<Theme>;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self
@@ -38,8 +39,9 @@ impl Component for Themed {
     }
 
     fn build(&mut self, cx: &mut Cx, props: &Self::Props, _children: &mut Children) {
-        if cx.get::<Theme>() != Some(props) {
-            cx.provide(*props);
+        let theme = props.get();
+        if cx.get::<Theme>() != Some(&theme) {
+            cx.provide(theme);
         }
     }
 }

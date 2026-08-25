@@ -6,6 +6,7 @@ use kursor_core::{
         blueprint::{Blueprint, IntoBlueprint},
     },
     layout::ScrollDirection,
+    state::IntoValue,
 };
 
 use super::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};
@@ -19,15 +20,15 @@ impl ScrollBuilder {
     pub(crate) fn new(child: impl IntoBlueprint) -> Self {
         Self {
             props: ScrollProps {
-                direction: ScrollDirection::Vertical,
+                direction: ScrollDirection::Vertical.into_value(),
                 behavior: Arc::new(WheelScroll::default()),
             },
             children: child.into_blueprint(),
         }
     }
 
-    pub fn direction(mut self, direction: ScrollDirection) -> Self {
-        self.props.direction = direction;
+    pub fn direction(mut self, direction: impl IntoValue<ScrollDirection>) -> Self {
+        self.props.direction = direction.into_value();
         self
     }
 

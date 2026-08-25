@@ -1,6 +1,7 @@
 use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
     render::style::Style,
+    state::IntoValue,
 };
 
 use super::{Block, BlockProps, Border};
@@ -18,13 +19,13 @@ impl BlockBuilder {
         }
     }
 
-    pub fn border(mut self, border: Border) -> Self {
-        self.props.border = border;
+    pub fn border(mut self, border: impl IntoValue<Border>) -> Self {
+        self.props.border = border.into_value();
         self
     }
 
     pub fn style(mut self, style: Style) -> Self {
-        self.props.style = Some(style);
+        self.props.style = Some(style).into_value();
         self
     }
 }
