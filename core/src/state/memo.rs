@@ -4,7 +4,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use super::{deps, id::AtomId, scope, slot::State};
+use super::{LocalState, deps, id::AtomId, scope};
 
 trait MemoNode {
     fn id(&self) -> AtomId;
@@ -68,11 +68,11 @@ pub(crate) fn refresh_dependents(sources: &[AtomId]) -> Vec<AtomId> {
         .collect()
 }
 
-pub struct Memo<T: State> {
+pub struct Memo<T: LocalState> {
     inner: Rc<Inner<T>>,
 }
 
-struct Inner<T: State> {
+struct Inner<T: LocalState> {
     id: AtomId,
     value: UnsafeCell<Option<T>>,
     compute: Box<dyn Fn() -> T>,
@@ -90,7 +90,7 @@ impl<'a> Drop for ComputeGuard<'a> {
     }
 }
 
-impl<T: State> Memo<T> {
+impl<T: LocalState> Memo<T> {
     pub fn new(compute: impl Fn() -> T + 'static) -> Self {
         let id = AtomId::next();
         let inner = Rc::new(Inner {
@@ -129,7 +129,7 @@ impl<T: State> Memo<T> {
     }
 }
 
-impl<T: State> Clone for Memo<T> {
+impl<T: LocalState> Clone for Memo<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -137,15 +137,15 @@ impl<T: State> Clone for Memo<T> {
     }
 }
 
-impl<T: State> PartialEq for Memo<T> {
+impl<T: LocalState> PartialEq for Memo<T> {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id()
     }
 }
 
-impl<T: State> Eq for Memo<T> {}
+impl<T: LocalState> Eq for Memo<T> {}
 
-impl<T: State> MemoNode for Inner<T> {
+impl<T: LocalState> MemoNode for Inner<T> {
     fn id(&self) -> AtomId {
         self.id
     }
@@ -160,7 +160,7 @@ impl<T: State> MemoNode for Inner<T> {
     }
 }
 
-impl<T: State> Inner<T> {
+impl<T: LocalState> Inner<T> {
     fn refresh(&self, node: &Rc<dyn MemoNode>) -> bool {
         if !self.dirty.get() && unsafe { (*self.value.get()).is_some() } {
             return false;

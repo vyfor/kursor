@@ -1,6 +1,7 @@
 use crate::{
     component::{action::Action, environment::Environment},
     layout::rect::Rect,
+    state::{LocalState, Signal},
     theme::Theme,
     tree::id::NodeId,
 };
@@ -24,6 +25,10 @@ impl<'a> Cx<'a> {
 
     pub fn owned<T: Clone + 'static>(&self) -> Option<T> {
         self.get::<T>().cloned()
+    }
+
+    pub fn signal<T: LocalState>(&self, value: T) -> Signal<T> {
+        Signal::new(value)
     }
 
     pub fn theme(&self) -> &Theme {

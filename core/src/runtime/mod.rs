@@ -27,7 +27,7 @@ use crate::{
     },
     render::{buffer::Buffer, buffer::CellDiff, canvas::Canvas},
     runtime::instance::Instance,
-    state::{deps, id::AtomId, memo, queue::dirty_queue, scope},
+    state::{LocalState, Signal, deps, id::AtomId, memo, queue::dirty_queue, scope, signal},
     tree::{Tree, id::NodeId},
 };
 
@@ -48,6 +48,8 @@ struct Scratch {
     painted: HashSet<NodeId>,
     removed_nodes: HashSet<NodeId>,
     dep_atoms: HashSet<AtomId>,
+    dirty_sources: Vec<AtomId>,
+    memo_sources: Vec<AtomId>,
     actions: Vec<Action>,
 }
 
@@ -70,6 +72,8 @@ impl Scratch {
             painted: HashSet::new(),
             removed_nodes: HashSet::new(),
             dep_atoms: HashSet::new(),
+            dirty_sources: Vec::new(),
+            memo_sources: Vec::new(),
             actions: Vec::new(),
         }
     }
@@ -93,6 +97,7 @@ pub struct Runtime {
     cursor: Option<(NodeId, u16, u16)>,
     last_click: Option<(NodeId, MouseButton, Instant)>,
     global_listeners: Vec<NodeId>,
+    local_queue: Rc<signal::LocalQueue>,
     scratch: Scratch,
 }
 
@@ -116,6 +121,7 @@ impl Runtime {
             cursor: None,
             last_click: None,
             global_listeners: Vec::new(),
+            local_queue: Rc::new(signal::LocalQueue::new()),
             scratch: Scratch::new(),
         }
     }
@@ -137,6 +143,7 @@ impl Runtime {
     }
 
     pub fn mount(&mut self, blueprint: Blueprint) {
+        let _signals = signal::enter(&self.local_queue);
         if let Some(root) = self.tree.root() {
             self.drop_node(root);
         }
@@ -196,6 +203,7 @@ impl Runtime {
     }
 
     pub fn handle_event(&mut self, event: Event) -> EventResult {
+        let _signals = signal::enter(&self.local_queue);
         let event = self.normalize(event);
         let result = match &event {
             Event::FocusIn | Event::FocusOut | Event::WindowFocus(_) => self
@@ -299,6 +307,7 @@ impl Runtime {
     }
 
     pub fn flush(&mut self) {
+        let _signals = signal::enter(&self.local_queue);
         let _scope = scope::enter();
         self.do_update();
         self.do_layout();
@@ -535,6 +544,7 @@ impl Runtime {
     }
 
     pub fn set_focus(&mut self, next: Option<NodeId>) {
+        let _signals = signal::enter(&self.local_queue);
         if let Some(id) = next
             && !self.tree.contains(id)
         {
@@ -556,8 +566,11 @@ impl Runtime {
     }
 
     fn do_update(&mut self) {
-        let dirty_atoms = dirty_queue().drain();
-        for &atom_id in &dirty_atoms {
+        self.scratch.dirty_sources.clear();
+        dirty_queue().drain_into(&mut self.scratch.dirty_sources);
+        self.local_queue
+            .drain_into(&mut self.scratch.dirty_sources);
+        for &atom_id in &self.scratch.dirty_sources {
             if let Some(nodes) = self.deps.get(&atom_id) {
                 for &node in nodes {
                     self.update_dirty.insert(node);
@@ -565,9 +578,12 @@ impl Runtime {
             }
         }
 
-        let mut sources = dirty_atoms;
-        while !sources.is_empty() {
-            let changed = memo::refresh_dependents(&sources);
+        self.scratch.memo_sources.clear();
+        self.scratch
+            .memo_sources
+            .extend_from_slice(&self.scratch.dirty_sources);
+        while !self.scratch.memo_sources.is_empty() {
+            let changed = memo::refresh_dependents(&self.scratch.memo_sources);
             if changed.is_empty() {
                 break;
             }
@@ -578,7 +594,8 @@ impl Runtime {
                     }
                 }
             }
-            sources = changed;
+            self.scratch.memo_sources.clear();
+            self.scratch.memo_sources.extend(changed);
         }
 
         loop {
@@ -971,6 +988,10 @@ impl Runtime {
 
         self.update_dirty.insert(id);
         id
+    }
+
+    pub fn signal<T: LocalState>(&self, value: T) -> Signal<T> {
+        Signal::new_in(self.local_queue.clone(), value)
     }
 
     fn do_layout(&mut self) {

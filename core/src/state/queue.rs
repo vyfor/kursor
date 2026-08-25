@@ -1,5 +1,4 @@
 use std::{
-    mem,
     sync::atomic::Ordering,
     sync::{Mutex, OnceLock},
 };
@@ -33,14 +32,13 @@ impl DirtyQueue {
             .push(id);
     }
 
-    pub fn drain(&self) -> Vec<AtomId> {
+    pub fn drain_into(&self, output: &mut Vec<AtomId>) {
         let mut queue = self
             .pending
             .lock()
             .unwrap_or_else(|error| error.into_inner());
-        let drained = mem::take(&mut *queue);
+        output.append(&mut queue);
         CURRENT_FRAME_EPOCH.fetch_add(1, Ordering::Relaxed);
-        drained
     }
 
     pub fn len(&self) -> usize {

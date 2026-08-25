@@ -6,7 +6,8 @@ use std::{
 
 use crate::state::{
     id::AtomId,
-    slot::{Slot, State},
+    slot::Slot,
+    SharedState,
 };
 
 type Erased = Box<dyn Any + Send + Sync>;
@@ -33,7 +34,7 @@ pub fn arena() -> &'static AtomArena {
 const CHUNK_SIZE: usize = 64;
 
 impl AtomArena {
-    pub fn insert<T: State>(&self, id: AtomId, initial: T) -> u32 {
+    pub fn insert<T: SharedState>(&self, id: AtomId, initial: T) -> u32 {
         let slot: Box<Slot<T>> = Box::new(Slot::new(id, initial));
         let raw = Box::into_raw(slot);
 
@@ -56,7 +57,7 @@ impl AtomArena {
     }
 
     #[inline(always)]
-    pub fn get<T: State>(&self, index: u32) -> &Slot<T> {
+    pub fn get<T: SharedState>(&self, index: u32) -> &Slot<T> {
         let chunks = self.chunks.read().unwrap_or_else(|e| e.into_inner());
         let chunk_idx = (index as usize) / CHUNK_SIZE;
         let slot_idx = (index as usize) % CHUNK_SIZE;
@@ -69,7 +70,7 @@ impl AtomArena {
     }
 
     #[inline(always)]
-    pub fn get_ptr<T: State>(&self, index: u32) -> *const Slot<T> {
+    pub fn get_ptr<T: SharedState>(&self, index: u32) -> *const Slot<T> {
         let chunks = self.chunks.read().unwrap_or_else(|e| e.into_inner());
         let chunk_idx = (index as usize) / CHUNK_SIZE;
         let slot_idx = (index as usize) % CHUNK_SIZE;

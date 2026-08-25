@@ -4,16 +4,20 @@ use std::ptr::NonNull;
 use crate::state::{
     arena::arena,
     id::AtomId,
-    slot::{Guard, Slot, State},
+    slot::{Guard, Slot},
+    LocalState, SharedState,
 };
 
-pub struct Atom<T: State> {
+pub struct Atom<T: LocalState> {
     slot: NonNull<Slot<T>>,
     _marker: PhantomData<fn() -> T>,
 }
 
-impl<T: State> Atom<T> {
-    pub fn new(value: T) -> Self {
+impl<T: LocalState> Atom<T> {
+    pub fn new(value: T) -> Self
+    where
+        T: SharedState,
+    {
         let id = AtomId::next();
         let slot_index = arena().insert(id, value);
         let slot = arena().get_ptr::<T>(slot_index);
@@ -63,23 +67,23 @@ impl<T: State> Atom<T> {
     }
 }
 
-impl<T: State> Clone for Atom<T> {
+impl<T: LocalState> Clone for Atom<T> {
     #[inline(always)]
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T: State> Copy for Atom<T> {}
+impl<T: LocalState> Copy for Atom<T> {}
 
-impl<T: State> PartialEq for Atom<T> {
+impl<T: LocalState> PartialEq for Atom<T> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.slot == other.slot
     }
 }
 
-impl<T: State> Eq for Atom<T> {}
+impl<T: LocalState> Eq for Atom<T> {}
 
-unsafe impl<T: State> Send for Atom<T> {}
-unsafe impl<T: State> Sync for Atom<T> {}
+unsafe impl<T: SharedState> Send for Atom<T> {}
+unsafe impl<T: SharedState> Sync for Atom<T> {}

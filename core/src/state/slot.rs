@@ -7,12 +7,9 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
 
-use crate::state::{deps, id::AtomId, queue::dirty_queue, scope};
+use crate::state::{LocalState, SharedState, deps, id::AtomId, queue::dirty_queue, scope};
 
 pub static CURRENT_FRAME_EPOCH: AtomicU32 = AtomicU32::new(1);
-
-pub trait State: Clone + PartialEq + Send + Sync + 'static {}
-impl<T: Clone + PartialEq + Send + Sync + 'static> State for T {}
 
 const WRITING: u32 = 1 << 31;
 const READERS: u32 = !WRITING;
@@ -36,7 +33,7 @@ struct Head<T> {
 }
 
 #[repr(align(64))]
-pub struct Slot<T: State> {
+pub struct Slot<T: LocalState> {
     head: Head<T>,
     id: AtomId,
     frame: AtomicU32,
@@ -45,10 +42,10 @@ pub struct Slot<T: State> {
     retired: UnsafeCell<Vec<Retired<T>>>,
 }
 
-unsafe impl<T: State> Sync for Slot<T> {}
-unsafe impl<T: State> Send for Slot<T> {}
+unsafe impl<T: SharedState> Sync for Slot<T> {}
+unsafe impl<T: SharedState> Send for Slot<T> {}
 
-impl<T: State> Slot<T> {
+impl<T: LocalState> Slot<T> {
     pub fn new(id: AtomId, initial: T) -> Self {
         let mut node = Box::new(Node {
             value: UnsafeCell::new(MaybeUninit::new(initial)),
@@ -300,12 +297,12 @@ impl<T: State> Slot<T> {
     }
 }
 
-pub struct Guard<'a, T: State> {
+pub struct Guard<'a, T: LocalState> {
     _marker: PhantomData<&'a Slot<T>>,
     node: *mut Node<T>,
 }
 
-impl<T: State> Deref for Guard<'_, T> {
+impl<T: LocalState> Deref for Guard<'_, T> {
     type Target = T;
 
     #[inline(always)]
@@ -314,14 +311,14 @@ impl<T: State> Deref for Guard<'_, T> {
     }
 }
 
-impl<T: State> Drop for Guard<'_, T> {
+impl<T: LocalState> Drop for Guard<'_, T> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { (*self.node).flags.fetch_sub(1, Ordering::Release) };
     }
 }
 
-impl<T: State> Drop for Slot<T> {
+impl<T: LocalState> Drop for Slot<T> {
     fn drop(&mut self) {
         for node in unsafe { &mut *self.nodes.get() } {
             if node.flags.load(Ordering::Relaxed) != DEAD {
