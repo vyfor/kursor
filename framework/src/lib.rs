@@ -1,6 +1,7 @@
 pub mod app;
 pub mod bindings;
 pub mod focus;
+pub mod layout;
 pub mod terminal;
 pub mod widgets;
 

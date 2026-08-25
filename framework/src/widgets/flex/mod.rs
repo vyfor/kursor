@@ -14,33 +14,28 @@ use kursor_core::{
     state::{IntoValue, Value},
 };
 
-#[derive(Clone)]
-pub enum FlexSize {
-    Content,
-    Fixed(Value<u16>),
-    Fill(Value<u16>),
-}
+use crate::layout::{ResolvedTrack, Track};
 
 #[derive(Clone)]
 pub struct FlexItem {
-    size: FlexSize,
+    size: Track,
     child: Blueprint,
 }
 
 impl FlexItem {
     pub fn content(child: impl IntoBlueprint) -> Self {
-        Self::new(FlexSize::Content, child)
+        Self::new(Track::content(), child)
     }
 
     pub fn fixed(size: impl IntoValue<u16>, child: impl IntoBlueprint) -> Self {
-        Self::new(FlexSize::Fixed(size.into_value()), child)
+        Self::new(Track::fixed(size), child)
     }
 
     pub fn fill(weight: impl IntoValue<u16>, child: impl IntoBlueprint) -> Self {
-        Self::new(FlexSize::Fill(weight.into_value()), child)
+        Self::new(Track::fill(weight), child)
     }
 
-    fn new(size: FlexSize, child: impl IntoBlueprint) -> Self {
+    fn new(size: Track, child: impl IntoBlueprint) -> Self {
         let mut children = child.into_blueprint();
         Self {
             size,
@@ -105,14 +100,7 @@ pub struct Flex {
     direction: Orientation,
     gap: u16,
     items: Rc<[FlexItem]>,
-    sizes: Vec<ResolvedFlexSize>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum ResolvedFlexSize {
-    Content,
-    Fixed(u16),
-    Fill(u16),
+    sizes: Vec<ResolvedTrack>,
 }
 
 impl Flex {
@@ -209,11 +197,7 @@ impl Component for Flex {
         let sizes: Vec<_> = props
             .items
             .iter()
-            .map(|item| match &item.size {
-                FlexSize::Content => ResolvedFlexSize::Content,
-                FlexSize::Fixed(size) => ResolvedFlexSize::Fixed(size.get()),
-                FlexSize::Fill(weight) => ResolvedFlexSize::Fill(weight.get()),
-            })
+            .map(|item| item.size.resolve())
             .collect();
         let structure_changed = !Rc::ptr_eq(&self.items, &props.items);
         let layout_changed = self.direction != direction || self.gap != gap || self.sizes != sizes;
@@ -249,21 +233,21 @@ impl Component for Flex {
         let mut has_fill = false;
 
         for index in 0..count {
-            let size = self.sizes.get(index).copied().unwrap_or(ResolvedFlexSize::Content);
+            let size = self.sizes.get(index).copied().unwrap_or(ResolvedTrack::Content);
             let child_available = match size {
-                ResolvedFlexSize::Fixed(main) => Self::with_main(available, self.direction, main),
+                ResolvedTrack::Fixed(main) => Self::with_main(available, self.direction, main),
                 _ => available,
             };
             let child = children.measure(index, child_available);
             cross = cross.max(Self::cross(child, self.direction));
             match size {
-                ResolvedFlexSize::Content => {
+                ResolvedTrack::Content => {
                     main = main.saturating_add(Self::main(child, self.direction));
                 }
-                ResolvedFlexSize::Fixed(fixed) => {
+                ResolvedTrack::Fixed(fixed) => {
                     main = main.saturating_add(fixed);
                 }
-                ResolvedFlexSize::Fill(_) => {
+                ResolvedTrack::Fill(_) => {
                     has_fill = true;
                 }
             }
@@ -295,12 +279,12 @@ impl Component for Flex {
         let mut total_weight = 0_u32;
 
         for index in 0..count {
-            match self.sizes.get(index).copied().unwrap_or(ResolvedFlexSize::Content) {
-                ResolvedFlexSize::Content => {
+            match self.sizes.get(index).copied().unwrap_or(ResolvedTrack::Content) {
+                ResolvedTrack::Content => {
                     allocated = allocated.saturating_add(Self::main(children.size(index), self.direction));
                 }
-                ResolvedFlexSize::Fixed(size) => allocated = allocated.saturating_add(size),
-                ResolvedFlexSize::Fill(weight) => total_weight = total_weight.saturating_add(u32::from(weight)),
+                ResolvedTrack::Fixed(size) => allocated = allocated.saturating_add(size),
+                ResolvedTrack::Fill(weight) => total_weight = total_weight.saturating_add(u32::from(weight)),
             }
         }
 
@@ -312,11 +296,11 @@ impl Component for Flex {
         let mut distributed = 0_u16;
 
         for index in 0..count {
-            let size = self.sizes.get(index).copied().unwrap_or(ResolvedFlexSize::Content);
+            let size = self.sizes.get(index).copied().unwrap_or(ResolvedTrack::Content);
             let main = match size {
-                ResolvedFlexSize::Content => Self::main(children.size(index), self.direction),
-                ResolvedFlexSize::Fixed(size) => size,
-                ResolvedFlexSize::Fill(weight) if total_weight > 0 => {
+                ResolvedTrack::Content => Self::main(children.size(index), self.direction),
+                ResolvedTrack::Fixed(size) => size,
+                ResolvedTrack::Fill(weight) if total_weight > 0 => {
                     let share = (u32::from(remaining) * u32::from(weight) / total_weight) as u16;
                     distributed = distributed.saturating_add(share);
                     if index + 1 == count {
@@ -325,7 +309,7 @@ impl Component for Flex {
                         share
                     }
                 }
-                ResolvedFlexSize::Fill(_) => 0,
+                ResolvedTrack::Fill(_) => 0,
             };
             let max_main = match self.direction {
                 Orientation::Horizontal => area.right().saturating_sub(cursor),
