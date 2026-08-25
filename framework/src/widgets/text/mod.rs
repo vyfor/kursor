@@ -2,7 +2,7 @@ pub mod builder;
 pub use builder::TextBuilder;
 
 use kursor_core::{
-    component::{Children, Component, blueprint::Blueprint, context::Cx},
+    component::{Component, Update, blueprint::Blueprint, context::Cx},
     layout::{WrapMode, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
     state::value::{IntoValue, Value},
@@ -138,10 +138,23 @@ impl Component for Text {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut Children) {
-        self.text = props.text.get();
-        self.style = props.style.get();
-        self.wrap = props.wrap.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let text = props.text.get();
+        let style = props.style.get();
+        let wrap = props.wrap.get();
+        let text_changed = self.text != text;
+        let style_changed = self.style != style;
+        let wrap_changed = self.wrap != wrap;
+        self.text = text;
+        self.style = style;
+        self.wrap = wrap;
+        if text_changed || wrap_changed {
+            Update::MEASURE
+        } else if style_changed {
+            Update::PAINT
+        } else {
+            Update::NONE
+        }
     }
 
     fn measure(

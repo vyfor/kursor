@@ -14,7 +14,6 @@ pub struct Instance {
     pub props: Rc<dyn Any>,
     pub declared_children: Rc<[Blueprint]>,
     pub children: Rc<[Blueprint]>,
-    pub child_memo: Option<u64>,
     pub type_id: TypeId,
     pub rect: Rect,
     pub offset: Offset,

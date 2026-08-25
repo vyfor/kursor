@@ -62,9 +62,39 @@ impl<'a> Cx<'a> {
         }
     }
 
-    pub fn invalidate(&mut self, node: NodeId) {
+    pub fn remeasure(&mut self, node: NodeId) {
         if let Some(actions) = self.actions.as_deref_mut() {
-            actions.push(Action::Invalidate(node));
+            actions.push(Action::Remeasure(node));
+        }
+    }
+
+    pub fn remeasure_self(&mut self) {
+        if let Some(node) = self.node {
+            self.remeasure(node);
+        }
+    }
+
+    pub fn repaint(&mut self, node: NodeId) {
+        if let Some(actions) = self.actions.as_deref_mut() {
+            actions.push(Action::Repaint(node));
+        }
+    }
+
+    pub fn repaint_self(&mut self) {
+        if let Some(node) = self.node {
+            self.repaint(node);
+        }
+    }
+
+    pub fn relayout(&mut self, node: NodeId) {
+        if let Some(actions) = self.actions.as_deref_mut() {
+            actions.push(Action::Relayout(node));
+        }
+    }
+
+    pub fn relayout_self(&mut self) {
+        if let Some(node) = self.node {
+            self.relayout(node);
         }
     }
 

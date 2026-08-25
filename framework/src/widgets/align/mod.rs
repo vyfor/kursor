@@ -3,7 +3,7 @@ pub use builder::AlignBuilder;
 
 use kursor_core::{
     component::{
-        Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -87,8 +87,14 @@ impl Component for Align {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.alignment = props.alignment.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let alignment = props.alignment.get();
+        if self.alignment == alignment {
+            Update::NONE
+        } else {
+            self.alignment = alignment;
+            Update::MEASURE
+        }
     }
 
     fn measure(

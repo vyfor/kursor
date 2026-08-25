@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     component::{
-        Children, Component, Focus,
+        Children, Component, Focus, Invalidation, Update,
         action::Action,
         blueprint::{Blueprint, empty_children},
         context::Cx,
@@ -38,9 +38,6 @@ struct Scratch {
     child_sizes: Vec<Size>,
     rects: Vec<Rect>,
     offsets: Vec<Offset>,
-    new_children: Vec<NodeId>,
-    old_children: Vec<NodeId>,
-    unkeyed: Vec<Option<NodeId>>,
     path: Vec<NodeId>,
     sent_nodes: Vec<NodeId>,
     listeners: Vec<NodeId>,
@@ -62,9 +59,6 @@ impl Scratch {
             child_sizes: Vec::new(),
             rects: Vec::new(),
             offsets: Vec::new(),
-            new_children: Vec::new(),
-            old_children: Vec::new(),
-            unkeyed: Vec::new(),
             path: Vec::new(),
             sent_nodes: Vec::new(),
             listeners: Vec::new(),
@@ -529,9 +523,22 @@ impl Runtime {
                     }
                 }
                 Action::Release => self.capture = None,
-                Action::Invalidate(node) => {
+                Action::Remeasure(node) => {
                     if self.tree.contains(node) {
                         self.update_dirty.insert(node);
+                        self.layout_dirty.insert(node);
+                        self.paint_dirty.insert(node);
+                    }
+                }
+                Action::Repaint(node) => {
+                    if self.tree.contains(node) {
+                        self.paint_dirty.insert(node);
+                    }
+                }
+                Action::Relayout(node) => {
+                    if self.tree.contains(node) {
+                        self.layout_dirty.insert(node);
+                        self.paint_dirty.insert(node);
                     }
                 }
                 Action::Cursor(node, position) => {
@@ -566,39 +573,39 @@ impl Runtime {
     }
 
     fn do_update(&mut self) {
-        self.scratch.dirty_sources.clear();
-        dirty_queue().drain_into(&mut self.scratch.dirty_sources);
-        self.local_queue
-            .drain_into(&mut self.scratch.dirty_sources);
-        for &atom_id in &self.scratch.dirty_sources {
-            if let Some(nodes) = self.deps.get(&atom_id) {
-                for &node in nodes {
-                    self.update_dirty.insert(node);
-                }
-            }
-        }
-
-        self.scratch.memo_sources.clear();
-        self.scratch
-            .memo_sources
-            .extend_from_slice(&self.scratch.dirty_sources);
-        while !self.scratch.memo_sources.is_empty() {
-            let changed = memo::refresh_dependents(&self.scratch.memo_sources);
-            if changed.is_empty() {
-                break;
-            }
-            for &memo_id in &changed {
-                if let Some(nodes) = self.deps.get(&memo_id) {
+        loop {
+            self.scratch.dirty_sources.clear();
+            dirty_queue().drain_into(&mut self.scratch.dirty_sources);
+            self.local_queue
+                .drain_into(&mut self.scratch.dirty_sources);
+            for &atom_id in &self.scratch.dirty_sources {
+                if let Some(nodes) = self.deps.get(&atom_id) {
                     for &node in nodes {
                         self.update_dirty.insert(node);
                     }
                 }
             }
-            self.scratch.memo_sources.clear();
-            self.scratch.memo_sources.extend(changed);
-        }
 
-        loop {
+            self.scratch.memo_sources.clear();
+            self.scratch
+                .memo_sources
+                .extend_from_slice(&self.scratch.dirty_sources);
+            while !self.scratch.memo_sources.is_empty() {
+                let changed = memo::refresh_dependents(&self.scratch.memo_sources);
+                if changed.is_empty() {
+                    break;
+                }
+                for &memo_id in &changed {
+                    if let Some(nodes) = self.deps.get(&memo_id) {
+                        for &node in nodes {
+                            self.update_dirty.insert(node);
+                        }
+                    }
+                }
+                self.scratch.memo_sources.clear();
+                self.scratch.memo_sources.extend(changed);
+            }
+
             self.scratch.dirty_nodes.clear();
             self.scratch.dirty_nodes.extend(
                 self.update_dirty
@@ -615,48 +622,37 @@ impl Runtime {
             let dirty = mem::take(&mut self.scratch.dirty_nodes);
             for id in dirty {
                 if self.tree.contains(id) {
-                    self.do_build(id);
+                    self.do_component_update(id);
                 }
             }
         }
     }
 
-    fn do_build(&mut self, id: NodeId) -> bool {
+    fn do_component_update(&mut self, id: NodeId) {
         let inherited = self
             .tree
             .parent(id)
             .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
             .or_else(|| self.tree.get(id).map(|node| node.inherited.clone()))
             .unwrap_or_default();
-        let (dc, cc, child_memo) = self
-            .tree
-            .get(id)
-            .map(|instance| {
-                (
-                    instance.declared_children.clone(),
-                    instance.children.clone(),
-                    instance.child_memo,
-                )
-            })
-            .unwrap();
-        let (((replacement, next_memo, memo_hit), global_listener), dep_reads) =
-            deps::collect(|| {
-                let ins = self.tree.get_mut(id).unwrap();
-                let mut children = Children::new(cc.clone(), child_memo);
-                let mut global_key_listener = false;
-                let mut cx = Cx {
-                    rect: Self::local_rect(ins.rect),
-                    node: Some(id),
-                    actions: None,
-                    global_input: Some(&mut global_key_listener),
-                    env: inherited.clone(),
-                };
-                ins.component
-                    .build_any(&mut cx, ins.props.as_ref(), &mut children);
-                ins.inherited = inherited.clone();
-                ins.env = cx.env.clone();
-                (children.finish(), global_key_listener)
-            });
+        let ((update, global_listener, env_changed), dep_reads) = deps::collect(|| {
+            let ins = self.tree.get_mut(id).unwrap();
+            let previous_env = ins.env.clone();
+            let mut global_key_listener = false;
+            let mut cx = Cx {
+                rect: Self::local_rect(ins.rect),
+                node: Some(id),
+                actions: None,
+                global_input: Some(&mut global_key_listener),
+                env: inherited.clone(),
+            };
+            let update = ins.component.update_any(&mut cx, ins.props.as_ref());
+            ins.inherited = inherited.clone();
+            let env = cx.env.clone();
+            ins.env = env.clone();
+            drop(cx);
+            (update, global_key_listener, !previous_env.same(&env))
+        });
 
         self.do_deps(id, dep_reads);
         if global_listener {
@@ -666,25 +662,41 @@ impl Runtime {
         } else {
             self.global_listeners.retain(|&node| node != id);
         }
-        let next_children: Rc<[Blueprint]> = replacement
-            .map(Into::into)
-            .unwrap_or_else(|| if memo_hit { cc } else { dc });
-        let children_changed = {
-            let ins = self.tree.get_mut(id).unwrap();
-            ins.child_memo = next_memo;
-            let changed = !Rc::ptr_eq(&ins.children, &next_children);
-            if changed {
-                ins.children = next_children.clone();
+        let Update {
+            mut invalidation,
+            children,
+        } = update;
+        if let Some(children) = children {
+            let children: Rc<[Blueprint]> = children.into();
+            {
+                let ins = self.tree.get_mut(id).unwrap();
+                ins.declared_children = children.clone();
+                ins.children = children.clone();
             }
-            changed
-        };
-        if children_changed {
-            self.sync(id, &next_children);
+            self.sync(id, &children);
+            invalidation |= Invalidation::ALL;
         }
-        self.layout_dirty.insert(id);
-        self.paint_dirty.insert(id);
 
-        children_changed
+        if env_changed {
+            self.scratch.child_ids.clear();
+            self.scratch
+                .child_ids
+                .extend_from_slice(self.tree.children(id));
+            for index in 0..self.scratch.child_ids.len() {
+                let child = self.scratch.child_ids[index];
+                self.update_dirty.insert(child);
+                self.layout_dirty.insert(child);
+                self.paint_dirty.insert(child);
+            }
+        }
+        if invalidation.contains(Invalidation::MEASURE)
+            || invalidation.contains(Invalidation::LAYOUT)
+        {
+            self.layout_dirty.insert(id);
+        }
+        if invalidation.contains(Invalidation::PAINT) {
+            self.paint_dirty.insert(id);
+        }
     }
 
     fn do_deps(&mut self, id: NodeId, mut dep_reads: Vec<AtomId>) {
@@ -744,16 +756,13 @@ impl Runtime {
     }
 
     fn sync(&mut self, parent: NodeId, blueprints: &[Blueprint]) {
-        self.scratch.old_children.clear();
-        self.scratch
-            .old_children
-            .extend_from_slice(self.tree.children(parent));
+        let old_children: Vec<NodeId> = self.tree.children(parent).to_vec();
         let parent_env = self.tree.get(parent).unwrap().env.clone();
 
-        let ordered = self.scratch.old_children.len() == blueprints.len()
+        let ordered = old_children.len() == blueprints.len()
             && self
-                .scratch
-                .old_children
+                .tree
+                .children(parent)
                 .iter()
                 .zip(blueprints)
                 .all(|(&child, blueprint)| {
@@ -763,36 +772,32 @@ impl Runtime {
                 });
 
         if ordered {
-            let oldc = mem::take(&mut self.scratch.old_children);
-            for (&child, blueprint) in oldc.iter().zip(blueprints) {
+            for (&child, blueprint) in old_children.iter().zip(blueprints) {
                 self.sync_existing(child, blueprint, &parent_env);
             }
-            self.tree.set_children(parent, oldc);
+            self.tree.set_children(parent, old_children);
             return;
         }
 
         let mut keyed = HashMap::new();
-        self.scratch.unkeyed.clear();
+        let mut unkeyed = Vec::new();
 
-        for &child in self.scratch.old_children.iter() {
+        for &child in &old_children {
             let key = self.tree.get(child).unwrap().key.clone();
             if let Some(key) = key {
                 keyed.insert(key, child);
             } else {
-                self.scratch.unkeyed.push(Some(child));
+                unkeyed.push(Some(child));
             }
         }
-        self.scratch.new_children.clear();
-        self.scratch.new_children.reserve(blueprints.len());
+        let mut new_children = Vec::with_capacity(blueprints.len());
         let mut unkeyed_index = 0;
 
         for bp in blueprints {
             let m = match &bp.key {
                 Some(key) => keyed.remove(key),
                 None => {
-                    let child = self
-                        .scratch
-                        .unkeyed
+                    let child = unkeyed
                         .get_mut(unkeyed_index)
                         .and_then(Option::take);
                     unkeyed_index += 1;
@@ -815,7 +820,7 @@ impl Runtime {
                 }
                 None => self.do_create(bp.clone(), Some(parent)),
             };
-            self.scratch.new_children.push(child);
+            new_children.push(child);
         }
 
         for child in keyed.into_values() {
@@ -823,15 +828,13 @@ impl Runtime {
                 self.drop_node(child);
             }
         }
-        let unkeyed = mem::take(&mut self.scratch.unkeyed);
         for child in unkeyed.into_iter().flatten() {
             if self.tree.contains(child) {
                 self.drop_node(child);
             }
         }
 
-        let newc = mem::take(&mut self.scratch.new_children);
-        self.tree.set_children(parent, newc);
+        self.tree.set_children(parent, new_children);
     }
 
     fn sync_existing(&mut self, child: NodeId, blueprint: &Blueprint, parent_env: &Environment) {
@@ -859,6 +862,9 @@ impl Runtime {
             let instance = self.tree.get_mut(child).unwrap();
             instance.available = None;
             self.update_dirty.insert(child);
+        }
+        if declared_changed {
+            self.sync(child, &blueprint.children);
         }
     }
 
@@ -969,7 +975,6 @@ impl Runtime {
             props: bp.props,
             declared_children: bp.children,
             children: empty_children(),
-            child_memo: None,
             type_id: bp.type_id,
             rect: Rect::new(0, 0, 0, 0),
             offset: Offset::ZERO,
@@ -986,8 +991,63 @@ impl Runtime {
             None => self.tree.create_root(ins),
         };
 
+        self.do_mount(id);
         self.update_dirty.insert(id);
+        self.layout_dirty.insert(id);
+        self.paint_dirty.insert(id);
         id
+    }
+
+    fn do_mount(&mut self, id: NodeId) {
+        let inherited = self
+            .tree
+            .get(id)
+            .map(|instance| instance.inherited.clone())
+            .unwrap_or_default();
+        let declared_children = self
+            .tree
+            .get(id)
+            .map(|instance| instance.declared_children.clone())
+            .unwrap_or_else(empty_children);
+        let (replacement, global_listener, env_changed) = {
+            let ins = self.tree.get_mut(id).unwrap();
+            let previous_env = ins.env.clone();
+            let mut children = Children::new(declared_children.clone());
+            let mut global_key_listener = false;
+            let mut cx = Cx {
+                rect: Self::local_rect(ins.rect),
+                node: Some(id),
+                actions: None,
+                global_input: Some(&mut global_key_listener),
+                env: inherited.clone(),
+            };
+            ins.component
+                .mount_any(&mut cx, ins.props.as_ref(), &mut children);
+            ins.inherited = inherited;
+            let env = cx.env.clone();
+            ins.env = env.clone();
+            drop(cx);
+            (
+                children.finish(),
+                global_key_listener,
+                !previous_env.same(&env),
+            )
+        };
+        if global_listener && !self.global_listeners.contains(&id) {
+            self.global_listeners.push(id);
+        }
+        let children: Rc<[Blueprint]> = replacement.map_or(declared_children, Into::into);
+        {
+            let ins = self.tree.get_mut(id).unwrap();
+            ins.declared_children = children.clone();
+            ins.children = children.clone();
+        }
+        self.sync(id, &children);
+
+        if env_changed {
+            self.layout_dirty.insert(id);
+            self.paint_dirty.insert(id);
+        }
     }
 
     pub fn signal<T: LocalState>(&self, value: T) -> Signal<T> {
@@ -1009,12 +1069,9 @@ impl Runtime {
             self.scratch
                 .dirty_nodes
                 .sort_unstable_by_key(|&id| (self.tree.depth(id), id));
-            self.layout_dirty
-                .extend(self.scratch.dirty_nodes.iter().copied());
-
             let dirty = mem::take(&mut self.scratch.dirty_nodes);
             for id in dirty {
-                if !self.tree.contains(id) || !self.layout_dirty.contains(&id) {
+                if !self.tree.contains(id) {
                     continue;
                 }
 

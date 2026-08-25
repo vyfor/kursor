@@ -5,7 +5,7 @@ use std::{cell::UnsafeCell, mem, rc::Rc};
 
 use kursor_core::{
     component::{
-        Children, Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -108,7 +108,7 @@ impl Overlays {
             state.host
         };
         if let Some(host) = host {
-            cx.invalidate(host);
+            cx.remeasure(host);
         }
     }
 
@@ -163,7 +163,6 @@ pub struct Overlay {
     overlays: Overlays,
     base: Rc<Blueprint>,
     layers: Vec<ActiveLayer>,
-    initialized: bool,
 }
 
 impl Overlay {
@@ -232,7 +231,6 @@ impl Component for Overlay {
             overlays: props.overlays.clone(),
             base: props.base.clone(),
             layers: Vec::new(),
-            initialized: false,
         }
     }
 
@@ -240,9 +238,20 @@ impl Component for Overlay {
         old != new
     }
 
-    fn build(&mut self, cx: &mut Cx, props: &Self::Props, children: &mut Children) {
-        let mut changed = !self.initialized;
+    fn mount(&mut self, cx: &mut Cx, props: &Self::Props, children: &mut kursor_core::component::MountChildren) {
+        self.overlays = props.overlays.clone();
+        self.base = props.base.clone();
+        if cx.get::<Overlays>() != Some(&self.overlays) {
+            cx.provide(self.overlays.clone());
+        }
+        if let Some(host) = cx.node {
+            self.overlays.attach(host);
+        }
+        children.replace(self.blueprints());
+    }
 
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        let mut changed = false;
         if self.overlays != props.overlays {
             if let Some(host) = cx.node {
                 self.overlays.detach(host);
@@ -278,8 +287,9 @@ impl Component for Overlay {
         }
 
         if changed {
-            children.replace(self.blueprints());
-            self.initialized = true;
+            Update::children(self.blueprints())
+        } else {
+            Update::NONE
         }
     }
 

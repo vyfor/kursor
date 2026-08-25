@@ -4,6 +4,8 @@ pub enum Action {
     Focus(Option<NodeId>),
     Capture(NodeId),
     Release,
-    Invalidate(NodeId),
+    Remeasure(NodeId),
+    Repaint(NodeId),
+    Relayout(NodeId),
     Cursor(NodeId, Option<(u16, u16)>),
 }

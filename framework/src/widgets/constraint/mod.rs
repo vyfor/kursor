@@ -3,7 +3,7 @@ pub use builder::ConstraintBuilder;
 
 use kursor_core::{
     component::{
-        Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -173,11 +173,24 @@ impl Component for Constraint {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.min_width = props.min_width.as_ref().map(Value::get);
-        self.max_width = props.max_width.as_ref().map(Value::get);
-        self.min_height = props.min_height.as_ref().map(Value::get);
-        self.max_height = props.max_height.as_ref().map(Value::get);
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let min_width = props.min_width.as_ref().map(Value::get);
+        let max_width = props.max_width.as_ref().map(Value::get);
+        let min_height = props.min_height.as_ref().map(Value::get);
+        let max_height = props.max_height.as_ref().map(Value::get);
+        if self.min_width == min_width
+            && self.max_width == max_width
+            && self.min_height == min_height
+            && self.max_height == max_height
+        {
+            Update::NONE
+        } else {
+            self.min_width = min_width;
+            self.max_width = max_width;
+            self.min_height = min_height;
+            self.max_height = max_height;
+            Update::MEASURE
+        }
     }
 
     fn measure(

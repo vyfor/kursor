@@ -1,6 +1,8 @@
 use std::any::Any;
+use std::ops::{BitOr, BitOrAssign};
 
 use crate::{
+    component::blueprint::{Blueprint, IntoBlueprint},
     component::context::Cx,
     event::{Event, EventResult, Phase},
     layout::{
@@ -15,9 +17,74 @@ pub mod behavior;
 pub mod blueprint;
 pub mod children;
 pub use children::Children;
+pub type MountChildren = Children;
 pub mod context;
 pub mod environment;
 pub mod key;
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub struct Invalidation(u8);
+
+impl Invalidation {
+    pub const NONE: Self = Self(0);
+    pub const MEASURE: Self = Self(1 << 0);
+    pub const LAYOUT: Self = Self(1 << 1);
+    pub const PAINT: Self = Self(1 << 2);
+    pub const ALL: Self = Self(Self::MEASURE.0 | Self::LAYOUT.0 | Self::PAINT.0);
+    pub const LAYOUT_AND_PAINT: Self = Self(Self::LAYOUT.0 | Self::PAINT.0);
+
+    pub const fn contains(self, other: Self) -> bool {
+        self.0 & other.0 == other.0
+    }
+}
+
+impl BitOr for Invalidation {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for Invalidation {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+pub struct Update {
+    pub(crate) invalidation: Invalidation,
+    pub(crate) children: Option<Vec<Blueprint>>,
+}
+
+impl Update {
+    pub const NONE: Self = Self {
+        invalidation: Invalidation::NONE,
+        children: None,
+    };
+
+    pub const PAINT: Self = Self {
+        invalidation: Invalidation::PAINT,
+        children: None,
+    };
+
+    pub const LAYOUT: Self = Self {
+        invalidation: Invalidation::LAYOUT_AND_PAINT,
+        children: None,
+    };
+
+    pub const MEASURE: Self = Self {
+        invalidation: Invalidation::ALL,
+        children: None,
+    };
+
+    pub fn children(children: impl IntoBlueprint) -> Self {
+        Self {
+            invalidation: Invalidation::ALL,
+            children: Some(children.into_blueprint()),
+        }
+    }
+}
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct Focus {
@@ -30,7 +97,21 @@ pub trait Component: 'static {
 
     fn create(cx: &mut Cx, props: &Self::Props) -> Self;
 
-    fn build(&mut self, _cx: &mut Cx, _props: &Self::Props, _children: &mut Children) {}
+    fn mount(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        _children: &mut MountChildren,
+    ) {
+    }
+
+    fn update(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+    ) -> Update {
+        Update::NONE
+    }
 
     fn focus(&self, _props: &Self::Props) -> Focus {
         Focus {
@@ -77,7 +158,12 @@ pub trait Component: 'static {
 }
 
 pub trait AnyComponent {
-    fn build_any(&mut self, cx: &mut Cx, props: &dyn Any, children: &mut Children);
+    fn mount_any(&mut self, cx: &mut Cx, props: &dyn Any, children: &mut MountChildren);
+    fn update_any(
+        &mut self,
+        cx: &mut Cx,
+        props: &dyn Any,
+    ) -> Update;
     fn focus_any(&self, props: &dyn Any) -> Focus;
     fn event_any(
         &mut self,
@@ -100,9 +186,18 @@ pub trait AnyComponent {
 }
 
 impl<C: Component> AnyComponent for C {
-    fn build_any(&mut self, cx: &mut Cx, props: &dyn Any, children: &mut Children) {
+    fn mount_any(&mut self, cx: &mut Cx, props: &dyn Any, children: &mut MountChildren) {
         let props = props.downcast_ref::<C::Props>().unwrap();
-        self.build(cx, props, children)
+        self.mount(cx, props, children)
+    }
+
+    fn update_any(
+        &mut self,
+        cx: &mut Cx,
+        props: &dyn Any,
+    ) -> Update {
+        let props = props.downcast_ref::<C::Props>().unwrap();
+        self.update(cx, props)
     }
 
     fn focus_any(&self, props: &dyn Any) -> Focus {

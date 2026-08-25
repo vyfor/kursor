@@ -5,20 +5,15 @@ use std::sync::Arc;
 
 use kursor_core::{
     component::{
-        Children, Component, Focus,
+        Component, Focus, Update,
         behavior::{Behavior, BehaviorCx},
         blueprint::Blueprint,
         context::Cx,
-    },
-    event::{
+    }, event::{
         Event, EventResult, Phase,
         key::KeyCode,
         mouse::{MouseButton, MouseKind},
-    },
-    layout::{context::MeasureCx, size::Size},
-    render::style::Style,
-    state::{IntoValue, Value},
-    theme::Theme,
+    }, layout::{WrapMode, context::MeasureCx, size::Size}, render::style::Style, state::{IntoValue, Signal, Value}, theme::Theme,
 };
 
 use super::{Block, BlockProps, Border, Text};
@@ -108,10 +103,11 @@ impl ButtonProps {
 
 pub struct Button {
     state: ButtonState,
-    label: String,
-    border: Border,
     styles: ButtonStyles,
     disabled: bool,
+    label: Signal<String>,
+    border: Signal<Border>,
+    style: Signal<Option<Style>>,
 }
 
 impl Button {
@@ -147,13 +143,14 @@ impl Button {
 impl Component for Button {
     type Props = ButtonProps;
 
-    fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
+    fn create(cx: &mut Cx, _props: &Self::Props) -> Self {
         Self {
             state: ButtonState::default(),
-            label: String::new(),
-            border: Border::Rounded,
             styles: ButtonStyles::default(),
             disabled: false,
+            label: cx.signal(String::new()),
+            border: cx.signal(Border::Rounded),
+            style: cx.signal(None),
         }
     }
 
@@ -190,20 +187,36 @@ impl Component for Button {
         )
     }
 
-    fn build(&mut self, cx: &mut Cx, props: &Self::Props, children: &mut Children) {
-        self.label = props.label.get();
-        self.border = props.border.get();
-        self.styles = props.styles.get();
-        self.disabled = props.disabled.get();
-        let theme = *cx.theme();
-        let style = self.style(theme);
+    fn mount(&mut self, _cx: &mut Cx, _props: &Self::Props, children: &mut kursor_core::component::MountChildren) {
         children.replace(Block::with(
             BlockProps {
-                border: Value::plain(self.border),
-                style: kursor_core::state::Value::plain(Some(style)),
+                border: self.border.clone().into_value(),
+                style: self.style.clone().into_value(),
             },
-            Text::styled(self.label.clone(), style),
+            Text::with(super::TextProps {
+                text: self.label.clone().into_value(),
+                style: self.style.clone().into_value(),
+                wrap: Value::plain(WrapMode::None),
+            }),
         ));
+    }
+
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        let label = props.label.get();
+        let border = props.border.get();
+        let styles = props.styles.get();
+        let disabled = props.disabled.get();
+        let old_style = self.style.peek();
+        self.styles = styles;
+        self.disabled = disabled;
+        self.label.set(label);
+        self.border.set(border);
+        let theme = *cx.theme();
+        let style = self.style(theme);
+        if old_style != Some(style) {
+            self.style.set(Some(style));
+        }
+        Update::NONE
     }
 
     fn event(
@@ -268,6 +281,7 @@ impl Component for Button {
         }
 
         if state_changed {
+            cx.relayout_self();
             EventResult::Consumed
         } else {
             EventResult::Ignored

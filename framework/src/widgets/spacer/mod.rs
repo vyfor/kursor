@@ -2,7 +2,7 @@ pub mod builder;
 pub use builder::SpacerBuilder;
 
 use kursor_core::{
-    component::{Component, blueprint::Blueprint, context::Cx},
+    component::{Component, Update, blueprint::Blueprint, context::Cx},
     layout::{context::MeasureCx, size::Size},
     state::{IntoValue, Value},
 };
@@ -39,8 +39,14 @@ impl Component for Spacer {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.size = props.size.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let size = props.size.get();
+        if self.size == size {
+            Update::NONE
+        } else {
+            self.size = size;
+            Update::MEASURE
+        }
     }
 
     fn measure(

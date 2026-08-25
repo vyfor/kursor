@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use kursor_core::{
     component::{
-        Component, Focus,
+        Component, Focus, Update,
         behavior::{Behavior, BehaviorCx},
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
@@ -189,8 +189,14 @@ impl Component for Scroll {
         old.direction != new.direction || !Arc::ptr_eq(&old.behavior, &new.behavior)
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.direction = props.direction.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let direction = props.direction.get();
+        if self.direction == direction {
+            Update::NONE
+        } else {
+            self.direction = direction;
+            Update::MEASURE
+        }
     }
 
     fn measure(
@@ -263,6 +269,7 @@ impl Component for Scroll {
         };
         let viewport = Size::new(cx.rect.width, cx.rect.height);
         if self.apply(intent, self.direction, viewport) {
+            cx.relayout_self();
             EventResult::Consumed
         } else {
             EventResult::Ignored

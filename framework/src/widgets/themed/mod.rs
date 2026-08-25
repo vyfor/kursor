@@ -3,7 +3,7 @@ pub use builder::ThemedBuilder;
 
 use kursor_core::{
     component::{
-        Children, Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -38,10 +38,17 @@ impl Component for Themed {
         old != new
     }
 
-    fn build(&mut self, cx: &mut Cx, props: &Self::Props, _children: &mut Children) {
+    fn mount(&mut self, cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::MountChildren) {
+        cx.provide(props.get());
+    }
+
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
         let theme = props.get();
         if cx.get::<Theme>() != Some(&theme) {
             cx.provide(theme);
+            Update::PAINT
+        } else {
+            Update::NONE
         }
     }
 }

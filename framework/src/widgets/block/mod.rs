@@ -3,7 +3,7 @@ pub use builder::BlockBuilder;
 
 use kursor_core::{
     component::{
-        Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -159,9 +159,20 @@ impl Component for Block {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.border = props.border.get();
-        self.style = props.style.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let border = props.border.get();
+        let style = props.style.get();
+        let border_changed = self.border != border;
+        let style_changed = self.style != style;
+        self.border = border;
+        self.style = style;
+        if border_changed {
+            Update::MEASURE
+        } else if style_changed {
+            Update::PAINT
+        } else {
+            Update::NONE
+        }
     }
 
     fn measure(

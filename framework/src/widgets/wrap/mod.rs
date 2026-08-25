@@ -3,7 +3,7 @@ pub use builder::WrapBuilder;
 
 use kursor_core::{
     component::{
-        Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -82,9 +82,16 @@ impl Component for Wrap {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.gap = props.gap.get();
-        self.line_gap = props.line_gap.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let gap = props.gap.get();
+        let line_gap = props.line_gap.get();
+        if self.gap == gap && self.line_gap == line_gap {
+            Update::NONE
+        } else {
+            self.gap = gap;
+            self.line_gap = line_gap;
+            Update::MEASURE
+        }
     }
 
     fn measure(

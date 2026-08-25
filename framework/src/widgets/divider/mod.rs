@@ -2,7 +2,7 @@ pub mod builder;
 pub use builder::DividerBuilder;
 
 use kursor_core::{
-    component::{Children, Component, blueprint::Blueprint, context::Cx},
+    component::{Component, Update, blueprint::Blueprint, context::Cx},
     layout::{Orientation, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
     state::Value,
@@ -72,11 +72,23 @@ impl Component for Divider {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, children: &mut Children) {
-        self.orientation = props.orientation.get();
-        self.style = props.style.get();
-        self.glyph = props.glyph.get();
-        children.clear();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let orientation = props.orientation.get();
+        let style = props.style.get();
+        let glyph = props.glyph.get();
+        let orientation_changed = self.orientation != orientation;
+        let style_changed = self.style != style;
+        let glyph_changed = self.glyph != glyph;
+        self.orientation = orientation;
+        self.style = style;
+        self.glyph = glyph;
+        if orientation_changed {
+            Update::MEASURE
+        } else if style_changed || glyph_changed {
+            Update::PAINT
+        } else {
+            Update::NONE
+        }
     }
 
     fn measure(

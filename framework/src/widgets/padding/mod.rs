@@ -3,7 +3,7 @@ pub use builder::PaddingBuilder;
 
 use kursor_core::{
     component::{
-        Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -83,8 +83,14 @@ impl Component for Padding {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.insets = props.insets.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let insets = props.insets.get();
+        if self.insets == insets {
+            Update::NONE
+        } else {
+            self.insets = insets;
+            Update::MEASURE
+        }
     }
 
     fn measure(

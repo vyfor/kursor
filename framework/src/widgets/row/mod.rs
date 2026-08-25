@@ -3,7 +3,7 @@ pub use builder::RowBuilder;
 
 use kursor_core::{
     component::{
-        Component,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -60,8 +60,14 @@ impl Component for Row {
         old != new
     }
 
-    fn build(&mut self, _cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::Children) {
-        self.gap = props.gap.get();
+    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+        let gap = props.gap.get();
+        if self.gap == gap {
+            Update::NONE
+        } else {
+            self.gap = gap;
+            Update::MEASURE
+        }
     }
 
     fn measure(
