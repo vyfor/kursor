@@ -4,6 +4,7 @@ pub mod button;
 pub mod column;
 pub mod bounds;
 pub mod divider;
+pub mod flex;
 pub mod overlay;
 pub mod padding;
 pub mod row;
@@ -20,6 +21,7 @@ pub use button::{Button, ButtonBehavior, ButtonIntent, ButtonProps, ButtonState,
 pub use column::{Column, ColumnProps};
 pub use bounds::{Bounds, BoundsProps};
 pub use divider::{Divider, DividerProps};
+pub use flex::{Flex, FlexBuilder, FlexItem, FlexProps, FlexSize, IntoFlexItems};
 pub use overlay::{Anchor, Layer, Overlay, OverlayProps, Overlays};
 pub use padding::{Padding, PaddingProps};
 pub use row::{Row, RowProps};
