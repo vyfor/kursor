@@ -7,8 +7,8 @@ use kursor_core::{
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
-    theme::Theme,
     state::{IntoValue, Value},
+    theme::Theme,
 };
 
 pub struct Themed;
@@ -38,7 +38,12 @@ impl Component for Themed {
         old != new
     }
 
-    fn mount(&mut self, cx: &mut Cx, props: &Self::Props, _children: &mut kursor_core::component::MountChildren) {
+    fn mount(
+        &mut self,
+        cx: &mut Cx,
+        props: &Self::Props,
+        _children: &mut kursor_core::component::MountChildren,
+    ) {
         cx.provide(props.get());
     }
 

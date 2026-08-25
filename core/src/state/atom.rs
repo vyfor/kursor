@@ -2,10 +2,10 @@ use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 use crate::state::{
+    LocalState, SharedState,
     arena::arena,
     id::AtomId,
     slot::{Guard, Slot},
-    LocalState, SharedState,
 };
 
 pub struct Atom<T: LocalState> {

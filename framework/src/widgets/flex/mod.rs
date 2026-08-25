@@ -4,7 +4,11 @@ pub use builder::FlexBuilder;
 use std::rc::Rc;
 
 use kursor_core::{
-    component::{Component, MountChildren, Update, blueprint::{Blueprint, IntoBlueprint}, context::Cx},
+    component::{
+        Component, MountChildren, Update,
+        blueprint::{Blueprint, IntoBlueprint},
+        context::Cx,
+    },
     layout::{
         Orientation,
         context::{LayoutCx, MeasureCx},
@@ -194,11 +198,7 @@ impl Component for Flex {
     fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
         let direction = props.direction.get();
         let gap = props.gap.get();
-        let sizes: Vec<_> = props
-            .items
-            .iter()
-            .map(|item| item.size.resolve())
-            .collect();
+        let sizes: Vec<_> = props.items.iter().map(|item| item.size.resolve()).collect();
         let structure_changed = !Rc::ptr_eq(&self.items, &props.items);
         let layout_changed = self.direction != direction || self.gap != gap || self.sizes != sizes;
         self.direction = direction;
@@ -233,7 +233,11 @@ impl Component for Flex {
         let mut has_fill = false;
 
         for index in 0..count {
-            let size = self.sizes.get(index).copied().unwrap_or(ResolvedTrack::Content);
+            let size = self
+                .sizes
+                .get(index)
+                .copied()
+                .unwrap_or(ResolvedTrack::Content);
             let child_available = match size {
                 ResolvedTrack::Fixed(main) => Self::with_main(available, self.direction, main),
                 _ => available,
@@ -253,17 +257,18 @@ impl Component for Flex {
             }
         }
 
-        main = main.saturating_add(
-            self.gap
-                .saturating_mul((count.saturating_sub(1)) as u16),
-        );
+        main = main.saturating_add(self.gap.saturating_mul((count.saturating_sub(1)) as u16));
         if has_fill {
             main = available_main;
         }
 
         match self.direction {
-            Orientation::Horizontal => Size::new(main.min(available.width), cross.min(available.height)),
-            Orientation::Vertical => Size::new(cross.min(available.width), main.min(available.height)),
+            Orientation::Horizontal => {
+                Size::new(main.min(available.width), cross.min(available.height))
+            }
+            Orientation::Vertical => {
+                Size::new(cross.min(available.width), main.min(available.height))
+            }
         }
     }
 
@@ -279,12 +284,20 @@ impl Component for Flex {
         let mut total_weight = 0_u32;
 
         for index in 0..count {
-            match self.sizes.get(index).copied().unwrap_or(ResolvedTrack::Content) {
+            match self
+                .sizes
+                .get(index)
+                .copied()
+                .unwrap_or(ResolvedTrack::Content)
+            {
                 ResolvedTrack::Content => {
-                    allocated = allocated.saturating_add(Self::main(children.size(index), self.direction));
+                    allocated =
+                        allocated.saturating_add(Self::main(children.size(index), self.direction));
                 }
                 ResolvedTrack::Fixed(size) => allocated = allocated.saturating_add(size),
-                ResolvedTrack::Fill(weight) => total_weight = total_weight.saturating_add(u32::from(weight)),
+                ResolvedTrack::Fill(weight) => {
+                    total_weight = total_weight.saturating_add(u32::from(weight))
+                }
             }
         }
 
@@ -296,7 +309,11 @@ impl Component for Flex {
         let mut distributed = 0_u16;
 
         for index in 0..count {
-            let size = self.sizes.get(index).copied().unwrap_or(ResolvedTrack::Content);
+            let size = self
+                .sizes
+                .get(index)
+                .copied()
+                .unwrap_or(ResolvedTrack::Content);
             let main = match size {
                 ResolvedTrack::Content => Self::main(children.size(index), self.direction),
                 ResolvedTrack::Fixed(size) => size,

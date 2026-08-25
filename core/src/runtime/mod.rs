@@ -576,8 +576,7 @@ impl Runtime {
         loop {
             self.scratch.dirty_sources.clear();
             dirty_queue().drain_into(&mut self.scratch.dirty_sources);
-            self.local_queue
-                .drain_into(&mut self.scratch.dirty_sources);
+            self.local_queue.drain_into(&mut self.scratch.dirty_sources);
             for &atom_id in &self.scratch.dirty_sources {
                 if let Some(nodes) = self.deps.get(&atom_id) {
                     for &node in nodes {
@@ -799,9 +798,7 @@ impl Runtime {
             let m = match &bp.key {
                 Some(key) => keyed.remove(key),
                 None => {
-                    let child = unkeyed
-                        .get_mut(unkeyed_index)
-                        .and_then(Option::take);
+                    let child = unkeyed.get_mut(unkeyed_index).and_then(Option::take);
                     unkeyed_index += 1;
                     child
                 }

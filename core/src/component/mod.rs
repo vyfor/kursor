@@ -97,19 +97,9 @@ pub trait Component: 'static {
 
     fn create(cx: &mut Cx, props: &Self::Props) -> Self;
 
-    fn mount(
-        &mut self,
-        _cx: &mut Cx,
-        _props: &Self::Props,
-        _children: &mut MountChildren,
-    ) {
-    }
+    fn mount(&mut self, _cx: &mut Cx, _props: &Self::Props, _children: &mut MountChildren) {}
 
-    fn update(
-        &mut self,
-        _cx: &mut Cx,
-        _props: &Self::Props,
-    ) -> Update {
+    fn update(&mut self, _cx: &mut Cx, _props: &Self::Props) -> Update {
         Update::NONE
     }
 
@@ -159,11 +149,7 @@ pub trait Component: 'static {
 
 pub trait AnyComponent {
     fn mount_any(&mut self, cx: &mut Cx, props: &dyn Any, children: &mut MountChildren);
-    fn update_any(
-        &mut self,
-        cx: &mut Cx,
-        props: &dyn Any,
-    ) -> Update;
+    fn update_any(&mut self, cx: &mut Cx, props: &dyn Any) -> Update;
     fn focus_any(&self, props: &dyn Any) -> Focus;
     fn event_any(
         &mut self,
@@ -191,11 +177,7 @@ impl<C: Component> AnyComponent for C {
         self.mount(cx, props, children)
     }
 
-    fn update_any(
-        &mut self,
-        cx: &mut Cx,
-        props: &dyn Any,
-    ) -> Update {
+    fn update_any(&mut self, cx: &mut Cx, props: &dyn Any) -> Update {
         let props = props.downcast_ref::<C::Props>().unwrap();
         self.update(cx, props)
     }

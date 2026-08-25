@@ -1,7 +1,7 @@
 use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
-    theme::Theme,
     state::{IntoValue, Value},
+    theme::Theme,
 };
 
 use super::Themed;

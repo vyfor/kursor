@@ -4,7 +4,11 @@ pub use builder::GridBuilder;
 use std::rc::Rc;
 
 use kursor_core::{
-    component::{Component, MountChildren, Update, blueprint::{Blueprint, IntoBlueprint}, context::Cx},
+    component::{
+        Component, MountChildren, Update,
+        blueprint::{Blueprint, IntoBlueprint},
+        context::Cx,
+    },
     layout::{
         context::{LayoutCx, MeasureCx},
         rect::Rect,
@@ -134,11 +138,7 @@ impl Grid {
         tracks.iter().map(Track::resolve).collect()
     }
 
-    fn content_sizes(
-        &self,
-        children: &mut MeasureCx,
-        available: Size,
-    ) -> (Vec<u16>, Vec<u16>) {
+    fn content_sizes(&self, children: &mut MeasureCx, available: Size) -> (Vec<u16>, Vec<u16>) {
         let mut columns = vec![0; self.column_tracks.len()];
         let mut rows = vec![0; self.row_tracks.len()];
         for (index, item) in self.items.iter().enumerate() {
@@ -253,17 +253,15 @@ impl Component for Grid {
             available.height,
             self.row_gap,
         );
-        let width = columns
-            .iter()
-            .copied()
-            .sum::<u16>()
-            .saturating_add(self.column_gap.saturating_mul(columns.len().saturating_sub(1) as u16));
-        let height = rows
-            .iter()
-            .copied()
-            .sum::<u16>()
-            .saturating_add(self.row_gap.saturating_mul(rows.len().saturating_sub(1) as u16));
-        
+        let width = columns.iter().copied().sum::<u16>().saturating_add(
+            self.column_gap
+                .saturating_mul(columns.len().saturating_sub(1) as u16),
+        );
+        let height = rows.iter().copied().sum::<u16>().saturating_add(
+            self.row_gap
+                .saturating_mul(rows.len().saturating_sub(1) as u16),
+        );
+
         Size::new(width.min(available.width), height.min(available.height))
     }
 
@@ -275,18 +273,15 @@ impl Component for Grid {
             area.width,
             self.column_gap,
         );
-        let rows = allocate_tracks(
-            &self.row_tracks,
-            &row_content,
-            area.height,
-            self.row_gap,
-        );
+        let rows = allocate_tracks(&self.row_tracks, &row_content, area.height, self.row_gap);
 
         let mut x = Vec::with_capacity(columns.len());
         let mut cursor = area.x;
         for width in &columns {
             x.push(cursor);
-            cursor = cursor.saturating_add(*width).saturating_add(self.column_gap);
+            cursor = cursor
+                .saturating_add(*width)
+                .saturating_add(self.column_gap);
         }
         let mut y = Vec::with_capacity(rows.len());
         let mut cursor = area.y;

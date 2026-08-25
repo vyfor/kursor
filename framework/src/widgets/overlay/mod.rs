@@ -238,7 +238,12 @@ impl Component for Overlay {
         old != new
     }
 
-    fn mount(&mut self, cx: &mut Cx, props: &Self::Props, children: &mut kursor_core::component::MountChildren) {
+    fn mount(
+        &mut self,
+        cx: &mut Cx,
+        props: &Self::Props,
+        children: &mut kursor_core::component::MountChildren,
+    ) {
         self.overlays = props.overlays.clone();
         self.base = props.base.clone();
         if cx.get::<Overlays>() != Some(&self.overlays) {

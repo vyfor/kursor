@@ -9,11 +9,16 @@ use kursor_core::{
         behavior::{Behavior, BehaviorCx},
         blueprint::Blueprint,
         context::Cx,
-    }, event::{
+    },
+    event::{
         Event, EventResult, Phase,
         key::KeyCode,
         mouse::{MouseButton, MouseKind},
-    }, layout::{WrapMode, context::MeasureCx, size::Size}, render::style::Style, state::{IntoValue, Signal, Value}, theme::Theme,
+    },
+    layout::{WrapMode, context::MeasureCx, size::Size},
+    render::style::Style,
+    state::{IntoValue, Signal, Value},
+    theme::Theme,
 };
 
 use super::{Block, BlockProps, Border, Text};
@@ -187,7 +192,12 @@ impl Component for Button {
         )
     }
 
-    fn mount(&mut self, _cx: &mut Cx, _props: &Self::Props, children: &mut kursor_core::component::MountChildren) {
+    fn mount(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        children: &mut kursor_core::component::MountChildren,
+    ) {
         children.replace(Block::with(
             BlockProps {
                 border: self.border.clone().into_value(),

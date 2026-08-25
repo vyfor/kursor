@@ -119,11 +119,7 @@ impl<T: LocalState> Memo<T> {
             let node: Rc<dyn MemoNode> = self.inner.clone();
             Inner::refresh(&self.inner, &node);
         }
-        let val = unsafe {
-            (*self.inner.value.get())
-                .as_ref()
-                .unwrap()
-        };
+        let val = unsafe { (*self.inner.value.get()).as_ref().unwrap() };
 
         f(val)
     }
@@ -197,11 +193,8 @@ impl<T: LocalState> Inner<T> {
             registry.depths.insert(self.id, depth);
             for dep in old_deps.drain(..) {
                 if let Some(entries) = registry.dependents.get_mut(&dep) {
-                    entries.retain(|entry| {
-                        entry
-                            .upgrade()
-                            .is_some_and(|entry| entry.id() != self.id)
-                    });
+                    entries
+                        .retain(|entry| entry.upgrade().is_some_and(|entry| entry.id() != self.id));
                     if entries.is_empty() {
                         registry.dependents.remove(&dep);
                     }

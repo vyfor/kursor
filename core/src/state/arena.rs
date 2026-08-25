@@ -4,11 +4,7 @@ use std::{
     sync::{OnceLock, RwLock},
 };
 
-use crate::state::{
-    id::AtomId,
-    slot::Slot,
-    SharedState,
-};
+use crate::state::{SharedState, id::AtomId, slot::Slot};
 
 type Erased = Box<dyn Any + Send + Sync>;
 

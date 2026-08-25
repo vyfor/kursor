@@ -1,8 +1,8 @@
 pub mod align;
 pub mod block;
+pub mod bounds;
 pub mod button;
 pub mod column;
-pub mod bounds;
 pub mod divider;
 pub mod flex;
 pub mod grid;
@@ -18,9 +18,9 @@ pub mod wrap;
 
 pub use align::{Align, AlignProps};
 pub use block::{Block, BlockProps, Border, BorderChars};
+pub use bounds::{Bounds, BoundsProps};
 pub use button::{Button, ButtonBehavior, ButtonIntent, ButtonProps, ButtonState, ButtonStyles};
 pub use column::{Column, ColumnProps};
-pub use bounds::{Bounds, BoundsProps};
 pub use divider::{Divider, DividerProps};
 pub use flex::{Flex, FlexBuilder, FlexItem, FlexProps, IntoFlexItems};
 pub use grid::{Grid, GridBuilder, GridItem, GridProps, IntoGridItems};
