@@ -11,7 +11,7 @@ pub struct Cx<'a> {
     pub node: Option<NodeId>,
     pub env: Environment,
     pub(crate) actions: Option<&'a mut Vec<Action>>,
-    pub(crate) global_input: Option<&'a mut bool>,
+    pub(crate) global_input: Option<&'a mut Option<bool>>,
 }
 
 impl<'a> Cx<'a> {
@@ -38,27 +38,23 @@ impl<'a> Cx<'a> {
         }
     }
 
-    pub fn focus(&mut self) {
-        if let (Some(actions), Some(node)) = (self.actions.as_deref_mut(), self.node) {
-            actions.push(Action::Focus(Some(node)));
-        }
-    }
-
-    pub fn unfocus(&mut self) {
+    pub fn focus(&mut self, focused: bool) {
         if let Some(actions) = self.actions.as_deref_mut() {
-            actions.push(Action::Focus(None));
+            match (focused, self.node) {
+                (true, Some(node)) => actions.push(Action::Focus(Some(node))),
+                (false, _) => actions.push(Action::Focus(None)),
+                (true, None) => {}
+            }
         }
     }
 
-    pub fn capture(&mut self) {
-        if let (Some(actions), Some(node)) = (self.actions.as_deref_mut(), self.node) {
-            actions.push(Action::Capture(node));
-        }
-    }
-
-    pub fn release_capture(&mut self) {
+    pub fn capture(&mut self, captured: bool) {
         if let Some(actions) = self.actions.as_deref_mut() {
-            actions.push(Action::Release);
+            match (captured, self.node) {
+                (true, Some(node)) => actions.push(Action::Capture(node)),
+                (false, _) => actions.push(Action::Release),
+                (true, None) => {}
+            }
         }
     }
 
@@ -98,21 +94,15 @@ impl<'a> Cx<'a> {
         }
     }
 
-    pub fn cursor(&mut self, x: u16, y: u16) {
+    pub fn cursor(&mut self, position: Option<(u16, u16)>) {
         if let (Some(actions), Some(node)) = (self.actions.as_deref_mut(), self.node) {
-            actions.push(Action::Cursor(node, Some((x, y))));
+            actions.push(Action::Cursor(node, position));
         }
     }
 
-    pub fn clear_cursor(&mut self) {
-        if let (Some(actions), Some(node)) = (self.actions.as_deref_mut(), self.node) {
-            actions.push(Action::Cursor(node, None));
-        }
-    }
-
-    pub fn global_input(&mut self) {
+    pub fn global_input(&mut self, enabled: bool) {
         if let Some(global_input) = self.global_input.as_deref_mut() {
-            *global_input = true;
+            *global_input = Some(enabled);
         }
     }
 }

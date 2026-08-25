@@ -248,13 +248,13 @@ impl Component for Button {
                 }
                 MouseKind::Down(MouseButton::Left) => {
                     self.state.pressed = true;
-                    cx.focus();
-                    cx.capture();
+                    cx.focus(true);
+                    cx.capture(true);
                     state_changed = true;
                 }
                 MouseKind::Up(MouseButton::Left) if self.state.pressed => {
                     self.state.pressed = false;
-                    cx.release_capture();
+                    cx.capture(false);
                     state_changed = true;
                 }
                 _ => {}

@@ -638,7 +638,7 @@ impl Runtime {
         let ((update, global_listener, env_changed), dep_reads) = deps::collect(|| {
             let ins = self.tree.get_mut(id).unwrap();
             let previous_env = ins.env.clone();
-            let mut global_key_listener = false;
+            let mut global_key_listener = None;
             let mut cx = Cx {
                 rect: Self::local_rect(ins.rect),
                 node: Some(id),
@@ -655,12 +655,14 @@ impl Runtime {
         });
 
         self.do_deps(id, dep_reads);
-        if global_listener {
-            if !self.global_listeners.contains(&id) {
-                self.global_listeners.push(id);
+        if let Some(enabled) = global_listener {
+            if enabled {
+                if !self.global_listeners.contains(&id) {
+                    self.global_listeners.push(id);
+                }
+            } else {
+                self.global_listeners.retain(|&node| node != id);
             }
-        } else {
-            self.global_listeners.retain(|&node| node != id);
         }
         let Update {
             mut invalidation,
@@ -1013,7 +1015,7 @@ impl Runtime {
             let ins = self.tree.get_mut(id).unwrap();
             let previous_env = ins.env.clone();
             let mut children = Children::new(declared_children.clone());
-            let mut global_key_listener = false;
+            let mut global_key_listener = None;
             let mut cx = Cx {
                 rect: Self::local_rect(ins.rect),
                 node: Some(id),
@@ -1033,7 +1035,7 @@ impl Runtime {
                 !previous_env.same(&env),
             )
         };
-        if global_listener && !self.global_listeners.contains(&id) {
+        if global_listener == Some(true) && !self.global_listeners.contains(&id) {
             self.global_listeners.push(id);
         }
         let children: Rc<[Blueprint]> = replacement.map_or(declared_children, Into::into);
