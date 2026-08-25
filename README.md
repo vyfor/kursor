@@ -20,9 +20,11 @@ the project is split into two crates:
 
 ## concepts
 
-### atoms
+### state management
 
-reactive state that can be shared between different parts of an application.
+- atoms: reactive state that can be shared between different parts of an application.
+- signals: reactive state local to the ui.
+- memo: derived state from a signal.
 
 ### environment
 
