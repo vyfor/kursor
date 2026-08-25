@@ -3,17 +3,17 @@ use kursor_core::{
     state::IntoValue,
 };
 
-use super::{Constraint, ConstraintProps};
+use super::{Bounds, BoundsProps};
 
-pub struct ConstraintBuilder {
-    props: ConstraintProps,
+pub struct BoundsBuilder {
+    props: BoundsProps,
     children: Vec<Blueprint>,
 }
 
-impl ConstraintBuilder {
+impl BoundsBuilder {
     pub(crate) fn new(child: impl IntoBlueprint) -> Self {
         Self {
-            props: ConstraintProps::default(),
+            props: BoundsProps::default(),
             children: child.into_blueprint(),
         }
     }
@@ -49,8 +49,8 @@ impl ConstraintBuilder {
     }
 }
 
-impl IntoBlueprint for ConstraintBuilder {
+impl IntoBlueprint for BoundsBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Constraint>(self.props).children(self.children)]
+        vec![Blueprint::new::<Bounds>(self.props).children(self.children)]
     }
 }

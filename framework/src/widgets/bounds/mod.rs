@@ -1,5 +1,5 @@
 pub mod builder;
-pub use builder::ConstraintBuilder;
+pub use builder::BoundsBuilder;
 
 use kursor_core::{
     component::{
@@ -16,23 +16,23 @@ use kursor_core::{
 };
 
 #[derive(Clone, Default, PartialEq, Eq)]
-pub struct ConstraintProps {
+pub struct BoundsProps {
     pub min_width: Option<Value<u16>>,
     pub max_width: Option<Value<u16>>,
     pub min_height: Option<Value<u16>>,
     pub max_height: Option<Value<u16>>,
 }
 
-pub struct Constraint {
+pub struct Bounds {
     min_width: Option<u16>,
     max_width: Option<u16>,
     min_height: Option<u16>,
     max_height: Option<u16>,
 }
 
-impl Constraint {
-    pub fn builder(child: impl IntoBlueprint) -> ConstraintBuilder {
-        ConstraintBuilder::new(child)
+impl Bounds {
+    pub fn builder(child: impl IntoBlueprint) -> BoundsBuilder {
+        BoundsBuilder::new(child)
     }
 
     pub fn exact(
@@ -43,7 +43,7 @@ impl Constraint {
         let width = width.into_value();
         let height = height.into_value();
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 min_width: Some(width.clone()),
                 max_width: Some(width),
                 min_height: Some(height.clone()),
@@ -56,7 +56,7 @@ impl Constraint {
     pub fn width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
         let width = width.into_value();
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 min_width: Some(width.clone()),
                 max_width: Some(width),
                 ..Default::default()
@@ -68,7 +68,7 @@ impl Constraint {
     pub fn height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
         let height = height.into_value();
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 min_height: Some(height.clone()),
                 max_height: Some(height),
                 ..Default::default()
@@ -88,7 +88,7 @@ impl Constraint {
         child: impl IntoBlueprint,
     ) -> Blueprint {
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 min_width: Some(width.into_value()),
                 min_height: Some(height.into_value()),
                 ..Default::default()
@@ -103,7 +103,7 @@ impl Constraint {
         child: impl IntoBlueprint,
     ) -> Blueprint {
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 max_width: Some(width.into_value()),
                 max_height: Some(height.into_value()),
                 ..Default::default()
@@ -114,7 +114,7 @@ impl Constraint {
 
     pub fn min_width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 min_width: Some(width.into_value()),
                 ..Default::default()
             },
@@ -124,7 +124,7 @@ impl Constraint {
 
     pub fn max_width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 max_width: Some(width.into_value()),
                 ..Default::default()
             },
@@ -134,7 +134,7 @@ impl Constraint {
 
     pub fn min_height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 min_height: Some(height.into_value()),
                 ..Default::default()
             },
@@ -144,7 +144,7 @@ impl Constraint {
 
     pub fn max_height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
-            ConstraintProps {
+            BoundsProps {
                 max_height: Some(height.into_value()),
                 ..Default::default()
             },
@@ -152,13 +152,13 @@ impl Constraint {
         )
     }
 
-    pub fn with(props: ConstraintProps, child: impl IntoBlueprint) -> Blueprint {
+    pub fn with(props: BoundsProps, child: impl IntoBlueprint) -> Blueprint {
         Blueprint::new::<Self>(props).child(child)
     }
 }
 
-impl Component for Constraint {
-    type Props = ConstraintProps;
+impl Component for Bounds {
+    type Props = BoundsProps;
 
     fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
         Self {
