@@ -1,10 +1,16 @@
+#[cfg(feature = "animate")]
+use super::Animated;
 use super::{LocalState, atom::Atom, memo::Memo, signal::Signal};
+#[cfg(feature = "animate")]
+use std::rc::Rc;
 
 pub enum Value<T: LocalState> {
     Plain(T),
     Signal(Signal<T>),
     Atom(Atom<T>),
     Memo(Memo<T>),
+    #[cfg(feature = "animate")]
+    Animated(Animated<T>),
 }
 
 impl<T: LocalState> Value<T> {
@@ -30,6 +36,8 @@ impl<T: LocalState> Value<T> {
             Self::Signal(signal) => signal.read(),
             Self::Atom(atom) => atom.read(),
             Self::Memo(memo) => memo.get(),
+            #[cfg(feature = "animate")]
+            Self::Animated(animated) => animated.get(),
         }
     }
 
@@ -39,6 +47,8 @@ impl<T: LocalState> Value<T> {
             Self::Signal(signal) => signal.with(f),
             Self::Atom(atom) => atom.with(f),
             Self::Memo(memo) => memo.with(f),
+            #[cfg(feature = "animate")]
+            Self::Animated(animated) => f(&animated.get()),
         }
     }
 }
@@ -50,6 +60,8 @@ impl<T: LocalState> Clone for Value<T> {
             Self::Signal(signal) => Self::Signal(signal.clone()),
             Self::Atom(atom) => Self::Atom(*atom),
             Self::Memo(memo) => Self::Memo(memo.clone()),
+            #[cfg(feature = "animate")]
+            Self::Animated(animated) => Self::Animated(animated.clone()),
         }
     }
 }
@@ -61,6 +73,8 @@ impl<T: LocalState> PartialEq for Value<T> {
             (Self::Signal(a), Self::Signal(b)) => a == b,
             (Self::Atom(a), Self::Atom(b)) => a == b,
             (Self::Memo(a), Self::Memo(b)) => a == b,
+            #[cfg(feature = "animate")]
+            (Self::Animated(a), Self::Animated(b)) => Rc::ptr_eq(&a.inner, &b.inner),
             _ => false,
         }
     }
@@ -68,8 +82,27 @@ impl<T: LocalState> PartialEq for Value<T> {
 
 impl<T: LocalState> Eq for Value<T> {}
 
+#[cfg(feature = "animate")]
+impl<T: LocalState> Value<T> {
+    pub fn animate<A>(self, animation: A) -> Self
+    where
+        A: animate::Animation<Value = T> + 'static,
+    {
+        Self::Animated(Animated::with(self, animation))
+    }
+}
+
 pub trait IntoValue<T: LocalState> {
     fn into_value(self) -> Value<T>;
+
+    #[cfg(feature = "animate")]
+    fn animate<A>(self, animation: A) -> Value<T>
+    where
+        A: animate::Animation<Value = T> + 'static,
+        Self: Sized,
+    {
+        self.into_value().animate(animation)
+    }
 }
 
 #[macro_export]
@@ -109,15 +142,15 @@ impl<T: LocalState> IntoValue<T> for Memo<T> {
     }
 }
 
-pub struct Static<T: LocalState>(pub T);
+pub struct Plain<T: LocalState>(pub T);
 
-impl<T: LocalState> Static<T> {
+impl<T: LocalState> Plain<T> {
     pub fn new(value: T) -> Self {
         Self(value)
     }
 }
 
-impl<T: LocalState> IntoValue<T> for Static<T> {
+impl<T: LocalState> IntoValue<T> for Plain<T> {
     fn into_value(self) -> Value<T> {
         Value::Plain(self.0)
     }

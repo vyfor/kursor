@@ -31,6 +31,22 @@ impl<'a> Cx<'a> {
         Signal::new(value)
     }
 
+    #[cfg(feature = "animate")]
+    pub fn time(&self) -> animate::Time {
+        let context = crate::state::frame::current()
+            .expect("animation time is only available within runtime");
+        animate::Time::new(context.elapsed, context.delta)
+    }
+
+    #[cfg(feature = "animate")]
+    pub fn animate<A: animate::Animation>(&mut self, animation: &mut A) -> animate::Activity {
+        let activity = animation.advance(self.time());
+        if activity.running {
+            crate::state::frame::request_frame();
+        }
+        activity
+    }
+
     pub fn theme(&self) -> &Theme {
         match self.get() {
             Some(theme) => theme,

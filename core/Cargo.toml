@@ -12,3 +12,8 @@ edition.workspace = true
 [dependencies]
 slab = "0.4"
 unicode-width = "0.2"
+animate = { version = "0.5", optional = true, default-features = false }
+
+[features]
+default = []
+animate = ["dep:animate"]

@@ -3,6 +3,21 @@
 version = 4
 
 [[package]]
+name = "animate"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8793b39338b1a85840f8935f2a76bbf70787156481b200783abf77fa30b7f8d"
+dependencies = [
+ "animate-core",
+]
+
+[[package]]
+name = "animate-core"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9df8c530ac3063fe9360cebb3e483d941b6b4ae98215e72f5bb4c447190c6e09"
+
+[[package]]
 name = "bitflags"
 version = "2.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -63,6 +78,7 @@ dependencies = [
 name = "kursor"
 version = "0.0.1"
 dependencies = [
+ "animate",
  "crossterm",
  "kursor-core",
  "unicode-width",
@@ -72,6 +88,7 @@ dependencies = [
 name = "kursor-core"
 version = "0.0.1"
 dependencies = [
+ "animate",
  "slab",
  "unicode-width",
 ]

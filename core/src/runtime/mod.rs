@@ -7,6 +7,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[cfg(feature = "animate")]
+use crate::state::frame;
 use crate::{
     component::{
         Children, Component, Focus, Invalidation, Update,
@@ -93,10 +95,30 @@ pub struct Runtime {
     global_listeners: Vec<NodeId>,
     local_queue: Rc<signal::LocalQueue>,
     scratch: Scratch,
+    #[cfg(feature = "animate")]
+    frame_id: u64,
+    #[cfg(feature = "animate")]
+    started_at: Instant,
+    #[cfg(feature = "animate")]
+    last_frame: Instant,
+    #[cfg(feature = "animate")]
+    frame_now: Instant,
+    #[cfg(feature = "animate")]
+    frame_elapsed: Duration,
+    #[cfg(feature = "animate")]
+    frame_delta: Duration,
+    #[cfg(feature = "animate")]
+    frame_interval: Duration,
+    #[cfg(feature = "animate")]
+    animation_deadline: Option<Instant>,
+    #[cfg(feature = "animate")]
+    animation_nodes: HashSet<NodeId>,
 }
 
 impl Runtime {
     pub fn new(size: Size) -> Self {
+        #[cfg(feature = "animate")]
+        let now = Instant::now();
         Self {
             tree: Tree::new(),
             deps: HashMap::new(),
@@ -117,6 +139,24 @@ impl Runtime {
             global_listeners: Vec::new(),
             local_queue: Rc::new(signal::LocalQueue::new()),
             scratch: Scratch::new(),
+            #[cfg(feature = "animate")]
+            frame_id: 0,
+            #[cfg(feature = "animate")]
+            started_at: now,
+            #[cfg(feature = "animate")]
+            last_frame: now,
+            #[cfg(feature = "animate")]
+            frame_now: now,
+            #[cfg(feature = "animate")]
+            frame_elapsed: Duration::ZERO,
+            #[cfg(feature = "animate")]
+            frame_delta: Duration::ZERO,
+            #[cfg(feature = "animate")]
+            frame_interval: Duration::from_millis(16),
+            #[cfg(feature = "animate")]
+            animation_deadline: None,
+            #[cfg(feature = "animate")]
+            animation_nodes: HashSet::new(),
         }
     }
 
@@ -136,7 +176,46 @@ impl Runtime {
         &self.back
     }
 
+    #[cfg(feature = "animate")]
+    pub fn next_deadline(&self) -> Option<Instant> {
+        self.animation_deadline
+    }
+
+    #[cfg(feature = "animate")]
+    pub fn set_frame_interval(&mut self, interval: Duration) {
+        self.frame_interval = interval.max(Duration::from_millis(1));
+    }
+
+    #[cfg(feature = "animate")]
+    fn request_animation_frame(&mut self, node: NodeId) {
+        self.animation_nodes.insert(node);
+        let deadline = self.frame_now + self.frame_interval;
+        self.animation_deadline = Some(
+            self.animation_deadline
+                .map_or(deadline, |current| current.min(deadline)),
+        );
+    }
+
+    #[cfg(feature = "animate")]
+    fn begin_frame(&mut self) {
+        let now = Instant::now();
+        self.frame_id = self.frame_id.wrapping_add(1);
+        self.frame_delta = now.saturating_duration_since(self.last_frame);
+        self.frame_elapsed = now.saturating_duration_since(self.started_at);
+        self.frame_now = now;
+        self.last_frame = now;
+        if self
+            .animation_deadline
+            .is_some_and(|deadline| deadline <= now)
+        {
+            self.animation_deadline = None;
+            self.update_dirty.extend(self.animation_nodes.drain());
+        }
+    }
+
     pub fn mount(&mut self, blueprint: Blueprint) {
+        #[cfg(feature = "animate")]
+        self.begin_frame();
         let _signals = signal::enter(&self.local_queue);
         if let Some(root) = self.tree.root() {
             self.drop_node(root);
@@ -301,13 +380,27 @@ impl Runtime {
     }
 
     pub fn flush(&mut self) {
+        #[cfg(feature = "animate")]
+        let _frame = frame::enter(frame::FrameContext {
+            frame_id: self.frame_id,
+            elapsed: self.frame_elapsed,
+            delta: self.frame_delta,
+            phase: frame::Phase::Update,
+            node: None,
+            runtime: self as *mut Runtime as *mut (),
+            request_frame,
+        });
         let _signals = signal::enter(&self.local_queue);
         let _scope = scope::enter();
         self.do_update();
+        #[cfg(feature = "animate")]
+        let _phase = frame::enter_node(None, frame::Phase::Passive);
         self.do_layout();
     }
 
     pub fn render(&mut self) -> Vec<CellDiff> {
+        #[cfg(feature = "animate")]
+        self.begin_frame();
         let _scope = scope::enter();
         self.flush();
         self.do_paint();
@@ -628,6 +721,8 @@ impl Runtime {
     }
 
     fn do_component_update(&mut self, id: NodeId) {
+        #[cfg(feature = "animate")]
+        let _node_frame = frame::enter_node(Some(id), frame::Phase::Update);
         let inherited = self
             .tree
             .parent(id)
@@ -1503,6 +1598,13 @@ impl Runtime {
             };
             self.apply_paint(child, child_origin, child_clip);
         }
+    }
+}
+
+#[cfg(feature = "animate")]
+unsafe fn request_frame(runtime: *mut (), node: NodeId) {
+    unsafe {
+        (&mut *(runtime as *mut Runtime)).request_animation_frame(node);
     }
 }
 

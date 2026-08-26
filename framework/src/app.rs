@@ -106,7 +106,17 @@ impl<T: Terminal> App<T> {
                 return Ok(());
             }
 
-            if !self.terminal.poll(Duration::from_millis(250))? {
+            #[cfg(feature = "animate")]
+            let timeout = self
+                .runtime
+                .next_deadline()
+                .map_or(Duration::from_millis(250), |deadline| {
+                    deadline.saturating_duration_since(std::time::Instant::now())
+                })
+                .min(Duration::from_millis(250));
+            #[cfg(not(feature = "animate"))]
+            let timeout = Duration::from_millis(250);
+            if !self.terminal.poll(timeout)? {
                 continue;
             }
 
