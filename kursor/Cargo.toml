@@ -2,7 +2,7 @@
 name = "kursor"
 authors.workspace = true
 categories.workspace = true
-description = "A modern retained-mode TUI library with fine-grained reactivity"
+description = "Build reactive terminal interfaces in Rust"
 keywords.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -18,7 +18,7 @@ crossterm = ["dep:crossterm"]
 animate = ["kursor-core/animate", "dep:animate"]
 
 [dependencies]
-kursor-core = { version = "0.0.1", path = "../core" }
+kursor-core = { version = "0.1.0", path = "../kursor-core" }
 unicode-width = "0.2"
 crossterm = { version = "0.29.0", default-features = false, features = ["bracketed-paste", "events"], optional = true }
 animate = { version = "0.5", optional = true, default-features = false }
