@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 edition.workspace = true
+readme = "../README.md"
 
 [lib]
 crate-type = ["lib"]
