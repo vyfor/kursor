@@ -22,6 +22,7 @@ use kursor_core::{
 };
 
 use super::{Block, BlockProps, Border, Text};
+use super::text::IntoText;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ButtonState {
@@ -204,7 +205,7 @@ impl Component for Button {
                 style: self.style.clone().into_value(),
             },
             Text::with(super::TextProps {
-                text: self.label.clone().into_value(),
+                text: self.label.clone().into_text(),
                 style: self.style.clone().into_value(),
                 wrap: Value::plain(WrapMode::None),
             }),

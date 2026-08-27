@@ -12,18 +12,18 @@ pub struct TextBuilder {
 }
 
 impl TextBuilder {
-    pub(crate) fn new(text: impl IntoValue<String>) -> Self {
+    pub(crate) fn new(text: impl super::IntoText) -> Self {
         Self {
             props: TextProps {
-                text: text.into_value(),
+                text: text.into_text(),
                 style: Value::plain(None),
                 wrap: Value::plain(WrapMode::None),
             },
         }
     }
 
-    pub fn style(mut self, style: Style) -> Self {
-        self.props.style = Value::plain(Some(style));
+    pub fn style(mut self, style: impl IntoValue<Option<Style>>) -> Self {
+        self.props.style = style.into_value();
         self
     }
 

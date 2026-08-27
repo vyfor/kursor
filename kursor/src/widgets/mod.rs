@@ -37,6 +37,6 @@ pub use row::{Row, RowProps};
 pub use scroll::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};
 pub use spacer::{Spacer, SpacerProps};
 pub use stack::{Stack, StackProps};
-pub use text::{Text, TextProps};
+pub use text::{Line, Span, Text, TextProps};
 pub use themed::Themed;
 pub use wrap::{Wrap, WrapProps};
