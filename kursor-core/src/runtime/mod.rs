@@ -297,10 +297,20 @@ impl Runtime {
             }
             Event::Mouse(mouse) => {
                 self.update_hover(mouse);
-                let target = self
-                    .capture
-                    .filter(|&id| self.tree.contains(id))
-                    .or_else(|| self.pick(mouse));
+                let wheel = matches!(
+                    mouse.kind,
+                    MouseKind::ScrollUp
+                        | MouseKind::ScrollDown
+                        | MouseKind::ScrollLeft
+                        | MouseKind::ScrollRight
+                );
+                let target = if wheel {
+                    self.pick(mouse)
+                } else {
+                    self.capture
+                        .filter(|&id| self.tree.contains(id))
+                        .or_else(|| self.pick(mouse))
+                };
                 let res = target.map_or(EventResult::Ignored, |id| self.dispatch(id, &event));
                 match mouse.kind {
                     MouseKind::Down(button) => {
@@ -346,7 +356,11 @@ impl Runtime {
                     }
                     _ => {}
                 }
-                res
+                if wheel && !res.is_handled() {
+                    self.dispatch_global_listener(&event)
+                } else {
+                    res
+                }
             }
             Event::Resize(width, height) => {
                 self.rect = Rect::new(0, 0, *width, *height);
@@ -591,8 +605,14 @@ impl Runtime {
         let result = {
             let ins = self.tree.get_mut(id).unwrap();
             self.scratch.actions.clear();
+            let rect = Rect::new(
+                ins.origin.x.max(0) as u16,
+                ins.origin.y.max(0) as u16,
+                ins.rect.width,
+                ins.rect.height,
+            );
             let mut cx = Cx {
-                rect: Self::local_rect(ins.rect),
+                rect,
                 node: Some(id),
                 actions: Some(&mut self.scratch.actions),
                 global_input: None,
@@ -1159,7 +1179,6 @@ impl Runtime {
             if self.scratch.dirty_nodes.is_empty() {
                 break;
             }
-
             self.scratch
                 .dirty_nodes
                 .sort_unstable_by_key(|&id| (self.tree.depth(id), id));
@@ -1184,6 +1203,7 @@ impl Runtime {
                 } else {
                     self.tree.get(id).map_or(Offset::ZERO, |ins| ins.offset)
                 };
+                self.layout_dirty.insert(id);
                 self.apply_layout(id, rect, offset);
             }
         }
@@ -1386,13 +1406,11 @@ impl Runtime {
                 .map_or((Rect::default(), Offset::ZERO), |ins| {
                     (ins.rect, ins.offset)
                 });
-            let size_changed = old_rect.width != rect.width || old_rect.height != rect.height;
-
             if old_rect != rect || old_offset != offset {
                 self.paint_all = true;
             }
 
-            if !is_dirty && !size_changed {
+            if !is_dirty && old_rect == rect && old_offset == offset {
                 let (parent_origin, parent_clip) = match self.tree.parent(id) {
                     Some(p) => match self.tree.get(p) {
                         Some(p_ins) => (p_ins.origin, p_ins.clip),
