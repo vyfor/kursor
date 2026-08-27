@@ -5,17 +5,15 @@ use kursor_core::{
 
 use super::{Bounds, BoundsProps};
 
+#[derive(Default)]
 pub struct BoundsBuilder {
     props: BoundsProps,
     children: Vec<Blueprint>,
 }
 
 impl BoundsBuilder {
-    pub(crate) fn new(child: impl IntoBlueprint) -> Self {
-        Self {
-            props: BoundsProps::default(),
-            children: child.into_blueprint(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn exact(mut self, width: impl IntoValue<u16>, height: impl IntoValue<u16>) -> Self {
@@ -47,10 +45,25 @@ impl BoundsBuilder {
         self.props.max_height = Some(height.into_value());
         self
     }
+
+    pub fn children(mut self, children: impl IntoBlueprint) -> Self {
+        self.children.extend(children.into_blueprint());
+        self
+    }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Bounds>(self.props).children(self.children)
+    }
 }
 
 impl IntoBlueprint for BoundsBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Bounds>(self.props).children(self.children)]
+        vec![self.build()]
+    }
+}
+
+impl From<BoundsBuilder> for Blueprint {
+    fn from(builder: BoundsBuilder) -> Self {
+        builder.build()
     }
 }

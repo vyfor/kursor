@@ -9,6 +9,7 @@ use super::{LocalState, deps, id::AtomId, scope};
 trait MemoNode {
     fn id(&self) -> AtomId;
     fn depth(&self) -> usize;
+    fn mark_dirty(&self);
     fn refresh(self: Rc<Self>) -> bool;
 }
 
@@ -55,6 +56,10 @@ pub(crate) fn refresh_dependents(sources: &[AtomId]) -> Vec<AtomId> {
 
     if nodes.is_empty() {
         return Vec::new();
+    }
+
+    for node in &nodes {
+        node.mark_dirty();
     }
 
     nodes.sort_unstable_by_key(|node| node.depth());
@@ -148,6 +153,10 @@ impl<T: LocalState> MemoNode for Inner<T> {
 
     fn depth(&self) -> usize {
         self.depth.get()
+    }
+
+    fn mark_dirty(&self) {
+        self.dirty.set(true);
     }
 
     fn refresh(self: Rc<Self>) -> bool {

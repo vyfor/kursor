@@ -19,7 +19,7 @@ impl Themed {
     }
 
     pub fn new(theme: impl IntoValue<Theme>, child: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(theme.into_value()).child(child)
+        Blueprint::new::<Self>(theme.into_value()).children(child)
     }
 
     pub fn default(child: impl IntoBlueprint) -> Blueprint {

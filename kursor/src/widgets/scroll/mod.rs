@@ -93,8 +93,8 @@ pub struct Scroll {
 }
 
 impl Scroll {
-    pub fn builder(child: impl IntoBlueprint) -> ScrollBuilder {
-        ScrollBuilder::new(child)
+    pub fn builder() -> ScrollBuilder {
+        ScrollBuilder::new()
     }
 
     pub fn new(child: impl IntoBlueprint) -> Blueprint {
@@ -132,7 +132,7 @@ impl Scroll {
     }
 
     pub fn with(props: ScrollProps, child: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(props).child(child)
+        Blueprint::new::<Self>(props).children(child)
     }
 
     fn apply(&mut self, intent: ScrollIntent, direction: ScrollDirection, viewport: Size) -> bool {

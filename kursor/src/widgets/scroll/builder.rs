@@ -16,19 +16,45 @@ pub struct ScrollBuilder {
     children: Vec<Blueprint>,
 }
 
-impl ScrollBuilder {
-    pub(crate) fn new(child: impl IntoBlueprint) -> Self {
+impl Default for ScrollBuilder {
+    fn default() -> Self {
         Self {
             props: ScrollProps {
                 direction: ScrollDirection::Vertical.into_value(),
                 behavior: Arc::new(WheelScroll::default()),
             },
-            children: child.into_blueprint(),
+            children: Vec::new(),
         }
+    }
+}
+
+impl ScrollBuilder {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn direction(mut self, direction: impl IntoValue<ScrollDirection>) -> Self {
         self.props.direction = direction.into_value();
+        self
+    }
+
+    pub fn vertical(mut self) -> Self {
+        self.props.direction = ScrollDirection::Vertical.into_value();
+        self
+    }
+
+    pub fn horizontal(mut self) -> Self {
+        self.props.direction = ScrollDirection::Horizontal.into_value();
+        self
+    }
+
+    pub fn both(mut self) -> Self {
+        self.props.direction = ScrollDirection::Both.into_value();
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoBlueprint) -> Self {
+        self.children.extend(children.into_blueprint());
         self
     }
 
@@ -38,6 +64,10 @@ impl ScrollBuilder {
     {
         self.props.behavior = Arc::new(behavior);
         self
+    }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Scroll>(self.props).children(self.children)
     }
 }
 
@@ -55,6 +85,12 @@ impl BehaviorBuilder for ScrollBuilder {
 
 impl IntoBlueprint for ScrollBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Scroll>(self.props).children(self.children)]
+        vec![self.build()]
+    }
+}
+
+impl From<ScrollBuilder> for Blueprint {
+    fn from(builder: ScrollBuilder) -> Self {
+        builder.build()
     }
 }

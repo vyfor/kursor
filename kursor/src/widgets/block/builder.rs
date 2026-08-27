@@ -6,17 +6,15 @@ use kursor_core::{
 
 use super::{Block, BlockProps, Border};
 
+#[derive(Default)]
 pub struct BlockBuilder {
     props: BlockProps,
     children: Vec<Blueprint>,
 }
 
 impl BlockBuilder {
-    pub(crate) fn new(child: impl IntoBlueprint) -> Self {
-        Self {
-            props: BlockProps::default(),
-            children: child.into_blueprint(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn border(mut self, border: impl IntoValue<Border>) -> Self {
@@ -24,14 +22,31 @@ impl BlockBuilder {
         self
     }
 
-    pub fn style(mut self, style: Style) -> Self {
-        self.props.style = Some(style).into_value();
+    pub fn style(mut self, style: impl IntoValue<Option<Style>>) -> Self {
+        self.props.style = style.into_value();
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoBlueprint) -> Self {
+        self.children.extend(children.into_blueprint());
         self
     }
 }
 
 impl IntoBlueprint for BlockBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Block>(self.props).children(self.children)]
+        vec![self.build()]
+    }
+}
+
+impl From<BlockBuilder> for Blueprint {
+    fn from(builder: BlockBuilder) -> Self {
+        builder.build()
+    }
+}
+
+impl BlockBuilder {
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Block>(self.props).children(self.children)
     }
 }

@@ -53,6 +53,12 @@ impl<T: LocalState> Value<T> {
     }
 }
 
+impl<T: LocalState + Default> Default for Value<T> {
+    fn default() -> Self {
+        Self::Plain(T::default())
+    }
+}
+
 impl<T: LocalState> Clone for Value<T> {
     fn clone(&self) -> Self {
         match self {

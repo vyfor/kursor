@@ -6,17 +6,15 @@ use kursor_core::{
 
 use super::{Padding, PaddingProps};
 
+#[derive(Default)]
 pub struct PaddingBuilder {
     insets: Value<Insets>,
     children: Vec<Blueprint>,
 }
 
 impl PaddingBuilder {
-    pub(crate) fn new(child: impl IntoBlueprint) -> Self {
-        Self {
-            insets: Value::plain(Insets::default()),
-            children: child.into_blueprint(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn insets(mut self, insets: impl IntoValue<Insets>) -> Self {
@@ -50,15 +48,28 @@ impl PaddingBuilder {
         self.insets = Value::plain(insets);
         self
     }
+
+    pub fn children(mut self, children: impl IntoBlueprint) -> Self {
+        self.children.extend(children.into_blueprint());
+        self
+    }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Padding>(PaddingProps {
+            insets: self.insets,
+        })
+        .children(self.children)
+    }
 }
 
 impl IntoBlueprint for PaddingBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![
-            Blueprint::new::<Padding>(PaddingProps {
-                insets: self.insets,
-            })
-            .children(self.children),
-        ]
+        vec![self.build()]
+    }
+}
+
+impl From<PaddingBuilder> for Blueprint {
+    fn from(builder: PaddingBuilder) -> Self {
+        builder.build()
     }
 }

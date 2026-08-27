@@ -26,8 +26,8 @@ pub struct Padding {
 }
 
 impl Padding {
-    pub fn builder(child: impl IntoBlueprint) -> PaddingBuilder {
-        PaddingBuilder::new(child)
+    pub fn builder() -> PaddingBuilder {
+        PaddingBuilder::new()
     }
 
     pub fn all(value: u16, child: impl IntoBlueprint) -> Blueprint {
@@ -66,7 +66,7 @@ impl Padding {
         Blueprint::new::<Self>(PaddingProps {
             insets: insets.into_value(),
         })
-        .child(child)
+        .children(child)
     }
 }
 

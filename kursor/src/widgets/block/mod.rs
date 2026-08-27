@@ -88,8 +88,8 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn builder(child: impl IntoBlueprint) -> BlockBuilder {
-        BlockBuilder::new(child)
+    pub fn builder() -> BlockBuilder {
+        BlockBuilder::new()
     }
 
     pub fn new(child: impl IntoBlueprint) -> Blueprint {
@@ -137,7 +137,7 @@ impl Block {
     }
 
     pub fn with(props: BlockProps, child: impl IntoBlueprint) -> Blueprint {
-        Blueprint::new::<Self>(props).child(child)
+        Blueprint::new::<Self>(props).children(child)
     }
 
     fn inset(border: Border) -> u16 {

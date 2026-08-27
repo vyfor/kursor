@@ -26,15 +26,31 @@ pub struct Align {
 }
 
 impl Align {
-    pub fn builder(child: impl IntoBlueprint) -> AlignBuilder {
-        AlignBuilder::new(child)
+    pub fn builder() -> AlignBuilder {
+        AlignBuilder::new()
     }
 
     pub fn new(alignment: impl IntoValue<Alignment>, child: impl IntoBlueprint) -> Blueprint {
         Blueprint::new::<Self>(AlignProps {
             alignment: alignment.into_value(),
         })
-        .child(child)
+        .children(child)
+    }
+
+    pub fn left(child: impl IntoBlueprint) -> Blueprint {
+        Self::center_left(child)
+    }
+
+    pub fn right(child: impl IntoBlueprint) -> Blueprint {
+        Self::center_right(child)
+    }
+
+    pub fn top(child: impl IntoBlueprint) -> Blueprint {
+        Self::top_center(child)
+    }
+
+    pub fn bottom(child: impl IntoBlueprint) -> Blueprint {
+        Self::bottom_center(child)
     }
 
     pub fn top_left(child: impl IntoBlueprint) -> Blueprint {
