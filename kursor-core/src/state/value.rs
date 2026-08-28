@@ -1,3 +1,5 @@
+use crate::{layout::{Alignment, Insets, Orientation, ScrollDirection, WrapMode}, render::style::Style, theme::Theme};
+
 #[cfg(feature = "animate")]
 use super::Animated;
 use super::{LocalState, atom::Atom, memo::Memo, signal::Signal};
@@ -180,18 +182,24 @@ into_value!(
     f32,
     f64,
     String,
-    crate::layout::Alignment,
-    crate::layout::Insets,
-    crate::layout::Orientation,
-    crate::layout::ScrollDirection,
-    crate::layout::WrapMode,
-    crate::render::style::Style,
-    crate::theme::Theme,
+    Alignment,
+    Insets,
+    Orientation,
+    ScrollDirection,
+    WrapMode,
+    Style,
+    Theme,
 );
 
 impl<T: LocalState> IntoValue<Option<T>> for Option<T> {
     fn into_value(self) -> Value<Option<T>> {
         Value::Plain(self)
+    }
+}
+
+impl IntoValue<Option<Style>> for Style {
+    fn into_value(self) -> Value<Option<Style>> {
+        Value::Plain(Some(self))
     }
 }
 

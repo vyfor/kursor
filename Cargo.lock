@@ -81,6 +81,7 @@ dependencies = [
  "animate",
  "crossterm",
  "kursor-core",
+ "kursor-fx",
  "unicode-width",
 ]
 
@@ -91,6 +92,14 @@ dependencies = [
  "animate",
  "slab",
  "unicode-width",
+]
+
+[[package]]
+name = "kursor-fx"
+version = "0.1.0"
+dependencies = [
+ "animate",
+ "kursor-core",
 ]
 
 [[package]]

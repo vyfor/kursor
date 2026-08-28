@@ -36,6 +36,15 @@ impl<'a> Canvas<'a> {
         }
     }
 
+    pub fn cell(&self, x: u16, y: u16) -> Option<Cell> {
+        let x = self.origin.x.saturating_add(i32::from(x));
+        let y = self.origin.y.saturating_add(i32::from(y));
+        if x < 0 || y < 0 || !self.clip.contains(x as u16, y as u16) {
+            return None;
+        }
+        self.buffer.cell(x as u16, y as u16).copied()
+    }
+
     pub fn set_str(&mut self, mut x: u16, y: u16, text: &str, style: Style) {
         for ch in text.chars() {
             let width = if ch.is_ascii() && ch >= ' ' {

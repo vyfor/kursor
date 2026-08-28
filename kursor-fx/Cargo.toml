@@ -1,0 +1,15 @@
+[package]
+name = "kursor-fx"
+authors.workspace = true
+categories.workspace = true
+description = "Visual effects for Kursor"
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+readme = "../README.md"
+
+[dependencies]
+kursor-core = { version = "0.1.0", path = "../kursor-core", features = ["animate"] }
+animate = { version = "0.5", default-features = false }

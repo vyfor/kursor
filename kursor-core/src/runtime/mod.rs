@@ -209,7 +209,14 @@ impl Runtime {
             .is_some_and(|deadline| deadline <= now)
         {
             self.animation_deadline = None;
-            self.update_dirty.extend(self.animation_nodes.drain());
+            self.scratch.dirty_nodes.clear();
+            self.scratch
+                .dirty_nodes
+                .extend(self.animation_nodes.drain());
+            self.update_dirty
+                .extend(self.scratch.dirty_nodes.iter().copied());
+            self.paint_dirty
+                .extend(self.scratch.dirty_nodes.iter().copied());
         }
     }
 
@@ -415,6 +422,16 @@ impl Runtime {
     pub fn render(&mut self) -> Vec<CellDiff> {
         #[cfg(feature = "animate")]
         self.begin_frame();
+        #[cfg(feature = "animate")]
+        let _frame = frame::enter(frame::FrameContext {
+            frame_id: self.frame_id,
+            elapsed: self.frame_elapsed,
+            delta: self.frame_delta,
+            phase: frame::Phase::Passive,
+            node: None,
+            runtime: self as *mut Runtime as *mut (),
+            request_frame,
+        });
         let _scope = scope::enter();
         self.flush();
         self.do_paint();
@@ -1581,8 +1598,10 @@ impl Runtime {
     }
 
     fn apply_paint(&mut self, id: NodeId, origin: Offset, clip: Rect) {
+        #[cfg(feature = "animate")]
+        let _node_frame = frame::enter_node(Some(id), frame::Phase::Passive);
         {
-            let ins = self.tree.get(id).unwrap();
+            let ins = self.tree.get_mut(id).unwrap();
             let mut cx = Cx {
                 node: Some(id),
                 rect: Self::local_rect(ins.rect),
@@ -1591,6 +1610,8 @@ impl Runtime {
                 env: ins.env.clone(),
             };
             let mut canvas = Canvas::new(&mut self.back, clip, origin);
+            ins.component
+                .pre_paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
             ins.component
                 .paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
         }
@@ -1615,6 +1636,24 @@ impl Runtime {
                 continue;
             };
             self.apply_paint(child, child_origin, child_clip);
+        }
+
+        let running = {
+            let ins = self.tree.get_mut(id).unwrap();
+            let mut cx = Cx {
+                node: Some(id),
+                rect: Self::local_rect(ins.rect),
+                actions: None,
+                global_input: None,
+                env: ins.env.clone(),
+            };
+            let mut canvas = Canvas::new(&mut self.back, clip, origin);
+            ins.component
+                .post_paint_any(&mut cx, ins.props.as_ref(), &mut canvas)
+        };
+        if running {
+            #[cfg(feature = "animate")]
+            self.request_animation_frame(id);
         }
     }
 }

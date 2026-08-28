@@ -13,3 +13,6 @@ pub use crossterm;
 
 #[cfg(feature = "animate")]
 pub use animate;
+
+#[cfg(feature = "fx")]
+pub use kursor_fx as fx;

@@ -1,0 +1,101 @@
+use kursor_core::{
+    layout::rect::Rect,
+    render::cell::Cell,
+};
+
+use crate::fx::Direction;
+
+#[derive(Clone)]
+pub enum Mask {
+    All,
+    Text,
+    NonEmpty,
+    Inner(u16),
+    Not(Box<Mask>),
+}
+
+impl Mask {
+    pub fn all() -> Self {
+        Self::All
+    }
+
+    pub fn text() -> Self {
+        Self::Text
+    }
+
+    pub fn non_empty() -> Self {
+        Self::NonEmpty
+    }
+
+    pub fn inner(margin: u16) -> Self {
+        Self::Inner(margin)
+    }
+
+    pub fn not(mask: impl Into<Mask>) -> Self {
+        Self::Not(Box::new(mask.into()))
+    }
+
+    pub fn includes(&self, cell: Cell, x: u16, y: u16, area: Rect) -> bool {
+        match self {
+            Self::All => true,
+            Self::Text | Self::NonEmpty => cell.ch != ' ',
+            Self::Inner(margin) => {
+                x >= *margin
+                    && y >= *margin
+                    && x.saturating_add(*margin) < area.width
+                    && y.saturating_add(*margin) < area.height
+            }
+            Self::Not(mask) => !mask.includes(cell, x, y, area),
+        }
+    }
+}
+
+impl Default for Mask {
+    fn default() -> Self {
+        Self::All
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum Spread {
+    Uniform,
+    Towards(Direction),
+    Radial,
+}
+
+impl Spread {
+    pub fn uniform() -> Self {
+        Self::Uniform
+    }
+
+    pub fn towards(direction: Direction) -> Self {
+        Self::Towards(direction)
+    }
+
+    pub fn radial() -> Self {
+        Self::Radial
+    }
+
+    pub fn progress(self, progress: f32, x: u16, y: u16, area: Rect) -> f32 {
+        if matches!(self, Self::Uniform) {
+            return progress.clamp(0.0, 1.0);
+        }
+
+        let nx = x as f32 / area.width.max(1) as f32;
+        let ny = y as f32 / area.height.max(1) as f32;
+        let local = match self {
+            Self::Uniform => 0.0,
+            Self::Towards(Direction::Right) => nx,
+            Self::Towards(Direction::Left) => 1.0 - nx,
+            Self::Towards(Direction::Down) => ny,
+            Self::Towards(Direction::Up) => 1.0 - ny,
+            Self::Radial => {
+                let dx = nx - 0.5;
+                let dy = ny - 0.5;
+                (dx * dx + dy * dy).sqrt().min(1.0)
+            }
+        };
+
+        ((progress - local * 0.35) / 0.65).clamp(0.0, 1.0)
+    }
+}

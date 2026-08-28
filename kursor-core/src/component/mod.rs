@@ -140,6 +140,12 @@ pub trait Component: 'static {
     }
     fn paint(&self, _cx: &mut Cx, _props: &Self::Props, _canvas: &mut Canvas) {}
 
+    fn pre_paint(&mut self, _cx: &mut Cx, _props: &Self::Props, _canvas: &mut Canvas) {}
+
+    fn post_paint(&mut self, _cx: &mut Cx, _props: &Self::Props, _canvas: &mut Canvas) -> bool {
+        false
+    }
+
     fn changed(&self, _old: &Self::Props, _new: &Self::Props) -> bool {
         true
     }
@@ -167,6 +173,8 @@ pub trait AnyComponent {
     ) -> Size;
     fn layout_any(&mut self, cx: &mut Cx, props: &dyn Any, area: Rect, children: &mut LayoutCx);
     fn paint_any(&self, cx: &mut Cx, props: &dyn Any, canvas: &mut Canvas);
+    fn pre_paint_any(&mut self, cx: &mut Cx, props: &dyn Any, canvas: &mut Canvas);
+    fn post_paint_any(&mut self, cx: &mut Cx, props: &dyn Any, canvas: &mut Canvas) -> bool;
     fn changed_any(&self, old: &dyn Any, new: &dyn Any) -> bool;
     fn drop_any(&mut self, cx: &mut Cx);
 }
@@ -217,6 +225,16 @@ impl<C: Component> AnyComponent for C {
     fn paint_any(&self, cx: &mut Cx, props: &dyn Any, canvas: &mut Canvas) {
         let props = props.downcast_ref::<C::Props>().unwrap();
         self.paint(cx, props, canvas)
+    }
+
+    fn pre_paint_any(&mut self, cx: &mut Cx, props: &dyn Any, canvas: &mut Canvas) {
+        let props = props.downcast_ref::<C::Props>().unwrap();
+        self.pre_paint(cx, props, canvas)
+    }
+
+    fn post_paint_any(&mut self, cx: &mut Cx, props: &dyn Any, canvas: &mut Canvas) -> bool {
+        let props = props.downcast_ref::<C::Props>().unwrap();
+        self.post_paint(cx, props, canvas)
     }
 
     fn changed_any(&self, old: &dyn Any, new: &dyn Any) -> bool {
