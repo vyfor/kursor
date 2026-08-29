@@ -82,6 +82,7 @@ dependencies = [
  "crossterm",
  "kursor-core",
  "kursor-fx",
+ "termina",
  "unicode-width",
 ]
 
@@ -240,6 +241,19 @@ name = "smallvec"
 version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
+
+[[package]]
+name = "termina"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9048a889effe34a5cddee0af7f53285198b16dca3be510858d38dfdb3e62a04e"
+dependencies = [
+ "bitflags",
+ "parking_lot",
+ "rustix",
+ "signal-hook",
+ "windows-sys",
+]
 
 [[package]]
 name = "unicode-width"

@@ -5,6 +5,9 @@ use kursor_core::{event::Event, layout::size::Size, render::buffer::CellDiff};
 #[cfg(feature = "crossterm")]
 pub mod crossterm;
 
+#[cfg(feature = "termina")]
+pub mod termina;
+
 pub trait Terminal {
     type Error: Error + Send + Sync + 'static;
 

@@ -11,6 +11,9 @@ pub use kursor_core as core;
 #[cfg(feature = "crossterm")]
 pub use crossterm;
 
+#[cfg(feature = "termina")]
+pub use termina;
+
 #[cfg(feature = "animate")]
 pub use animate;
 
