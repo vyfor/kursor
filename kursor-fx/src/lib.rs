@@ -3,6 +3,7 @@ mod compose;
 mod context;
 mod layer;
 mod mask;
+mod subcell;
 mod widget;
 mod fx;
 
@@ -12,4 +13,5 @@ pub use context::{EffectCx, Fx, FxClone};
 pub use fx::*;
 pub use layer::{EffectLayer, LayerCell};
 pub use mask::{Mask, Spread};
+pub use subcell::{Axis, Subcell};
 pub use widget::{Effect, EffectProps};
