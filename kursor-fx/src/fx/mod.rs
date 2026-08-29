@@ -1,5 +1,5 @@
-mod direction;
 mod color;
+mod direction;
 mod fade;
 mod slide;
 mod tint;

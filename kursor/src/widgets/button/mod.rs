@@ -21,8 +21,8 @@ use kursor_core::{
     theme::Theme,
 };
 
-use super::{Block, BlockProps, Border, Text};
 use super::text::IntoText;
+use super::{Block, BlockProps, Border, Text};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ButtonState {

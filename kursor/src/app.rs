@@ -4,19 +4,19 @@ use std::{
 };
 
 use kursor_core::{
-    term_info::TermInfo,
     component::blueprint::Blueprint,
     event::{Event, EventResult, mouse::MouseKind},
     render::buffer::{Buffer, CellDiff},
     runtime::Runtime,
+    term_info::TermInfo,
 };
 
 use crate::{focus, terminal::Terminal};
 
-#[cfg(feature = "termina")]
-use crate::terminal::termina::Termina;
 #[cfg(all(not(feature = "termina"), feature = "crossterm"))]
 use crate::terminal::crossterm::Crossterm;
+#[cfg(feature = "termina")]
+use crate::terminal::termina::Termina;
 
 #[cfg(feature = "termina")]
 type DefaultTerminal = Termina;

@@ -66,7 +66,11 @@ impl Fx for Slide {
             return Activity::FINISHED;
         }
 
-        let amount = if self.inward { 1.0 - progress } else { progress };
+        let amount = if self.inward {
+            1.0 - progress
+        } else {
+            progress
+        };
         let total = match self.direction {
             Direction::Left | Direction::Right => cx.layer.width() as f32,
             Direction::Up | Direction::Down => cx.layer.height() as f32,
@@ -149,8 +153,9 @@ impl Slide {
                 if cx.includes(&self.mask, x, 0) {
                     let src = cx.source(x, 0);
                     let underlay = cx.underlay(x, edge_y);
-                    let cell =
-                        self.subcell.edge_cell(src, underlay, Direction::Down, 1.0 - frac);
+                    let cell = self
+                        .subcell
+                        .edge_cell(src, underlay, Direction::Down, 1.0 - frac);
                     cx.set(x, edge_y, cell);
                 }
             }
@@ -188,8 +193,9 @@ impl Slide {
                 if cx.includes(&self.mask, x, src_row) {
                     let src = cx.source(x, src_row);
                     let underlay = cx.underlay(x, edge_y);
-                    let cell =
-                        self.subcell.edge_cell(src, underlay, Direction::Up, 1.0 - frac);
+                    let cell = self
+                        .subcell
+                        .edge_cell(src, underlay, Direction::Up, 1.0 - frac);
                     cx.set(x, edge_y, cell);
                 }
             }
@@ -223,8 +229,9 @@ impl Slide {
                 if cx.includes(&self.mask, 0, y) {
                     let src = cx.source(0, y);
                     let underlay = cx.underlay(edge_x, y);
-                    let cell =
-                        self.subcell.edge_cell(src, underlay, Direction::Right, 1.0 - frac);
+                    let cell = self
+                        .subcell
+                        .edge_cell(src, underlay, Direction::Right, 1.0 - frac);
                     cx.set(edge_x, y, cell);
                 }
             }
@@ -262,8 +269,9 @@ impl Slide {
                 if cx.includes(&self.mask, src_col, y) {
                     let src = cx.source(src_col, y);
                     let underlay = cx.underlay(edge_x, y);
-                    let cell =
-                        self.subcell.edge_cell(src, underlay, Direction::Left, 1.0 - frac);
+                    let cell = self
+                        .subcell
+                        .edge_cell(src, underlay, Direction::Left, 1.0 - frac);
                     cx.set(edge_x, y, cell);
                 }
             }

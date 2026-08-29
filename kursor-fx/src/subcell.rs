@@ -41,10 +41,10 @@ impl Subcell {
         let chars: &[char] = match self {
             Self::None => &[' '],
             Self::Half => &[' ', '\u{2584}', '\u{2588}'],
-            Self::Eighth | Self::EighthExt => {
-                &[' ', '\u{2581}', '\u{2582}', '\u{2583}', '\u{2584}',
-                  '\u{2585}', '\u{2586}', '\u{2587}', '\u{2588}']
-            }
+            Self::Eighth | Self::EighthExt => &[
+                ' ', '\u{2581}', '\u{2582}', '\u{2583}', '\u{2584}', '\u{2585}', '\u{2586}',
+                '\u{2587}', '\u{2588}',
+            ],
             Self::Braille => &['\u{2800}', '\u{28C0}', '\u{28E4}', '\u{28F6}', '\u{28FF}'],
         };
         pick_char(chars, amount)
@@ -55,10 +55,17 @@ impl Subcell {
             Self::None => &[' '],
             Self::Half => &[' ', '\u{2580}', '\u{2588}'],
             Self::Eighth => &[' ', '\u{2580}', '\u{2588}'],
-            Self::EighthExt => {
-                &[' ', '\u{2594}', '\u{1FB82}', '\u{1FB83}',
-                  '\u{2580}', '\u{1FB84}', '\u{1FB85}', '\u{1FB86}', '\u{2588}']
-            }
+            Self::EighthExt => &[
+                ' ',
+                '\u{2594}',
+                '\u{1FB82}',
+                '\u{1FB83}',
+                '\u{2580}',
+                '\u{1FB84}',
+                '\u{1FB85}',
+                '\u{1FB86}',
+                '\u{2588}',
+            ],
             Self::Braille => &['\u{2800}', '\u{2809}', '\u{281B}', '\u{283F}', '\u{28FF}'],
         };
         pick_char(chars, amount)
@@ -68,10 +75,10 @@ impl Subcell {
         let chars: &[char] = match self {
             Self::None => &[' '],
             Self::Half => &[' ', '\u{258C}', '\u{2588}'],
-            Self::Eighth | Self::EighthExt => {
-                &[' ', '\u{258F}', '\u{258E}', '\u{258D}', '\u{258C}',
-                  '\u{258B}', '\u{258A}', '\u{2589}', '\u{2588}']
-            }
+            Self::Eighth | Self::EighthExt => &[
+                ' ', '\u{258F}', '\u{258E}', '\u{258D}', '\u{258C}', '\u{258B}', '\u{258A}',
+                '\u{2589}', '\u{2588}',
+            ],
             Self::Braille => &['\u{2800}', '\u{2847}', '\u{28FF}'],
         };
         pick_char(chars, amount)
@@ -82,10 +89,17 @@ impl Subcell {
             Self::None => &[' '],
             Self::Half => &[' ', '\u{2590}', '\u{2588}'],
             Self::Eighth => &[' ', '\u{2590}', '\u{2588}'],
-            Self::EighthExt => {
-                &[' ', '\u{2595}', '\u{1FB87}', '\u{1FB88}',
-                  '\u{2590}', '\u{1FB89}', '\u{1FB8A}', '\u{1FB8B}', '\u{2588}']
-            }
+            Self::EighthExt => &[
+                ' ',
+                '\u{2595}',
+                '\u{1FB87}',
+                '\u{1FB88}',
+                '\u{2590}',
+                '\u{1FB89}',
+                '\u{1FB8A}',
+                '\u{1FB8B}',
+                '\u{2588}',
+            ],
             Self::Braille => &['\u{2800}', '\u{28B8}', '\u{28FF}'],
         };
         pick_char(chars, amount)
@@ -111,13 +125,7 @@ impl Subcell {
         Cell::new(ch, source.style)
     }
 
-    pub fn edge_cell(
-        self,
-        src: Cell,
-        underlay: Cell,
-        direction: Direction,
-        amount: f32,
-    ) -> Cell {
+    pub fn edge_cell(self, src: Cell, underlay: Cell, direction: Direction, amount: f32) -> Cell {
         let ch = match direction {
             Direction::Left => self.fill_left(amount),
             Direction::Right => self.fill_right(amount),
@@ -133,7 +141,7 @@ impl Subcell {
 }
 
 fn pick_char(chars: &[char], amount: f32) -> char {
-    let idx = ((amount.clamp(0.0, 1.0) * (chars.len() - 1) as f32).round() as usize)
-        .min(chars.len() - 1);
+    let idx =
+        ((amount.clamp(0.0, 1.0) * (chars.len() - 1) as f32).round() as usize).min(chars.len() - 1);
     chars[idx]
 }

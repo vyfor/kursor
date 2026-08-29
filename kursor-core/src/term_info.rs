@@ -70,7 +70,9 @@ impl TermInfo {
 
     pub fn from_env() -> Self {
         let mut info = Self::default();
-        let term = std::env::var("TERM").unwrap_or_default().to_ascii_lowercase();
+        let term = std::env::var("TERM")
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         let color_term = std::env::var("COLORTERM")
             .unwrap_or_default()
             .to_ascii_lowercase();
@@ -104,9 +106,10 @@ impl TermInfo {
         if !multiplexed {
             match () {
                 _ if std::env::var_os("KITTY_WINDOW_ID").is_some()
-            || std::env::var_os("KITTY_PID").is_some()
-            || term == "xterm-kitty"
-            || program == "kitty" => {
+                    || std::env::var_os("KITTY_PID").is_some()
+                    || term == "xterm-kitty"
+                    || program == "kitty" =>
+                {
                     info.color_256 = true;
                     info.true_color = true;
                     info.hyperlinks = true;
@@ -118,7 +121,9 @@ impl TermInfo {
                     info.synchronized_output = true;
                     info.notifications.osc_99 = true;
                 }
-                _ if program == "ghostty" || std::env::var_os("GHOSTTY_RESOURCES_DIR").is_some() => {
+                _ if program == "ghostty"
+                    || std::env::var_os("GHOSTTY_RESOURCES_DIR").is_some() =>
+                {
                     info.color_256 = true;
                     info.true_color = true;
                     info.hyperlinks = true;

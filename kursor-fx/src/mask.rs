@@ -1,7 +1,4 @@
-use kursor_core::{
-    layout::rect::Rect,
-    render::cell::Cell,
-};
+use kursor_core::{layout::rect::Rect, render::cell::Cell};
 
 use crate::fx::Direction;
 

@@ -66,7 +66,11 @@ impl Fx for Wipe {
             return Activity::FINISHED;
         }
 
-        let amount = if self.inward { progress } else { 1.0 - progress };
+        let amount = if self.inward {
+            progress
+        } else {
+            1.0 - progress
+        };
         let total = match self.direction {
             Direction::Left | Direction::Right => cx.layer.width() as f32,
             Direction::Up | Direction::Down => cx.layer.height() as f32,
@@ -156,7 +160,9 @@ impl Wipe {
                 if cx.includes(&self.mask, edge_x, y) {
                     let src = cx.source(edge_x, y);
                     let underlay = cx.underlay(edge_x, y);
-                    let cell = self.subcell.edge_cell(src, underlay, Direction::Right, frac);
+                    let cell = self
+                        .subcell
+                        .edge_cell(src, underlay, Direction::Right, frac);
                     cx.set(edge_x, y, cell);
                 }
             }

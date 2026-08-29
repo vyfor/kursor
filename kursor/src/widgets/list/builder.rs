@@ -2,8 +2,12 @@ use std::rc::Rc;
 
 use kursor_core::{
     component::{
-        behavior::{Behavior, BehaviorBuilder}, blueprint::{Blueprint, IntoBlueprint}, context::Cx,
-    }, layout::Orientation, state::IntoValue,
+        behavior::{Behavior, BehaviorBuilder},
+        blueprint::{Blueprint, IntoBlueprint},
+        context::Cx,
+    },
+    layout::Orientation,
+    state::IntoValue,
 };
 
 use super::{IntoListSelection, List, ListFit, ListIntent, ListProps, ListState};
@@ -59,18 +63,12 @@ impl ListBuilder {
         self
     }
 
-    pub fn on_select(
-        mut self,
-        on_select: impl Fn(&mut Cx, usize) + 'static,
-    ) -> Self {
+    pub fn on_select(mut self, on_select: impl Fn(&mut Cx, usize) + 'static) -> Self {
         self.props.on_select = Some(Rc::new(on_select));
         self
     }
 
-    pub fn on_activate(
-        mut self,
-        on_activate: impl Fn(&mut Cx, usize) + 'static,
-    ) -> Self {
+    pub fn on_activate(mut self, on_activate: impl Fn(&mut Cx, usize) + 'static) -> Self {
         self.props.on_activate = Some(Rc::new(on_activate));
         self
     }

@@ -1,9 +1,6 @@
 use kursor_core::{
     layout::rect::Rect,
-    render::{
-        canvas::Canvas,
-        cell::Cell,
-    },
+    render::{canvas::Canvas, cell::Cell},
 };
 
 #[derive(Clone, Copy)]

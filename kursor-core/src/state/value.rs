@@ -1,4 +1,8 @@
-use crate::{layout::{Alignment, Insets, Orientation, ScrollDirection, WrapMode}, render::style::Style, theme::Theme};
+use crate::{
+    layout::{Alignment, Insets, Orientation, ScrollDirection, WrapMode},
+    render::style::Style,
+    theme::Theme,
+};
 
 #[cfg(feature = "animate")]
 use super::Animated;

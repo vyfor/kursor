@@ -1,4 +1,7 @@
-use super::{attrs::{Attrs, Underline}, color::Color};
+use super::{
+    attrs::{Attrs, Underline},
+    color::Color,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Style {

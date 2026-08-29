@@ -243,7 +243,10 @@ impl Component for Text {
     ) -> Size {
         let lines = wrap_lines(&self.lines, self.wrap, available.width);
         let width = lines.iter().map(Line::width).max().unwrap_or(0);
-        Size::new((width as u16).min(available.width), (lines.len() as u16).min(available.height))
+        Size::new(
+            (width as u16).min(available.width),
+            (lines.len() as u16).min(available.height),
+        )
     }
 
     fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {

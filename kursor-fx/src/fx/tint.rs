@@ -3,8 +3,8 @@ use std::time::Duration;
 use animate::{Activity, Time};
 use kursor_core::render::{color::Color, style::Style};
 
-use crate::{EffectCx, Fx, Mask, Spread};
 use super::color::mix;
+use crate::{EffectCx, Fx, Mask, Spread};
 
 #[derive(Clone)]
 pub struct Tint {
@@ -84,7 +84,11 @@ impl Fx for Tint {
             }
         }
 
-        if progress >= 1.0 { Activity::FINISHED } else { Activity::RUNNING }
+        if progress >= 1.0 {
+            Activity::FINISHED
+        } else {
+            Activity::RUNNING
+        }
     }
 
     fn reset(&mut self) {

@@ -1,7 +1,6 @@
 use kursor_core::{
     component::{
-        Component,
-        Update,
+        Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
@@ -28,10 +27,7 @@ pub struct Effect {
 
 impl Effect {
     pub fn new(child: impl IntoBlueprint, fx: impl Fx) -> Blueprint {
-        Blueprint::new::<Self>(EffectProps {
-            fx: Box::new(fx),
-        })
-        .children(child)
+        Blueprint::new::<Self>(EffectProps { fx: Box::new(fx) }).children(child)
     }
 }
 
@@ -76,13 +72,7 @@ impl Component for Effect {
         }
     }
 
-    fn layout(
-        &mut self,
-        _cx: &mut Cx,
-        _props: &Self::Props,
-        area: Rect,
-        children: &mut LayoutCx,
-    ) {
+    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
         if self.layer.area() != area {
             self.underlay_captured = false;
         }
@@ -91,12 +81,7 @@ impl Component for Effect {
         }
     }
 
-    fn post_paint(
-        &mut self,
-        cx: &mut Cx,
-        _props: &Self::Props,
-        canvas: &mut Canvas,
-    ) -> bool {
+    fn post_paint(&mut self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) -> bool {
         self.layer.capture(canvas, cx.rect);
 
         let mut effect_cx = EffectCx {

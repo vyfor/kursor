@@ -1,11 +1,10 @@
-
 mod compose;
 mod context;
+mod fx;
 mod layer;
 mod mask;
 mod subcell;
 mod widget;
-mod fx;
 
 pub use animate::{Activity, Time};
 pub use compose::{Infinite, Parallel, Sequence, infinite, par, seq};

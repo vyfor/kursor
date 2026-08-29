@@ -100,8 +100,8 @@ impl Behavior for LazyListBehavior {
                 MouseKind::ScrollUp => Some(ListIntent::ScrollBy(-i32::from(self.wheel_step))),
                 MouseKind::ScrollDown => Some(ListIntent::ScrollBy(i32::from(self.wheel_step))),
                 MouseKind::Down(MouseButton::Left) | MouseKind::Click(MouseButton::Left) => {
-            let rel_pos = mouse.row.saturating_sub(cx.rect.y);
-            let absolute_pos = u32::from(rel_pos).saturating_add(state.scroll_offset);
+                    let rel_pos = mouse.row.saturating_sub(cx.rect.y);
+                    let absolute_pos = u32::from(rel_pos).saturating_add(state.scroll_offset);
                     state.item_at(absolute_pos).map(ListIntent::Select)
                 }
                 _ => None,
@@ -194,9 +194,17 @@ impl LazyList {
             .collect()
     }
 
-    fn request_range(&mut self, visible: Range<usize>, callback: Option<&Rc<dyn Fn(Range<usize>)>>) {
-        let Some(callback) = callback else { return; };
-        if visible.is_empty() { return; }
+    fn request_range(
+        &mut self,
+        visible: Range<usize>,
+        callback: Option<&Rc<dyn Fn(Range<usize>)>>,
+    ) {
+        let Some(callback) = callback else {
+            return;
+        };
+        if visible.is_empty() {
+            return;
+        }
 
         let desired = visible.start.saturating_sub(self.prefetch)
             ..(visible.end + self.prefetch).min(self.count);
@@ -249,12 +257,7 @@ impl LazyList {
         self.state.scroll_offset = self.state.scroll_offset.min(max_scroll);
     }
 
-    fn set_selected(
-        &mut self,
-        cx: &mut Cx,
-        props: &LazyListProps,
-        index: Option<usize>,
-    ) -> bool {
+    fn set_selected(&mut self, cx: &mut Cx, props: &LazyListProps, index: Option<usize>) -> bool {
         let prev = self.state.selected;
         self.state.selected = index;
 
@@ -280,12 +283,7 @@ impl LazyList {
         self.state.selected != prev
     }
 
-    fn apply(
-        &mut self,
-        cx: &mut Cx,
-        props: &LazyListProps,
-        intent: ListIntent,
-    ) -> bool {
+    fn apply(&mut self, cx: &mut Cx, props: &LazyListProps, intent: ListIntent) -> bool {
         let count = self.count;
         if count == 0 {
             return false;
@@ -335,7 +333,10 @@ impl LazyList {
                 self.set_selected(cx, props, Some(clamped))
             }
             ListIntent::ScrollBy(delta) => {
-                let max_scroll = self.state.content_size.saturating_sub(self.state.viewport_size);
+                let max_scroll = self
+                    .state
+                    .content_size
+                    .saturating_sub(self.state.viewport_size);
                 let prev = self.state.scroll_offset;
                 if delta > 0 {
                     self.state.scroll_offset = self
@@ -416,8 +417,10 @@ impl Component for LazyList {
             || !Rc::ptr_eq(&old.item_builder, &new.item_builder)
             || old.on_select.as_ref().map(Rc::as_ptr) != new.on_select.as_ref().map(Rc::as_ptr)
             || old.on_activate.as_ref().map(Rc::as_ptr) != new.on_activate.as_ref().map(Rc::as_ptr)
-            || old.on_visible_range.as_ref().map(Rc::as_ptr) != new.on_visible_range.as_ref().map(Rc::as_ptr)
-            || old.on_request_range.as_ref().map(Rc::as_ptr) != new.on_request_range.as_ref().map(Rc::as_ptr)
+            || old.on_visible_range.as_ref().map(Rc::as_ptr)
+                != new.on_visible_range.as_ref().map(Rc::as_ptr)
+            || old.on_request_range.as_ref().map(Rc::as_ptr)
+                != new.on_request_range.as_ref().map(Rc::as_ptr)
     }
 
     fn mount(
@@ -466,7 +469,11 @@ impl Component for LazyList {
         let previous_margin = self.scroll_margin;
         let previous_wrap = self.wrap;
 
-        if self.count != count || self.item_extent != item_extent || self.orientation != orientation || self.gap != gap {
+        if self.count != count
+            || self.item_extent != item_extent
+            || self.orientation != orientation
+            || self.gap != gap
+        {
             self.count = count;
             self.requested_range = None;
             self.item_extent = item_extent;
@@ -588,12 +595,18 @@ impl Component for LazyList {
             match self.orientation {
                 Orientation::Vertical => {
                     let y = area.y.saturating_add(position);
-                    children.set(local_idx, Rect::new(area.x, y, cross_size, self.item_extent));
+                    children.set(
+                        local_idx,
+                        Rect::new(area.x, y, cross_size, self.item_extent),
+                    );
                     children.translate(local_idx, kursor_core::layout::Offset::new(0, offset));
                 }
                 Orientation::Horizontal => {
                     let x = area.x.saturating_add(position);
-                    children.set(local_idx, Rect::new(x, area.y, self.item_extent, cross_size));
+                    children.set(
+                        local_idx,
+                        Rect::new(x, area.y, self.item_extent, cross_size),
+                    );
                     children.translate(local_idx, kursor_core::layout::Offset::new(offset, 0));
                 }
             }

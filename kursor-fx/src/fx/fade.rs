@@ -94,8 +94,7 @@ impl Fx for Fade {
                             let mut cell = source;
                             cell.style.fg = mix(fg_from, fg_to, amount, Color::White);
                             if bg_from != bg_to {
-                                cell.style.bg =
-                                    mix(bg_from, bg_to, amount, Color::Black);
+                                cell.style.bg = mix(bg_from, bg_to, amount, Color::Black);
                             }
                             cell
                         }
@@ -117,8 +116,7 @@ impl Fx for Fade {
                             let mut cell = source;
                             cell.style.fg = mix(fg_from, fg_to, amount, Color::Black);
                             if bg_from != bg_to {
-                                cell.style.bg =
-                                    mix(bg_from, bg_to, amount, Color::Black);
+                                cell.style.bg = mix(bg_from, bg_to, amount, Color::Black);
                             }
                             cell
                         }
@@ -128,10 +126,8 @@ impl Fx for Fade {
                             source
                         } else {
                             let mut cell = source;
-                            cell.style.fg =
-                                mix(color, source.style.fg, amount, Color::White);
-                            cell.style.bg =
-                                mix(color, source.style.bg, amount, Color::Black);
+                            cell.style.fg = mix(color, source.style.fg, amount, Color::White);
+                            cell.style.bg = mix(color, source.style.bg, amount, Color::Black);
                             cell
                         }
                     }
@@ -143,10 +139,8 @@ impl Fx for Fade {
                             cell
                         } else {
                             let mut cell = source;
-                            cell.style.fg =
-                                mix(source.style.fg, color, amount, Color::Black);
-                            cell.style.bg =
-                                mix(source.style.bg, color, amount, Color::Black);
+                            cell.style.fg = mix(source.style.fg, color, amount, Color::Black);
+                            cell.style.bg = mix(source.style.bg, color, amount, Color::Black);
                             cell
                         }
                     }

@@ -8,9 +8,9 @@ use windows_sys::Win32::{
     Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT},
     System::{
         Console::{
-            GetConsoleMode, GetStdHandle, SetConsoleMode, ENABLE_ECHO_INPUT,
-            ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT, ENABLE_VIRTUAL_TERMINAL_INPUT,
-            ENABLE_VIRTUAL_TERMINAL_PROCESSING, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+            ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT,
+            ENABLE_VIRTUAL_TERMINAL_INPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode,
+            GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode,
         },
         Threading::WaitForSingleObject,
     },
@@ -48,13 +48,7 @@ pub fn query(timeout: Duration, info: &mut TermInfo) -> io::Result<bool> {
         return Ok(false);
     }
 
-    let result = exchange(
-        &mut input,
-        &mut output,
-        input_handle,
-        timeout,
-        info,
-    );
+    let result = exchange(&mut input, &mut output, input_handle, timeout, info);
 
     let input_restore = unsafe { SetConsoleMode(input_handle, input_mode) };
     let output_restore = unsafe { SetConsoleMode(output_handle, output_mode) };

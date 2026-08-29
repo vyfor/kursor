@@ -225,9 +225,11 @@ impl ProbeParser {
         let mut replies = Vec::new();
 
         loop {
-            let Some(start) = self.buffer.iter().position(|byte| {
-                matches!(*byte, 0x1b | 0x90 | 0x9b | 0x9d | 0x9f)
-            }) else {
+            let Some(start) = self
+                .buffer
+                .iter()
+                .position(|byte| matches!(*byte, 0x1b | 0x90 | 0x9b | 0x9d | 0x9f))
+            else {
                 self.buffer.clear();
                 break;
             };
@@ -252,17 +254,14 @@ impl ProbeParser {
                         break;
                     };
                     let end = body_start + relative_end;
-                    if let Some(reply) = parse_csi(
-                        self.buffer[end],
-                        &self.buffer[body_start..end],
-                    ) {
+                    if let Some(reply) = parse_csi(self.buffer[end], &self.buffer[body_start..end])
+                    {
                         replies.push(reply);
                     }
                     self.buffer.drain(..=end);
                 }
                 Sequence::Osc | Sequence::Dcs | Sequence::Apc => {
-                    let Some((relative_end, terminator_length)) =
-                        end(&self.buffer[body_start..])
+                    let Some((relative_end, terminator_length)) = end(&self.buffer[body_start..])
                     else {
                         break;
                     };
@@ -382,7 +381,9 @@ fn parse_osc(payload: &[u8]) -> Vec<ProbeReply> {
         }
         4 => {
             while let (Some(index), Some(value)) = (fields.next(), fields.next()) {
-                let Some(index) = parse_u16(index).map(usize::from).filter(|index| *index < 16)
+                let Some(index) = parse_u16(index)
+                    .map(usize::from)
+                    .filter(|index| *index < 16)
                 else {
                     continue;
                 };
@@ -411,7 +412,9 @@ fn parse_u16(value: &[u8]) -> Option<u16> {
         if !byte.is_ascii_digit() {
             return None;
         }
-        result = result.checked_mul(10)?.checked_add(u16::from(byte - b'0'))?;
+        result = result
+            .checked_mul(10)?
+            .checked_add(u16::from(byte - b'0'))?;
     }
     Some(result)
 }

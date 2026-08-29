@@ -3,14 +3,15 @@ use std::{ops::Range, rc::Rc};
 use kursor_core::{
     component::{
         behavior::{Behavior, BehaviorBuilder},
-        blueprint::{Blueprint, IntoBlueprint}, context::Cx,
+        blueprint::{Blueprint, IntoBlueprint},
+        context::Cx,
     },
     layout::Orientation,
     state::IntoValue,
 };
 
-use crate::widgets::list::{IntoListSelection, ListIntent};
 use super::{LazyList, LazyListBehavior, LazyListProps, LazyListState};
+use crate::widgets::list::{IntoListSelection, ListIntent};
 
 pub struct LazyListBuilder {
     props: LazyListProps,
@@ -92,34 +93,22 @@ impl LazyListBuilder {
         self
     }
 
-    pub fn on_select(
-        mut self,
-        on_select: impl Fn(&mut Cx, usize) + 'static,
-    ) -> Self {
+    pub fn on_select(mut self, on_select: impl Fn(&mut Cx, usize) + 'static) -> Self {
         self.props.on_select = Some(Rc::new(on_select));
         self
     }
 
-    pub fn on_activate(
-        mut self,
-        on_activate: impl Fn(&mut Cx, usize) + 'static,
-    ) -> Self {
+    pub fn on_activate(mut self, on_activate: impl Fn(&mut Cx, usize) + 'static) -> Self {
         self.props.on_activate = Some(Rc::new(on_activate));
         self
     }
 
-    pub fn on_visible_range(
-        mut self,
-        on_visible: impl Fn(Range<usize>) + 'static,
-    ) -> Self {
+    pub fn on_visible_range(mut self, on_visible: impl Fn(Range<usize>) + 'static) -> Self {
         self.props.on_visible_range = Some(Rc::new(on_visible));
         self
     }
 
-    pub fn on_request_range(
-        mut self,
-        on_request: impl Fn(Range<usize>) + 'static,
-    ) -> Self {
+    pub fn on_request_range(mut self, on_request: impl Fn(Range<usize>) + 'static) -> Self {
         self.props.on_request_range = Some(Rc::new(on_request));
         self
     }

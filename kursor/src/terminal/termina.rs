@@ -202,14 +202,13 @@ impl Drop for Termina {
 
 fn translate(event: TerminaEvent) -> Result<Option<Event>, io::Error> {
     Ok(match event {
-        TerminaEvent::Key(key) if key.kind != KeyEventKind::Release => {
-            translate_code(key.code).map(|code| {
+        TerminaEvent::Key(key) if key.kind != KeyEventKind::Release => translate_code(key.code)
+            .map(|code| {
                 Event::Key(KeyEvent {
                     code,
                     modifiers: translate_modifiers(key.modifiers),
                 })
-            })
-        }
+            }),
         TerminaEvent::Key(_) => None,
         TerminaEvent::Mouse(mouse) => {
             let kind = match mouse.kind {
@@ -351,7 +350,9 @@ fn map_color(color: Color) -> ColorSpec {
         Color::LightCyan => ColorSpec::BRIGHT_CYAN,
         Color::LightGray => ColorSpec::WHITE,
         Color::White => ColorSpec::BRIGHT_WHITE,
-        Color::Rgb(red, green, blue) => ColorSpec::TrueColor(RgbColor::new(red, green, blue).into()),
+        Color::Rgb(red, green, blue) => {
+            ColorSpec::TrueColor(RgbColor::new(red, green, blue).into())
+        }
         Color::Ansi(index) => ColorSpec::PaletteIndex(index),
     }
 }

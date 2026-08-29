@@ -244,12 +244,7 @@ impl List {
         self.state.scroll_offset = self.state.scroll_offset.min(max_scroll);
     }
 
-    fn set_selected(
-        &mut self,
-        cx: &mut Cx,
-        props: &ListProps,
-        index: Option<usize>,
-    ) -> bool {
+    fn set_selected(&mut self, cx: &mut Cx, props: &ListProps, index: Option<usize>) -> bool {
         let prev = self.state.selected;
         self.state.selected = index;
 
@@ -275,12 +270,7 @@ impl List {
         self.state.selected != prev
     }
 
-    fn apply(
-        &mut self,
-        cx: &mut Cx,
-        props: &ListProps,
-        intent: ListIntent,
-    ) -> bool {
+    fn apply(&mut self, cx: &mut Cx, props: &ListProps, intent: ListIntent) -> bool {
         let count = self.state.count;
         if count == 0 {
             return false;
@@ -330,7 +320,10 @@ impl List {
                 self.set_selected(cx, props, Some(clamped))
             }
             ListIntent::ScrollBy(delta) => {
-                let max_scroll = self.state.content_size.saturating_sub(self.state.viewport_size);
+                let max_scroll = self
+                    .state
+                    .content_size
+                    .saturating_sub(self.state.viewport_size);
                 let prev = self.state.scroll_offset;
                 if delta > 0 {
                     self.state.scroll_offset = self
@@ -541,7 +534,11 @@ impl Component for List {
                             area.x,
                             area.y.saturating_add(position),
                             cross_size,
-                            if hidden { 0 } else { item_size.min(u32::from(u16::MAX)) as u16 },
+                            if hidden {
+                                0
+                            } else {
+                                item_size.min(u32::from(u16::MAX)) as u16
+                            },
                         ),
                     );
                     children.translate(index, Offset::new(0, offset));
@@ -558,7 +555,11 @@ impl Component for List {
                         Rect::new(
                             area.x.saturating_add(position),
                             area.y,
-                            if hidden { 0 } else { item_size.min(u32::from(u16::MAX)) as u16 },
+                            if hidden {
+                                0
+                            } else {
+                                item_size.min(u32::from(u16::MAX)) as u16
+                            },
                             cross_size,
                         ),
                     );
