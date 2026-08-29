@@ -36,15 +36,20 @@ impl Clone for Sequence {
 
 impl Fx for Sequence {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity {
-        while self.index < self.effects.len() {
-            let activity = self.effects[self.index].apply(cx);
-            if activity.finished {
-                self.index += 1;
-                continue;
+        let len = self.effects.len();
+        for (index, effect) in self.effects.iter_mut().enumerate() {
+            let activity = effect.apply(cx);
+            if !activity.finished {
+                self.index = index;
+                return activity;
             }
-            return activity;
+
+            if index + 1 < len {
+                cx.layer.advance();
+            }
         }
 
+        self.index = len;
         Activity::FINISHED
     }
 

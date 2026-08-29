@@ -79,6 +79,10 @@ impl EffectLayer {
         }
     }
 
+    pub(crate) fn advance(&mut self) {
+        self.source.copy_from_slice(&self.output);
+    }
+
     pub fn for_each<F>(&self, mut f: F)
     where
         F: FnMut(LayerCell),
