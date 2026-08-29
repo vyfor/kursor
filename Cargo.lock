@@ -82,8 +82,10 @@ dependencies = [
  "crossterm",
  "kursor-core",
  "kursor-fx",
+ "libc",
  "termina",
  "unicode-width",
+ "windows-sys",
 ]
 
 [[package]]

@@ -8,6 +8,8 @@ pub mod crossterm;
 #[cfg(feature = "termina")]
 pub mod termina;
 
+pub(crate) mod probe;
+
 pub trait Terminal {
     type Error: Error + Send + Sync + 'static;
 

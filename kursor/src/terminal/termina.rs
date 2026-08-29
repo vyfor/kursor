@@ -77,13 +77,7 @@ impl App<Termina> {
     }
 
     pub fn from(root: Blueprint) -> Result<Self, io::Error> {
-        let mut terminal = Termina::new()?;
-        let size = terminal.size()?;
-        let mut runtime = Runtime::new(size);
-        runtime.mount(root);
-        let mut app = Self::with_terminal(runtime, terminal);
-        app.init_focus();
-        Ok(app)
+        Self::builder(root).build()
     }
 }
 

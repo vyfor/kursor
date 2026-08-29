@@ -1,3 +1,4 @@
+pub mod term_info;
 pub mod component;
 pub mod event;
 pub mod layout;

@@ -4,6 +4,7 @@ use std::{
 };
 
 use kursor_core::{
+    term_info::TermInfo,
     component::blueprint::Blueprint,
     event::{Event, EventResult, mouse::MouseKind},
     render::buffer::{Buffer, CellDiff},
@@ -12,10 +13,59 @@ use kursor_core::{
 
 use crate::{focus, terminal::Terminal};
 
+#[cfg(feature = "termina")]
+use crate::terminal::termina::Termina;
+#[cfg(all(not(feature = "termina"), feature = "crossterm"))]
+use crate::terminal::crossterm::Crossterm;
+
+#[cfg(feature = "termina")]
+type DefaultTerminal = Termina;
+#[cfg(all(not(feature = "termina"), feature = "crossterm"))]
+type DefaultTerminal = Crossterm;
+
 static QUIT: AtomicBool = AtomicBool::new(false);
 
 pub fn quit() {
     QUIT.store(true, Ordering::Relaxed);
+}
+
+#[cfg(any(feature = "termina", feature = "crossterm"))]
+pub struct AppBuilder {
+    root: Blueprint,
+    query_timeout: Option<Duration>,
+}
+
+#[cfg(any(feature = "termina", feature = "crossterm"))]
+impl AppBuilder {
+    pub fn query_terminal(mut self, timeout: Duration) -> Self {
+        self.query_timeout = Some(timeout);
+        self
+    }
+
+    pub fn build(self) -> Result<App<DefaultTerminal>, std::io::Error> {
+        let capabilities = match self.query_timeout {
+            Some(timeout) => crate::terminal::probe::query(timeout),
+            None => TermInfo::from_env(),
+        };
+        let mut terminal = default_terminal()?;
+        let size = terminal.size()?;
+        let mut runtime = Runtime::new(size);
+        runtime.provide(capabilities);
+        runtime.mount(self.root);
+        let mut app = App::with_terminal(runtime, terminal);
+        app.init_focus();
+        Ok(app)
+    }
+}
+
+#[cfg(feature = "termina")]
+fn default_terminal() -> Result<DefaultTerminal, std::io::Error> {
+    Termina::new()
+}
+
+#[cfg(all(not(feature = "termina"), feature = "crossterm"))]
+fn default_terminal() -> Result<DefaultTerminal, std::io::Error> {
+    Ok(Crossterm::new())
 }
 
 pub struct App<T: Terminal> {
@@ -138,6 +188,16 @@ impl<T: Terminal> App<T> {
 
                 self.handle_event(event);
             }
+        }
+    }
+}
+
+#[cfg(any(feature = "termina", feature = "crossterm"))]
+impl App<DefaultTerminal> {
+    pub fn builder(root: Blueprint) -> AppBuilder {
+        AppBuilder {
+            root,
+            query_timeout: None,
         }
     }
 }

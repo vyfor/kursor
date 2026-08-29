@@ -77,6 +77,7 @@ impl Scratch {
 
 pub struct Runtime {
     tree: Tree<Instance>,
+    root_env: Environment,
     deps: HashMap<AtomId, Vec<NodeId>>,
     node_deps: HashMap<NodeId, Vec<AtomId>>,
     rect: Rect,
@@ -121,6 +122,7 @@ impl Runtime {
         let now = Instant::now();
         Self {
             tree: Tree::new(),
+            root_env: Environment::default(),
             deps: HashMap::new(),
             node_deps: HashMap::new(),
             rect: Rect::new(0, 0, size.width, size.height),
@@ -162,6 +164,10 @@ impl Runtime {
 
     pub fn front_buffer(&self) -> &Buffer {
         &self.front
+    }
+
+    pub fn provide<T: 'static>(&mut self, value: T) {
+        self.root_env.set(value);
     }
 
     pub fn cursor(&self) -> Option<(u16, u16)> {
@@ -1088,7 +1094,7 @@ impl Runtime {
     fn do_create(&mut self, bp: Blueprint, parent: Option<NodeId>) -> NodeId {
         let inherited = parent
             .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
-            .unwrap_or_default();
+            .unwrap_or_else(|| self.root_env.clone());
         let component = (bp.create)(
             &mut Cx {
                 node: None,
