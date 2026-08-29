@@ -1,4 +1,4 @@
-use kursor_core::render::cell::Cell;
+use kursor_core::render::{cell::Cell, color::Color, style::Style};
 
 use crate::fx::Direction;
 
@@ -109,6 +109,26 @@ impl Subcell {
             Direction::Right => self.fill_right(amount),
         };
         Cell::new(ch, source.style)
+    }
+
+    pub fn edge_cell(
+        self,
+        src: Cell,
+        underlay: Cell,
+        direction: Direction,
+        amount: f32,
+    ) -> Cell {
+        let ch = match direction {
+            Direction::Left => self.fill_left(amount),
+            Direction::Right => self.fill_right(amount),
+            Direction::Up => self.fill_top(amount),
+            Direction::Down => self.fill_bottom(amount),
+        };
+        let fg = match src.style.bg {
+            Color::Reset => src.style.fg,
+            bg => bg,
+        };
+        Cell::new(ch, Style::new().fg(fg).bg(underlay.style.bg))
     }
 }
 

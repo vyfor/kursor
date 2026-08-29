@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use animate::{Activity, Time};
-use kursor_core::render::{cell::Cell, color::Color, style::Style};
 
 use crate::{Direction, EffectCx, Fx, Mask, Subcell};
 
@@ -147,17 +146,12 @@ impl Slide {
         if whole < h {
             let edge_y = whole as u16;
             for x in 0..w {
-                let src = cx.source(x, 0);
-                let underlay = cx.underlay(x, edge_y);
                 if cx.includes(&self.mask, x, 0) {
-                    let ch = self.subcell.fill_bottom(1.0 - frac);
-                    let fg = if src.style.bg != Color::Reset {
-                        src.style.bg
-                    } else {
-                        src.style.fg
-                    };
-                    let style = Style::new().fg(fg).bg(underlay.style.bg);
-                    cx.set(x, edge_y, Cell::new(ch, style));
+                    let src = cx.source(x, 0);
+                    let underlay = cx.underlay(x, edge_y);
+                    let cell =
+                        self.subcell.edge_cell(src, underlay, Direction::Down, 1.0 - frac);
+                    cx.set(x, edge_y, cell);
                 }
             }
         }
@@ -191,17 +185,12 @@ impl Slide {
             let edge_y = edge_row as u16;
             let src_row = (edge_row + whole).min(h.saturating_sub(1)) as u16;
             for x in 0..w {
-                let src = cx.source(x, src_row);
-                let underlay = cx.underlay(x, edge_y);
                 if cx.includes(&self.mask, x, src_row) {
-                    let ch = self.subcell.fill_top(1.0 - frac);
-                    let fg = if src.style.bg != Color::Reset {
-                        src.style.bg
-                    } else {
-                        src.style.fg
-                    };
-                    let style = Style::new().fg(fg).bg(underlay.style.bg);
-                    cx.set(x, edge_y, Cell::new(ch, style));
+                    let src = cx.source(x, src_row);
+                    let underlay = cx.underlay(x, edge_y);
+                    let cell =
+                        self.subcell.edge_cell(src, underlay, Direction::Up, 1.0 - frac);
+                    cx.set(x, edge_y, cell);
                 }
             }
         }
@@ -231,17 +220,12 @@ impl Slide {
         if whole < w {
             let edge_x = whole as u16;
             for y in 0..h {
-                let src = cx.source(0, y);
-                let underlay = cx.underlay(edge_x, y);
                 if cx.includes(&self.mask, 0, y) {
-                    let ch = self.subcell.fill_right(1.0 - frac);
-                    let fg = if src.style.bg != Color::Reset {
-                        src.style.bg
-                    } else {
-                        src.style.fg
-                    };
-                    let style = Style::new().fg(fg).bg(underlay.style.bg);
-                    cx.set(edge_x, y, Cell::new(ch, style));
+                    let src = cx.source(0, y);
+                    let underlay = cx.underlay(edge_x, y);
+                    let cell =
+                        self.subcell.edge_cell(src, underlay, Direction::Right, 1.0 - frac);
+                    cx.set(edge_x, y, cell);
                 }
             }
         }
@@ -275,17 +259,12 @@ impl Slide {
             let edge_x = edge_col as u16;
             let src_col = (edge_col + whole).min(w.saturating_sub(1)) as u16;
             for y in 0..h {
-                let src = cx.source(src_col, y);
-                let underlay = cx.underlay(edge_x, y);
                 if cx.includes(&self.mask, src_col, y) {
-                    let ch = self.subcell.fill_left(1.0 - frac);
-                    let fg = if src.style.bg != Color::Reset {
-                        src.style.bg
-                    } else {
-                        src.style.fg
-                    };
-                    let style = Style::new().fg(fg).bg(underlay.style.bg);
-                    cx.set(edge_x, y, Cell::new(ch, style));
+                    let src = cx.source(src_col, y);
+                    let underlay = cx.underlay(edge_x, y);
+                    let cell =
+                        self.subcell.edge_cell(src, underlay, Direction::Left, 1.0 - frac);
+                    cx.set(edge_x, y, cell);
                 }
             }
         }
