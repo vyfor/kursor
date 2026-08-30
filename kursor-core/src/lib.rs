@@ -7,6 +7,7 @@ pub mod state;
 pub mod term_info;
 pub mod theme;
 pub mod tree;
+pub mod util;
 
 #[cfg(feature = "animate")]
 pub use animate;

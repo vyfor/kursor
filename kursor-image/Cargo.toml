@@ -1,0 +1,19 @@
+[package]
+name = "kursor-image"
+authors.workspace = true
+categories.workspace = true
+description = "Terminal image protocols for Kursor"
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+readme = "../README.md"
+
+[features]
+default = ["image"]
+image = ["dep:image"]
+
+[dependencies]
+kursor-core = { version = "0.1.0", path = "../kursor-core" }
+image = { version = "0.25", default-features = false, optional = true }

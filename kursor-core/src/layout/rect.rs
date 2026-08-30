@@ -1,4 +1,4 @@
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Rect {
     pub x: u16,
     pub y: u16,

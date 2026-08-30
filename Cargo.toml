@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["kursor-core", "kursor", "kursor-fx"]
+members = ["kursor-core", "kursor", "kursor-fx", "kursor-image"]
 
 [workspace.package]
 authors = ["vyfor"]
