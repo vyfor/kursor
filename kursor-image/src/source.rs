@@ -1,4 +1,7 @@
-use std::rc::Rc;
+use std::{
+    path::PathBuf,
+    rc::Rc,
+};
 
 use crate::{Error, ImageFormat, Result};
 
@@ -53,6 +56,10 @@ pub enum ImageSource {
         format: ImageFormat,
         bytes: Rc<[u8]>,
     },
+    File {
+        path: PathBuf,
+        format: ImageFormat,
+    },
 }
 
 impl ImageSource {
@@ -67,10 +74,16 @@ impl ImageSource {
         }
     }
 
+    pub fn file(path: impl Into<PathBuf>) -> Self {
+        let path = path.into();
+        let format = crate::kitty::file_format(&path);
+        Self::File { path, format }
+    }
+
     pub fn data_ref(&self) -> Option<&ImageData> {
         match self {
             Self::Data(image) => Some(image),
-            Self::Encoded { .. } => None,
+            Self::Encoded { .. } | Self::File { .. } => None,
         }
     }
 
@@ -78,12 +91,11 @@ impl ImageSource {
     pub fn to_data(&self) -> Result<ImageData> {
         match self {
             Self::Data(image) => Ok(image.clone()),
-            Self::Encoded { bytes, .. } => {
-                let image = image::load_from_memory(bytes)
-                    .map_err(|error| crate::Error::Decode(error.to_string()))?
-                    .into_rgba8();
-                ImageData::rgba(image.width(), image.height(), image.into_raw())
+            Self::File { path, .. } => {
+                let bytes = std::fs::read(path).map_err(Error::Io)?;
+                decode_bytes(&bytes)
             }
+            Self::Encoded { bytes, .. } => decode_bytes(bytes),
         }
     }
 
@@ -91,7 +103,17 @@ impl ImageSource {
     pub fn to_data(&self) -> Result<ImageData> {
         match self {
             Self::Data(image) => Ok(image.clone()),
-            Self::Encoded { format, .. } => Err(Error::UnsupportedFormat(*format)),
+            Self::File { format, .. } | Self::Encoded { format, .. } => {
+                Err(Error::UnsupportedFormat(*format))
+            }
         }
     }
+}
+
+#[cfg(feature = "image")]
+fn decode_bytes(bytes: &[u8]) -> Result<ImageData> {
+    let image = image::load_from_memory(bytes)
+        .map_err(|error| Error::Decode(error.to_string()))?
+        .into_rgba8();
+    ImageData::rgba(image.width(), image.height(), image.into_raw())
 }
