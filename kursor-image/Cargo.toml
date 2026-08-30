@@ -16,4 +16,11 @@ image = ["dep:image"]
 
 [dependencies]
 kursor-core = { version = "0.1.0", path = "../kursor-core" }
-image = { version = "0.25", default-features = false, optional = true }
+image = { version = "0.25", default-features = false, features = [
+    "png",
+    "jpeg",
+    "gif",
+    "webp",
+    "bmp",
+    "tiff",
+], optional = true }

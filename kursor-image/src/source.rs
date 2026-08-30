@@ -75,7 +75,7 @@ impl ImageSource {
     }
 
     #[cfg(feature = "image")]
-    pub fn decode(&self) -> Result<ImageData> {
+    pub fn to_data(&self) -> Result<ImageData> {
         match self {
             Self::Data(image) => Ok(image.clone()),
             Self::Encoded { bytes, .. } => {
@@ -88,7 +88,7 @@ impl ImageSource {
     }
 
     #[cfg(not(feature = "image"))]
-    pub fn decode(&self) -> Result<ImageData> {
+    pub fn to_data(&self) -> Result<ImageData> {
         match self {
             Self::Data(image) => Ok(image.clone()),
             Self::Encoded { format, .. } => Err(Error::UnsupportedFormat(*format)),

@@ -1,8 +1,6 @@
 use kursor_core::render::{cell::Cell, color::Color, style::Style};
 
-use crate::{
-    GraphicsProtocol, ImageData, ImageEncoder, ImageTarget, Result,
-};
+use crate::{GraphicsProtocol, ImageEncoder, ImageSource, ImageTarget, Result};
 
 pub struct Halfblocks;
 
@@ -13,7 +11,8 @@ impl ImageEncoder for Halfblocks {
         GraphicsProtocol::Halfblocks
     }
 
-    fn encode(&self, image: &ImageData, target: &ImageTarget) -> Result<Self::Output> {
+    fn encode(&self, source: &ImageSource, target: &ImageTarget) -> Result<Self::Output> {
+        let image = source.to_data()?;
         let width = u32::from(target.size.width);
         let height = u32::from(target.size.height);
         if width == 0 || height == 0 {
