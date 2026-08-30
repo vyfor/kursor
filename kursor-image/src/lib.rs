@@ -3,6 +3,7 @@ mod format;
 mod halfblocks;
 mod kitty;
 mod placement;
+mod sixel;
 mod source;
 
 pub use error::{Error, Result};
@@ -10,6 +11,7 @@ pub use format::{GraphicsProtocol, ImageFormat};
 pub use halfblocks::Halfblocks;
 pub use kitty::{Kitty, Transmission};
 pub use placement::{ImageFit, ImageTarget, fit_cells};
+pub use sixel::Sixel;
 pub use source::{ImageData, ImageSource};
 
 pub trait ImageEncoder {
