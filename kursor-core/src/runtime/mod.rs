@@ -11,7 +11,7 @@ use std::{
 use crate::state::frame;
 use crate::{
     component::{
-        Children, Component, Focus, Invalidation, Update,
+        AnyComponent, Children, Component, Focus, Invalidation, Update,
         action::Action,
         blueprint::{Blueprint, empty_children},
         context::Cx,
@@ -53,6 +53,7 @@ struct Scratch {
     dirty_sources: Vec<AtomId>,
     memo_sources: Vec<AtomId>,
     actions: Vec<Action>,
+    placeholder: Option<Box<dyn AnyComponent>>,
 }
 
 impl Scratch {
@@ -74,6 +75,7 @@ impl Scratch {
             dirty_sources: Vec::new(),
             memo_sources: Vec::new(),
             actions: Vec::new(),
+            placeholder: None,
         }
     }
 }
@@ -850,6 +852,15 @@ impl Runtime {
             || invalidation.contains(Invalidation::LAYOUT)
         {
             self.layout_dirty.insert(id);
+            if invalidation.contains(Invalidation::MEASURE) {
+                if let Some(ins) = self.tree.get_mut(id) {
+                    ins.is_measure_valid = false;
+                    ins.is_layout_valid = false;
+                }
+                if let Some(parent) = self.tree.parent(id) {
+                    self.layout_dirty.insert(parent);
+                }
+            }
         }
         if invalidation.contains(Invalidation::PAINT) {
             self.paint_dirty.insert(id);
@@ -1013,10 +1024,12 @@ impl Runtime {
             (should_update, env_changed, declared_changed)
         };
 
-        if should_update || env_changed || declared_changed {
-            let instance = self.tree.get_mut(child).unwrap();
-            instance.available = None;
-            self.update_dirty.insert(child);
+            if should_update || env_changed || declared_changed {
+                let instance = self.tree.get_mut(child).unwrap();
+                instance.available = None;
+                instance.is_measure_valid = false;
+                instance.is_layout_valid = false;
+                self.update_dirty.insert(child);
         }
         if declared_changed {
             self.sync(child, &blueprint.children);
@@ -1139,6 +1152,8 @@ impl Runtime {
             offset: Offset::ZERO,
             measured: Size::default(),
             available: None,
+            is_measure_valid: false,
+            is_layout_valid: false,
             env: inherited.clone(),
             inherited,
             origin: Offset::ZERO,
@@ -1239,7 +1254,17 @@ impl Runtime {
                     self.tree.get(id).map_or(Rect::new(0, 0, 0, 0), |c| c.rect)
                 };
 
-                let measured_changed = self.apply_measure(id, Size::new(rect.width, rect.height));
+                let available = if self.tree.root() == Some(id) {
+                    Size::new(rect.width, rect.height)
+                } else {
+                    self.tree
+                        .parent(id)
+                        .and_then(|p| self.tree.get(p))
+                        .and_then(|p| p.available)
+                        .unwrap_or_else(|| Size::new(rect.width, rect.height))
+                };
+
+                let measured_changed = self.apply_measure(id, available);
                 if measured_changed && let Some(parent) = self.tree.parent(id) {
                     self.layout_dirty.insert(parent);
                 }
@@ -1255,135 +1280,98 @@ impl Runtime {
     }
 
     fn apply_measure(&mut self, id: NodeId, available: Size) -> bool {
+        {
+            let ins = self.tree.get(id).unwrap();
+            if ins.is_measure_valid
+                && ins.available == Some(available)
+            {
+                return false;
+            }
+        }
+
         self.scratch.child_ids.clear();
         self.scratch
             .child_ids
             .extend_from_slice(self.tree.children(id));
         let child_count = self.scratch.child_ids.len();
-        let env = self.tree.get(id).unwrap().env.clone();
-        let rect = self.tree.get(id).unwrap().rect;
+        let (env, rect) = {
+            let ins = self.tree.get(id).unwrap();
+            (ins.env.clone(), ins.rect)
+        };
 
-        self.scratch.child_sizes.clear();
-        if child_count <= 32 {
-            self.scratch
-                .child_sizes
-                .resize(child_count, Size::default());
-            let use_cache = true;
-            let mut measures: Vec<Option<Size>> = vec![None; child_count];
+        let mut component = {
+            let ins = self.tree.get_mut(id).unwrap();
+            let ph = self.scratch.placeholder.take().unwrap_or_else(|| Box::new(Placeholder));
+            mem::replace(&mut ins.component, ph)
+        };
+        let props = {
+            let ins = self.tree.get_mut(id).unwrap();
+            mem::replace(&mut ins.props, Rc::new(()))
+        };
 
-            let mut component = {
-                let ins = self.tree.get_mut(id).unwrap();
-                mem::replace(&mut ins.component, Box::new(Placeholder))
+        let child_ids = &self.scratch.child_ids;
+        let mut measure = |index: usize, child_available: Size| -> Size {
+            let Some(&child_id) = child_ids.get(index) else {
+                return Size::default();
             };
-            let props = {
-                let ins = self.tree.get_mut(id).unwrap();
-                mem::replace(&mut ins.props, Rc::new(()))
-            };
+            if !self.tree.contains(child_id) {
+                return Size::default();
+            }
+            Self::measure_node(&mut self.tree, child_id, child_available)
+        };
 
-            let child_ids = &self.scratch.child_ids;
-            let mut measure = |index: usize, child_available: Size| -> Size {
-                if index >= child_count {
-                    return Size::default();
-                }
-                if let Some(size) = measures[index]
-                    && child_available == available
-                {
-                    return size;
-                }
-                let child_id = child_ids[index];
-                if !self.tree.contains(child_id) {
-                    return Size::default();
-                }
-                let size = Self::measure_node(&mut self.tree, child_id, child_available);
-                measures[index] = Some(size);
-                size
+        let measured = {
+            let mut cx = Cx {
+                node: Some(id),
+                rect,
+                actions: None,
+                global_input: None,
+                env,
             };
+            let mut children = MeasureCx::new(&mut measure, child_count, available);
+            component.measure_any(&mut cx, props.as_ref(), available, &mut children)
+        };
 
-            let measured = {
-                let mut cx = Cx {
-                    node: Some(id),
-                    rect,
-                    actions: None,
-                    global_input: None,
-                    env,
-                };
-                let mut children = MeasureCx::new(&mut measure, child_count, available);
-                component.measure_any(&mut cx, props.as_ref(), available, &mut children)
-            };
-
-            let changed = {
-                let ins = self.tree.get_mut(id).unwrap();
-                let changed = ins.measured != measured;
-                ins.component = component;
-                ins.props = props;
-                ins.measured = measured;
-                ins.available = Some(available);
-                changed
-            };
-            let _ = use_cache;
+        let changed = {
+            let ins = self.tree.get_mut(id).unwrap();
+            let changed = ins.measured != measured;
+            let ph = mem::replace(&mut ins.component, component);
+            ins.props = props;
+            ins.measured = measured;
+            ins.available = Some(available);
+            ins.is_measure_valid = true;
+            if changed {
+                ins.is_layout_valid = false;
+            }
+            self.scratch.placeholder = Some(ph);
             changed
-        } else {
-            let mut component = {
-                let ins = self.tree.get_mut(id).unwrap();
-                mem::replace(&mut ins.component, Box::new(Placeholder))
-            };
-            let props = {
-                let ins = self.tree.get_mut(id).unwrap();
-                mem::replace(&mut ins.props, Rc::new(()))
-            };
-
-            let child_ids = &self.scratch.child_ids;
-            let mut measure = |index: usize, child_available: Size| -> Size {
-                if index >= child_count {
-                    return Size::default();
-                }
-                let child_id = child_ids[index];
-                if !self.tree.contains(child_id) {
-                    return Size::default();
-                }
-                Self::measure_node(&mut self.tree, child_id, child_available)
-            };
-
-            let measured = {
-                let mut cx = Cx {
-                    node: Some(id),
-                    rect,
-                    actions: None,
-                    global_input: None,
-                    env,
-                };
-                let mut children = MeasureCx::new(&mut measure, child_count, available);
-                component.measure_any(&mut cx, props.as_ref(), available, &mut children)
-            };
-
-            let changed = {
-                let ins = self.tree.get_mut(id).unwrap();
-                let changed = ins.measured != measured;
-                ins.component = component;
-                ins.props = props;
-                ins.measured = measured;
-                ins.available = Some(available);
-                changed
-            };
-            changed
+        };
+        if changed
+            && let Some(parent) = self.tree.parent(id)
+        {
+            if let Some(p) = self.tree.get_mut(parent) {
+                p.is_measure_valid = false;
+                p.is_layout_valid = false;
+            }
+            self.layout_dirty.insert(parent);
         }
+        changed
     }
 
     fn measure_node(tree: &mut Tree<Instance>, id: NodeId, available: Size) -> Size {
-        let child_count = tree.children(id).len();
-
-        if child_count == 0
-            && let Some(cached) = tree.get(id).and_then(|ins| ins.available)
-            && cached == available
-            && let Some(ins) = tree.get(id)
+        if let Some(ins) = tree.get(id)
+            && ins.is_measure_valid
+            && ins.available == Some(available)
         {
             return ins.measured;
         }
 
-        let env = tree.get(id).unwrap().env.clone();
-        let rect = tree.get(id).unwrap().rect;
+        let child_count = tree.children(id).len();
 
-        let mut measures = (child_count <= 32).then(|| vec![None; child_count]);
+        let (env, rect) = {
+            let ins = tree.get(id).unwrap();
+            (ins.env.clone(), ins.rect)
+        };
 
         let mut component = {
             let ins = tree.get_mut(id).unwrap();
@@ -1397,24 +1385,13 @@ impl Runtime {
         let mut child_ids = Vec::new();
         child_ids.extend_from_slice(tree.children(id));
         let mut measure = |index: usize, child_available: Size| -> Size {
-            if index >= child_count {
+            let Some(&child_id) = child_ids.get(index) else {
                 return Size::default();
-            }
-            if let Some(measures) = measures.as_ref()
-                && let Some(size) = measures[index]
-                && child_available == available
-            {
-                return size;
-            }
-            let child_id = child_ids[index];
+            };
             if !tree.contains(child_id) {
                 return Size::default();
             }
-            let size = Self::measure_node(tree, child_id, child_available);
-            if let Some(measures) = measures.as_mut() {
-                measures[index] = Some(size);
-            }
-            size
+            Self::measure_node(tree, child_id, child_available)
         };
 
         let measured = {
@@ -1431,10 +1408,20 @@ impl Runtime {
 
         {
             let ins = tree.get_mut(id).unwrap();
+            let changed = ins.measured != measured;
             ins.component = component;
             ins.props = props;
             ins.measured = measured;
             ins.available = Some(available);
+            ins.is_measure_valid = true;
+            if changed {
+                ins.is_layout_valid = false;
+                if let Some(parent) = tree.parent(id) {
+                    if let Some(p) = tree.get_mut(parent) {
+                        p.is_layout_valid = false;
+                    }
+                }
+            }
         }
         measured
     }
@@ -1456,22 +1443,28 @@ impl Runtime {
             }
 
             if !is_dirty && old_rect == rect && old_offset == offset {
-                let (parent_origin, parent_clip) = match self.tree.parent(id) {
-                    Some(p) => match self.tree.get(p) {
-                        Some(p_ins) => (p_ins.origin, p_ins.clip),
+                let layout_clean = self
+                    .tree
+                    .get(id)
+                    .is_some_and(|ins| ins.is_layout_valid);
+                if layout_clean {
+                    let (parent_origin, parent_clip) = match self.tree.parent(id) {
+                        Some(p) => match self.tree.get(p) {
+                            Some(p_ins) => (p_ins.origin, p_ins.clip),
+                            None => (Offset::ZERO, self.rect),
+                        },
                         None => (Offset::ZERO, self.rect),
-                    },
-                    None => (Offset::ZERO, self.rect),
-                };
-                let origin = Self::translate(parent_origin, rect, offset);
-                let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
-                    .unwrap_or(Rect::new(0, 0, 0, 0));
-                let ins = self.tree.get_mut(id).unwrap();
-                ins.rect = rect;
-                ins.offset = offset;
-                ins.origin = origin;
-                ins.clip = clip;
-                continue;
+                    };
+                    let origin = Self::translate(parent_origin, rect, offset);
+                    let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
+                        .unwrap_or(Rect::new(0, 0, 0, 0));
+                    let ins = self.tree.get_mut(id).unwrap();
+                    ins.rect = rect;
+                    ins.offset = offset;
+                    ins.origin = origin;
+                    ins.clip = clip;
+                    continue;
+                }
             }
 
             self.scratch.child_ids.clear();
@@ -1534,6 +1527,7 @@ impl Runtime {
                 ins.offset = offset;
                 ins.origin = origin;
                 ins.clip = clip;
+                ins.is_layout_valid = true;
             }
 
             let child_ids = mem::take(&mut self.scratch.child_ids);

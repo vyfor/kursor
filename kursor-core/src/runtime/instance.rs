@@ -19,6 +19,8 @@ pub struct Instance {
     pub offset: Offset,
     pub measured: Size,
     pub available: Option<Size>,
+    pub is_measure_valid: bool,
+    pub is_layout_valid: bool,
     pub env: Environment,
     pub inherited: Environment,
     pub origin: Offset,
