@@ -18,6 +18,10 @@ pub struct Canvas<'a> {
 }
 
 impl<'a> Canvas<'a> {
+    pub fn origin(&self) -> Offset {
+        self.origin
+    }
+
     pub fn new(buffer: &'a mut Buffer, clip: Rect, origin: Offset, node: NodeId) -> Self {
         Self {
             buffer,

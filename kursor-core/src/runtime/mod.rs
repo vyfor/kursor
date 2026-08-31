@@ -1432,37 +1432,43 @@ impl Runtime {
 
         while let Some((id, rect, offset)) = self.scratch.layout_pending.pop() {
             let is_dirty = self.layout_dirty.remove(&id);
-            let (old_rect, old_offset) = self
+            let (old_rect, old_offset, old_origin, old_clip) = self
                 .tree
                 .get(id)
-                .map_or((Rect::default(), Offset::ZERO), |ins| {
-                    (ins.rect, ins.offset)
-                });
+                .map_or(
+                    (Rect::default(), Offset::ZERO, Offset::ZERO, Rect::default()),
+                    |ins| (ins.rect, ins.offset, ins.origin, ins.clip),
+                );
             if old_rect != rect || old_offset != offset {
                 self.paint_all = true;
             }
 
-            if !is_dirty && old_rect == rect && old_offset == offset {
-                let layout_clean = self
+            let (parent_origin, parent_clip) = match self.tree.parent(id) {
+                Some(p) => match self.tree.get(p) {
+                    Some(p_ins) => (p_ins.origin, p_ins.clip),
+                    None => (Offset::ZERO, self.rect),
+                },
+                None => (Offset::ZERO, self.rect),
+            };
+            let origin = Self::translate(parent_origin, rect, offset);
+            let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
+                .unwrap_or(Rect::new(0, 0, 0, 0));
+
+            if old_origin != origin || old_clip != clip {
+                self.paint_all = true;
+            }
+
+            if !is_dirty
+                && old_rect == rect
+                && old_offset == offset
+                && old_origin == origin
+                && old_clip == clip
+            {
+                let l_valid = self
                     .tree
                     .get(id)
                     .is_some_and(|ins| ins.is_layout_valid);
-                if layout_clean {
-                    let (parent_origin, parent_clip) = match self.tree.parent(id) {
-                        Some(p) => match self.tree.get(p) {
-                            Some(p_ins) => (p_ins.origin, p_ins.clip),
-                            None => (Offset::ZERO, self.rect),
-                        },
-                        None => (Offset::ZERO, self.rect),
-                    };
-                    let origin = Self::translate(parent_origin, rect, offset);
-                    let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
-                        .unwrap_or(Rect::new(0, 0, 0, 0));
-                    let ins = self.tree.get_mut(id).unwrap();
-                    ins.rect = rect;
-                    ins.offset = offset;
-                    ins.origin = origin;
-                    ins.clip = clip;
+                if l_valid {
                     continue;
                 }
             }

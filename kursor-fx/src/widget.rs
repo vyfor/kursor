@@ -5,6 +5,7 @@ use kursor_core::{
         context::Cx,
     },
     layout::{
+        offset::Offset,
         context::{LayoutCx, MeasureCx},
         rect::Rect,
         size::Size,
@@ -23,6 +24,7 @@ pub struct Effect {
     fx: Box<dyn Fx>,
     layer: EffectLayer,
     underlay_captured: bool,
+    underlay_origin: Offset,
 }
 
 impl Effect {
@@ -39,6 +41,7 @@ impl Component for Effect {
             fx: props.fx.clone(),
             layer: EffectLayer::new(),
             underlay_captured: false,
+            underlay_origin: Offset::ZERO,
         }
     }
 
@@ -51,9 +54,10 @@ impl Component for Effect {
     }
 
     fn pre_paint(&mut self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
-        if !self.underlay_captured {
+        if !self.underlay_captured || self.underlay_origin != canvas.origin() {
             self.layer.capture_underlay(canvas, cx.rect);
             self.underlay_captured = true;
+            self.underlay_origin = canvas.origin();
         }
         self.layer.write_underlay(canvas);
     }
