@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write as _;
 
 use crate::{Error, GraphicsProtocol, ImageData, ImageEncoder, ImageSource, ImageTarget, Result};
 
@@ -80,6 +81,8 @@ impl ImageEncoder for Sixel {
         }
 
         let bands = height.div_ceil(6);
+        let mut row_buf = Vec::with_capacity(width);
+
         for band in 0..bands {
             let y0 = band * 6;
             let mut set: BTreeSet<u8> = BTreeSet::new();
@@ -96,11 +99,8 @@ impl ImageEncoder for Sixel {
             }
             let mut first = true;
             for id in set {
-                if !first {
-                    out.push(b'$');
-                }
-                first = false;
-                out.extend_from_slice(format!("#{id}").as_bytes());
+                row_buf.clear();
+                let mut last = 0;
                 for x in 0..width {
                     let mut bits: u8 = 0;
                     for dy in 0..6 {
@@ -112,8 +112,23 @@ impl ImageEncoder for Sixel {
                             bits |= 1 << dy;
                         }
                     }
-                    out.push(0x3f + bits);
+                    let ch = 0x3f + bits;
+                    if bits != 0 {
+                        last = x + 1;
+                    }
+                    row_buf.push(ch);
                 }
+
+                if last == 0 {
+                    continue;
+                }
+
+                if !first {
+                    out.push(b'$');
+                }
+                first = false;
+                out.extend_from_slice(format!("#{id}").as_bytes());
+                write_rle(&mut out, &row_buf[..last]);
             }
             if band + 1 < bands {
                 out.push(b'-');
@@ -122,6 +137,25 @@ impl ImageEncoder for Sixel {
 
         out.extend_from_slice(b"\x1b\\");
         Ok(out)
+    }
+}
+
+fn write_rle(out: &mut Vec<u8>, chars: &[u8]) {
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
+        let mut count = 1;
+        while i + count < chars.len() && chars[i + count] == ch {
+            count += 1;
+        }
+        if count > 3 {
+            let _ = write!(out, "!{count}{}", ch as char);
+        } else {
+            for _ in 0..count {
+                out.push(ch);
+            }
+        }
+        i += count;
     }
 }
 
