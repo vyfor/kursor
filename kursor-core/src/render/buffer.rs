@@ -148,6 +148,7 @@ pub struct Buffer {
     height: u16,
     cells: Vec<Cell>,
     graphics: BTreeMap<NodeId, GraphicsEntry>,
+    dirty_rect: Option<Rect>,
 }
 
 impl Buffer {
@@ -157,6 +158,7 @@ impl Buffer {
             height: size.height,
             cells: vec![Cell::default(); size.width as usize * size.height as usize],
             graphics: BTreeMap::new(),
+            dirty_rect: None,
         }
     }
 
@@ -193,25 +195,44 @@ impl Buffer {
     pub fn set(&mut self, x: u16, y: u16, cell: Cell) {
         if let Some(i) = self.index(x, y) {
             self.cells[i] = cell;
+            if let Some(r) = self.dirty_rect
+                && r.x == 0
+                && r.y == 0
+                && r.width == self.width
+                && r.height == self.height
+            {
+                return;
+            }
+            self.dirty_rect = Some(match self.dirty_rect {
+                None => Rect::new(x, y, 1, 1),
+                Some(r) => {
+                    let x0 = r.x.min(x);
+                    let y0 = r.y.min(y);
+                    let x1 = r.right().max(x + 1);
+                    let y1 = r.bottom().max(y + 1);
+                    Rect::new(x0, y0, x1 - x0, y1 - y0)
+                }
+            });
         }
     }
 
     pub fn clear(&mut self) {
         self.cells.fill(Cell::default());
         self.graphics.clear();
+        self.dirty_rect = Some(Rect::new(0, 0, self.width, self.height));
     }
 
     pub fn size(&self) -> Size {
         Size::new(self.width, self.height)
     }
 
-    pub fn diff(&self, old: &Buffer) -> Vec<CellDiff> {
+    pub fn diff(&mut self, old: &Buffer) -> Vec<CellDiff> {
         let mut out = Vec::new();
         self.diff_into(old, &mut out);
         out
     }
 
-    pub fn diff_into(&self, old: &Buffer, out: &mut Vec<CellDiff>) {
+    pub fn diff_into(&mut self, old: &Buffer, out: &mut Vec<CellDiff>) {
         if self.size() != old.size() {
             out.clear();
             out.extend(self.cells.iter().enumerate().map(|(i, &cell)| CellDiff {
@@ -219,17 +240,32 @@ impl Buffer {
                 y: (i as u32 / self.width as u32) as u16,
                 cell,
             }));
+            self.dirty_rect = None;
             return;
         }
 
         out.clear();
-        for (i, (&new, &old_cell)) in self.cells.iter().zip(&old.cells).enumerate() {
-            if new != old_cell {
-                out.push(CellDiff {
-                    x: (i as u32 % self.width as u32) as u16,
-                    y: (i as u32 / self.width as u32) as u16,
-                    cell: new,
-                });
+        let rect = match self.dirty_rect.take() {
+            None => return,
+            Some(r) => r,
+        };
+
+        let x0 = rect.x.min(self.width);
+        let y0 = rect.y.min(self.height);
+        let x1 = (rect.x + rect.width).min(self.width);
+        let y1 = (rect.y + rect.height).min(self.height);
+
+        for y in y0..y1 {
+            let row = y as usize * self.width as usize;
+            for x in x0..x1 {
+                let i = row + x as usize;
+                if self.cells[i] != old.cells[i] {
+                    out.push(CellDiff {
+                        x,
+                        y,
+                        cell: self.cells[i],
+                    });
+                }
             }
         }
     }

@@ -461,7 +461,7 @@ impl Runtime {
         let _scope = scope::enter();
         self.flush();
         self.do_paint();
-        self.back_buffer().diff(self.front_buffer())
+        self.back.diff(&self.front)
     }
 
     pub fn commit(&mut self, changes: &[CellDiff]) {
