@@ -14,25 +14,24 @@ the project is still early and the api is subject to change.
 
 ## architecture
 
-the project is split into two crates:
+the project is split into several crates:
 - `kursor-core`: a lower-level library that provides mechanisms and primitives.
 - `kursor`: a higher-level framework that builds on top of `kursor-core` and decides how those mechanisms are presented and combined.
+- `kursor-fx`: visual effects layer for kursor.
+- `kursor-image`: terminal graphics protocol implementations.
 
 ## concepts
 
-### state management
+### state
 
 - atoms: reactive state that can be shared between different parts of an application.
 - signals: reactive state local to the ui.
 - memo: derived state from a signal.
-
-### environment
-
-a typemap for components to provide values to their descendants or retrieve values from their ancestors.
+- animated: values that gradually interpolate over time.
 
 ### widgets
 
-small, composable building blocks. kursor is built on the idea that if a feature can be a widget, it is a widget. themes, overlays, keybindings and such are all simple widgets abstracted over core.
+small, composable building blocks. kursor is built to be extended. it is grounded on the idea that if a feature can be a widget, it is a widget. themes, overlays, keybindings and such are all simple widgets abstracted over core.
 
 ### input handling
 
@@ -42,4 +41,14 @@ aside from handling events locally, widgets can opt into global input handling w
 
 ### behavior & intents
 
-it is generally a bad idea for a widget to hard-code the interpretation of its input. instead, kursor exposes a **behavior** that translates raw input into a semantic **intent**. the component then decides how that intent alters its state.
+it is generally a bad idea for a widget to hard-code the interpretation of its input. instead, kursor exposes a *behavior* that translates raw input into a semantic *intent*. the component then decides how that intent alters its state.
+
+### animations & effects
+
+kursor tightly integrates with [`animate`](https://github.com/vyfor/animate) to both let *you* animate state without typical boilerplate, and let *widgets* to opt in to this system with very little wiring.
+
+`kursor-fx`, on the other hand, provides primitives to construct and apply visual effects to any component. animations change the internal state of widgets, whilst effects operate externally on the rendered output.
+
+### images
+
+terminal graphics via kitty, sixel, iterm2 protocols, as well as good old halfblocks. and yes, kursor is able to do the terminal probing for you to detect its capabilities.
