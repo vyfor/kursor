@@ -1,4 +1,3 @@
-use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write as _;
 
 use crate::{Error, GraphicsProtocol, ImageData, ImageEncoder, ImageSource, ImageTarget, Result};
@@ -55,81 +54,94 @@ impl ImageEncoder for Sixel {
         let height = height as usize;
         let pixels = image.rgba_bytes();
 
-        let mut pal: BTreeMap<u8, (u8, u8, u8)> = BTreeMap::new();
-        let mut idx: Vec<Option<u8>> = Vec::with_capacity(width * height);
+        let mut pal = [false; 216];
+        let mut idx: Vec<u8> = Vec::with_capacity(width * height);
         for px in pixels.chunks_exact(4) {
             if px[3] < 128 {
-                idx.push(None);
+                idx.push(255);
                 continue;
             }
             let r = px[0] as usize * 5 / 255;
             let g = px[1] as usize * 5 / 255;
             let b = px[2] as usize * 5 / 255;
             let id = (r * 36 + g * 6 + b) as u8;
-            pal.entry(id).or_insert((
-                (r * 100 / 5) as u8,
-                (g * 100 / 5) as u8,
-                (b * 100 / 5) as u8,
-            ));
-            idx.push(Some(id));
+            pal[id as usize] = true;
+            idx.push(id);
         }
 
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(width * height / 2);
         out.extend_from_slice(b"\x1bPq\"1;1");
-        for (id, (r, g, b)) in &pal {
-            out.extend_from_slice(format!("#{id};2;{r};{g};{b}").as_bytes());
+        for (id, &present) in pal.iter().enumerate() {
+            if present {
+                let id = id as u8;
+                let r = (id / 36) * 20;
+                let g = ((id % 36) / 6) * 20;
+                let b = (id % 6) * 20;
+                let _ = write!(out, "#{id};2;{r};{g};{b}");
+            }
         }
 
         let bands = height.div_ceil(6);
-        let mut row_buf = Vec::with_capacity(width);
+        let mut band_bits = vec![0u8; 216 * width];
+        let mut active = Vec::with_capacity(216);
+        let mut active2 = [false; 216];
 
         for band in 0..bands {
             let y0 = band * 6;
-            let mut set: BTreeSet<u8> = BTreeSet::new();
-            for y in y0..(y0 + 6).min(height) {
+            active.clear();
+            active2.fill(false);
+
+            for dy in 0..6 {
+                let y = y0 + dy;
+                if y >= height {
+                    break;
+                }
+                let row_start = y * width;
+                let bit = 1u8 << dy;
                 for x in 0..width {
-                    if let Some(id) = idx[y * width + x] {
-                        set.insert(id);
+                    let id = idx[row_start + x];
+                    if id < 216 {
+                        let offset = id as usize * width + x;
+                        band_bits[offset] |= bit;
+                        if !active2[id as usize] {
+                            active2[id as usize] = true;
+                            active.push(id);
+                        }
                     }
                 }
             }
-            if set.is_empty() {
+
+            if active.is_empty() {
                 out.push(b'-');
                 continue;
             }
+
+            active.sort_unstable();
             let mut first = true;
-            for id in set {
-                row_buf.clear();
+            for &id in &active {
+                let offset = id as usize * width;
+                let slice = &mut band_bits[offset..offset + width];
+
                 let mut last = 0;
-                for x in 0..width {
-                    let mut bits: u8 = 0;
-                    for dy in 0..6 {
-                        let y = y0 + dy;
-                        if y >= height {
-                            continue;
-                        }
-                        if idx[y * width + x] == Some(id) {
-                            bits |= 1 << dy;
-                        }
-                    }
-                    let ch = 0x3f + bits;
-                    if bits != 0 {
+                for (x, bits) in slice.iter_mut().enumerate() {
+                    let b = *bits;
+                    if b != 0 {
                         last = x + 1;
                     }
-                    row_buf.push(ch);
+                    *bits = 0x3f + b;
                 }
 
-                if last == 0 {
-                    continue;
+                if last > 0 {
+                    if !first {
+                        out.push(b'$');
+                    }
+                    first = false;
+                    let _ = write!(out, "#{id}");
+                    write_rle(&mut out, &slice[..last]);
                 }
-
-                if !first {
-                    out.push(b'$');
-                }
-                first = false;
-                out.extend_from_slice(format!("#{id}").as_bytes());
-                write_rle(&mut out, &row_buf[..last]);
+                slice.fill(0);
             }
+
             if band + 1 < bands {
                 out.push(b'-');
             }
