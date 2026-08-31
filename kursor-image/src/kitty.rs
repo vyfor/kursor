@@ -4,15 +4,13 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use kursor_core::{layout::size::Size, util::base64};
 
-use crate::{
-    Error, GraphicsProtocol, ImageEncoder, ImageFormat, ImageSource, ImageTarget, Result,
-};
+use crate::{Error, GraphicsProtocol, ImageEncoder, ImageFormat, ImageSource, ImageTarget, Result};
 
 pub struct Kitty {
     transmission: Transmission,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub enum Transmission {
     #[default]
     Direct,
@@ -58,6 +56,16 @@ impl Kitty {
         let mut out = Vec::new();
         let _ = write!(out, "\x1b_Ga=d,d=i,i={id};\x1b\\");
         out
+    }
+
+    pub fn undisplay(&self, id: u32) -> Vec<u8> {
+        let mut out = Vec::new();
+        let _ = write!(out, "\x1b_Ga=d,d=c,i={id};\x1b\\");
+        out
+    }
+
+    pub fn delete_all() -> Vec<u8> {
+        b"\x1b_Ga=d,d=a;\x1b\\".to_vec()
     }
 }
 

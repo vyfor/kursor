@@ -26,12 +26,13 @@ use kursor_core::{
     layout::size::Size,
     render::{
         attrs::{Attrs, Blink, Underline},
-        buffer::CellDiff,
+        buffer::{CellDiff, GraphicsDiff},
         color::Color,
         style::Style,
     },
     runtime::Runtime,
 };
+use kursor_image::Kitty;
 
 use super::Terminal;
 use crate::app::App;
@@ -103,6 +104,8 @@ impl Terminal for Crossterm {
             LeaveAlternateScreen,
             SetAttribute(Attribute::Reset)
         );
+        let _ = self.stdout.write_all(&Kitty::delete_all());
+        let _ = self.stdout.flush();
         let _ = terminal::disable_raw_mode();
         self.active = false;
     }
@@ -123,10 +126,26 @@ impl Terminal for Crossterm {
     fn present(
         &mut self,
         changes: &[CellDiff],
+        graphics: &GraphicsDiff,
         cursor: Option<(u16, u16)>,
     ) -> Result<(), Self::Error> {
         let mut last_pos: Option<(u16, u16)> = None;
         let mut last_style: Option<Style> = None;
+
+        for clear in &graphics.clears {
+            self.stdout.write_all(&clear.prelude)?;
+            for y in 0..clear.h {
+                crossterm::queue!(
+                    self.stdout,
+                    cursor::MoveTo(clear.x, clear.y.saturating_add(y))
+                )?;
+                for _ in 0..clear.w {
+                    crossterm::queue!(self.stdout, Print(' '))?;
+                }
+            }
+            last_pos = None;
+            last_style = None;
+        }
 
         for change in changes {
             let need_move = match last_pos {
@@ -146,6 +165,10 @@ impl Terminal for Crossterm {
         }
         if !changes.is_empty() {
             crossterm::queue!(self.stdout, SetAttribute(Attribute::Reset))?;
+        }
+        for draw in &graphics.draws {
+            crossterm::queue!(self.stdout, cursor::MoveTo(draw.x, draw.y))?;
+            self.stdout.write_all(&draw.data)?;
         }
         match cursor {
             Some((x, y)) => crossterm::queue!(self.stdout, cursor::MoveTo(x, y), cursor::Show)?,

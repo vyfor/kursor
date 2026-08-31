@@ -1,4 +1,4 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ImageFormat {
     Png,
     Jpeg,
@@ -9,7 +9,7 @@ pub enum ImageFormat {
     Other,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum GraphicsProtocol {
     Kitty,
     Sixel,

@@ -62,16 +62,18 @@ pub fn fit_cells(
         ),
         ImageFit::Fill => available,
         ImageFit::Contain => {
-            let scale = f64::from(available.width) / f64::from(natural.width.max(1))
-                .min(f64::from(available.height) / f64::from(natural.height.max(1)));
+            let scale = f64::from(available.width)
+                / f64::from(natural.width.max(1))
+                    .min(f64::from(available.height) / f64::from(natural.height.max(1)));
             Size::new(
                 (f64::from(natural.width) * scale).floor().max(1.0) as u16,
                 (f64::from(natural.height) * scale).floor().max(1.0) as u16,
             )
         }
         ImageFit::Cover => {
-            let scale = f64::from(available.width) / f64::from(natural.width.max(1))
-                .max(f64::from(available.height) / f64::from(natural.height.max(1)));
+            let scale = f64::from(available.width)
+                / f64::from(natural.width.max(1))
+                    .max(f64::from(available.height) / f64::from(natural.height.max(1)));
             Size::new(
                 (f64::from(natural.width) * scale).floor().max(1.0) as u16,
                 (f64::from(natural.height) * scale).floor().max(1.0) as u16,

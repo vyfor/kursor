@@ -1,7 +1,7 @@
 pub mod instance;
 use std::{
     cmp::{self, Ordering},
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     mem,
     rc::Rc,
     time::{Duration, Instant},
@@ -27,7 +27,10 @@ use crate::{
         rect::Rect,
         size::Size,
     },
-    render::{buffer::Buffer, buffer::CellDiff, canvas::Canvas},
+    render::{
+        buffer::{Buffer, CellDiff, CommittedGraphics, GraphicsDiff, diff_graphics},
+        canvas::Canvas,
+    },
     runtime::instance::Instance,
     state::{LocalState, Signal, deps, id::AtomId, memo, queue::dirty_queue, scope, signal},
     tree::{Tree, id::NodeId},
@@ -95,6 +98,8 @@ pub struct Runtime {
     last_click: Option<(NodeId, MouseButton, Instant)>,
     global_listeners: Vec<NodeId>,
     local_queue: Rc<signal::LocalQueue>,
+    graphics_committed: BTreeMap<NodeId, CommittedGraphics>,
+    graphics_reset: bool,
     scratch: Scratch,
     #[cfg(feature = "animate")]
     frame_id: u64,
@@ -140,6 +145,8 @@ impl Runtime {
             last_click: None,
             global_listeners: Vec::new(),
             local_queue: Rc::new(signal::LocalQueue::new()),
+            graphics_committed: BTreeMap::new(),
+            graphics_reset: false,
             scratch: Scratch::new(),
             #[cfg(feature = "animate")]
             frame_id: 0,
@@ -180,6 +187,16 @@ impl Runtime {
 
     pub fn back_buffer(&self) -> &Buffer {
         &self.back
+    }
+
+    pub fn take_graphics(&mut self) -> GraphicsDiff {
+        let diff = diff_graphics(
+            self.back.graphics(),
+            &mut self.graphics_committed,
+            self.graphics_reset,
+        );
+        self.graphics_reset = false;
+        diff
     }
 
     #[cfg(feature = "animate")]
@@ -379,6 +396,7 @@ impl Runtime {
                 self.rect = Rect::new(0, 0, *width, *height);
                 self.front = Buffer::new(Size::new(*width, *height));
                 self.back = Buffer::new(Size::new(*width, *height));
+                self.graphics_reset = true;
                 self.paint_all = true;
                 self.tree.root().map_or(EventResult::Ignored, |root| {
                     self.layout_dirty.insert(root);
@@ -1047,6 +1065,10 @@ impl Runtime {
             self.paint_dirty.remove(&node);
         }
 
+        for &node in &subtree {
+            self.back.remove_graphics(node);
+        }
+
         for &node in subtree.iter().rev() {
             let ins = self.tree.get_mut(node).unwrap();
             let mut cx = Cx {
@@ -1606,6 +1628,7 @@ impl Runtime {
     fn apply_paint(&mut self, id: NodeId, origin: Offset, clip: Rect) {
         #[cfg(feature = "animate")]
         let _node_frame = frame::enter_node(Some(id), frame::Phase::Passive);
+        self.back.remove_graphics(id);
         {
             let ins = self.tree.get_mut(id).unwrap();
             let mut cx = Cx {
@@ -1615,7 +1638,7 @@ impl Runtime {
                 global_input: None,
                 env: ins.env.clone(),
             };
-            let mut canvas = Canvas::new(&mut self.back, clip, origin);
+            let mut canvas = Canvas::new(&mut self.back, clip, origin, id);
             ins.component
                 .pre_paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
             ins.component
@@ -1653,7 +1676,7 @@ impl Runtime {
                 global_input: None,
                 env: ins.env.clone(),
             };
-            let mut canvas = Canvas::new(&mut self.back, clip, origin);
+            let mut canvas = Canvas::new(&mut self.back, clip, origin, id);
             ins.component
                 .post_paint_any(&mut cx, ins.props.as_ref(), &mut canvas)
         };

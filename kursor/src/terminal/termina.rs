@@ -13,12 +13,13 @@ use kursor_core::{
     layout::size::Size,
     render::{
         attrs::{Blink, Underline},
-        buffer::CellDiff,
+        buffer::{CellDiff, GraphicsDiff},
         color::Color,
         style::Style,
     },
     runtime::Runtime,
 };
+use kursor_image::Kitty;
 use termina::{
     Event as TerminaEvent, OneBased, PlatformTerminal, Terminal as TerminaTerminal,
     escape::csi::{
@@ -124,6 +125,7 @@ impl Terminal for Termina {
             Self::mode(DecPrivateModeCode::ClearAndEnableAlternateScreen, false),
             Csi::Sgr(Sgr::Reset),
         );
+        let _ = self.inner.write_all(&Kitty::delete_all());
         let _ = self.inner.flush();
         let _ = self.inner.enter_cooked_mode();
         self.active = false;
@@ -149,11 +151,24 @@ impl Terminal for Termina {
     fn present(
         &mut self,
         changes: &[CellDiff],
+        graphics: &GraphicsDiff,
         cursor: Option<(u16, u16)>,
     ) -> Result<(), Self::Error> {
         self.output.clear();
         let mut last_pos: Option<(u16, u16)> = None;
         let mut last_style: Option<Style> = None;
+
+        for clear in &graphics.clears {
+            self.output.extend_from_slice(&clear.prelude);
+            for y in 0..clear.h {
+                self.cursor(clear.x, clear.y.saturating_add(y))?;
+                for _ in 0..clear.w {
+                    self.output.push(b' ');
+                }
+            }
+            last_pos = None;
+            last_style = None;
+        }
 
         for change in changes {
             let need_move = match last_pos {
@@ -173,6 +188,10 @@ impl Terminal for Termina {
         }
         if !changes.is_empty() {
             write!(self.output, "{}", Csi::Sgr(Sgr::Reset))?;
+        }
+        for draw in &graphics.draws {
+            self.cursor(draw.x, draw.y)?;
+            self.output.extend_from_slice(&draw.data);
         }
         match cursor {
             Some((x, y)) => {

@@ -2,21 +2,28 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::{
     layout::{offset::Offset, rect::Rect},
-    render::{buffer::Buffer, cell::Cell, style::Style},
+    render::{
+        buffer::{Buffer, GraphicsOp},
+        cell::Cell,
+        style::Style,
+    },
+    tree::id::NodeId,
 };
 
 pub struct Canvas<'a> {
     buffer: &'a mut Buffer,
     clip: Rect,
     origin: Offset,
+    node: NodeId,
 }
 
 impl<'a> Canvas<'a> {
-    pub fn new(buffer: &'a mut Buffer, clip: Rect, origin: Offset) -> Self {
+    pub fn new(buffer: &'a mut Buffer, clip: Rect, origin: Offset, node: NodeId) -> Self {
         Self {
             buffer,
             clip,
             origin,
+            node,
         }
     }
 
@@ -68,6 +75,14 @@ impl<'a> Canvas<'a> {
                 self.set_cell(x, y, Cell::new(ch, style));
             }
         }
+    }
+
+    pub fn push_graphics(&mut self, op: GraphicsOp) {
+        let x = self.origin.x.max(0) as u16;
+        let y = self.origin.y.max(0) as u16;
+        let w = self.clip.width;
+        let h = self.clip.height;
+        self.buffer.push_graphics(self.node, x, y, w, h, op);
     }
 
     pub fn clear(&mut self) {

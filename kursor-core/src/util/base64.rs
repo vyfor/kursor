@@ -24,6 +24,6 @@ pub fn encode(data: &[u8]) -> String {
             '='
         });
     }
-    
+
     o
 }

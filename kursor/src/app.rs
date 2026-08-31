@@ -102,6 +102,10 @@ impl<T: Terminal> App<T> {
 
     pub fn render(&mut self) -> Vec<CellDiff> {
         let changes = self.runtime.render();
+        let graphics = self.runtime.take_graphics();
+        let _ = self
+            .terminal
+            .present(&changes, &graphics, self.runtime.cursor());
         self.runtime.commit(&changes);
         changes
     }
@@ -150,7 +154,9 @@ impl<T: Terminal> App<T> {
     fn event_loop(&mut self) -> Result<(), T::Error> {
         loop {
             let changes = self.runtime.render();
-            self.terminal.present(&changes, self.runtime.cursor())?;
+            let graphics = self.runtime.take_graphics();
+            self.terminal
+                .present(&changes, &graphics, self.runtime.cursor())?;
             self.runtime.commit(&changes);
             if QUIT.load(Ordering::Relaxed) {
                 return Ok(());

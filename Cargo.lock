@@ -202,6 +202,7 @@ dependencies = [
  "crossterm",
  "kursor-core",
  "kursor-fx",
+ "kursor-image",
  "libc",
  "termina",
  "unicode-width",

@@ -1,6 +1,10 @@
 use std::{error::Error, time::Duration};
 
-use kursor_core::{event::Event, layout::size::Size, render::buffer::CellDiff};
+use kursor_core::{
+    event::Event,
+    layout::size::Size,
+    render::buffer::{CellDiff, GraphicsDiff},
+};
 
 #[cfg(feature = "crossterm")]
 pub mod crossterm;
@@ -22,6 +26,7 @@ pub trait Terminal {
     fn present(
         &mut self,
         changes: &[CellDiff],
+        graphics: &GraphicsDiff,
         cursor: Option<(u16, u16)>,
     ) -> Result<(), Self::Error>;
 }

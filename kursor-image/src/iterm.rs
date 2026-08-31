@@ -1,6 +1,8 @@
 use kursor_core::util::base64;
 
-use crate::{Error, GraphicsProtocol, ImageData, ImageEncoder, ImageFormat, ImageSource, ImageTarget, Result};
+use crate::{
+    Error, GraphicsProtocol, ImageData, ImageEncoder, ImageFormat, ImageSource, ImageTarget, Result,
+};
 
 pub struct Iterm2;
 
@@ -53,8 +55,9 @@ fn encode_png(image: &ImageData) -> Result<Vec<u8>> {
     #[cfg(feature = "image")]
     {
         let mut buf = Vec::new();
-        let rgba = image::RgbaImage::from_raw(image.width(), image.height(), image.rgba_bytes().to_vec())
-            .ok_or(Error::InvalidDimensions)?;
+        let rgba =
+            image::RgbaImage::from_raw(image.width(), image.height(), image.rgba_bytes().to_vec())
+                .ok_or(Error::InvalidDimensions)?;
         let enc = image::codecs::png::PngEncoder::new(&mut buf);
         image::ImageEncoder::write_image(
             enc,
@@ -69,6 +72,8 @@ fn encode_png(image: &ImageData) -> Result<Vec<u8>> {
     #[cfg(not(feature = "image"))]
     {
         let _ = image;
-        Err(Error::Encode("png encoding requires the `image` feature".into()))
+        Err(Error::Encode(
+            "png encoding requires the `image` feature".into(),
+        ))
     }
 }

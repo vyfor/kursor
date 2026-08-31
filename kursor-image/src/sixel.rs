@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{Error, GraphicsProtocol, ImageEncoder, ImageSource, ImageTarget, Result};
+use crate::{Error, GraphicsProtocol, ImageData, ImageEncoder, ImageSource, ImageTarget, Result};
 
 pub struct Sixel {
     pub colors: usize,
@@ -30,12 +30,26 @@ impl ImageEncoder for Sixel {
         GraphicsProtocol::Sixel
     }
 
-    fn encode(&self, source: &ImageSource, _target: &ImageTarget) -> Result<Self::Output> {
+    fn encode(&self, source: &ImageSource, target: &ImageTarget) -> Result<Self::Output> {
         let image = source.to_data()?;
-        let (width, height) = image.size();
+        let (mut width, mut height) = image.size();
         if width == 0 || height == 0 {
             return Err(Error::InvalidDimensions);
         }
+        let image = if let Some(cs) = target.cell_size() {
+            let pw = target.size.width as u32 * u32::from(cs.width);
+            let ph = target.size.height as u32 * u32::from(cs.height);
+            if pw > 0 && ph > 0 && (pw != width || ph != height) {
+                let scaled = scale_rgba(image.rgba_bytes(), width, height, pw, ph);
+                width = pw;
+                height = ph;
+                ImageData::rgba(width, height, scaled)?
+            } else {
+                image
+            }
+        } else {
+            image
+        };
         let width = width as usize;
         let height = height as usize;
         let pixels = image.rgba_bytes();
@@ -51,8 +65,11 @@ impl ImageEncoder for Sixel {
             let g = px[1] as usize * 5 / 255;
             let b = px[2] as usize * 5 / 255;
             let id = (r * 36 + g * 6 + b) as u8;
-            pal.entry(id)
-                .or_insert(((r * 100 / 5) as u8, (g * 100 / 5) as u8, (b * 100 / 5) as u8));
+            pal.entry(id).or_insert((
+                (r * 100 / 5) as u8,
+                (g * 100 / 5) as u8,
+                (b * 100 / 5) as u8,
+            ));
             idx.push(Some(id));
         }
 
@@ -106,4 +123,18 @@ impl ImageEncoder for Sixel {
         out.extend_from_slice(b"\x1b\\");
         Ok(out)
     }
+}
+
+fn scale_rgba(src: &[u8], sw: u32, sh: u32, dw: u32, dh: u32) -> Vec<u8> {
+    let mut out = vec![0; (dw * dh * 4) as usize];
+    for y in 0..dh {
+        let sy = y * sh / dh;
+        for x in 0..dw {
+            let sx = x * sw / dw;
+            let si = ((sy * sw + sx) * 4) as usize;
+            let di = ((y * dw + x) * 4) as usize;
+            out[di..di + 4].copy_from_slice(&src[si..si + 4]);
+        }
+    }
+    out
 }

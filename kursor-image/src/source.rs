@@ -1,11 +1,11 @@
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     rc::Rc,
 };
 
 use crate::{Error, ImageFormat, Result};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ImageData {
     width: u32,
     height: u32,
@@ -49,7 +49,7 @@ impl ImageData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ImageSource {
     Data(ImageData),
     Encoded {
@@ -116,4 +116,34 @@ fn decode_bytes(bytes: &[u8]) -> Result<ImageData> {
         .map_err(|error| Error::Decode(error.to_string()))?
         .into_rgba8();
     ImageData::rgba(image.width(), image.height(), image.into_raw())
+}
+
+impl From<ImageData> for ImageSource {
+    fn from(image: ImageData) -> Self {
+        Self::Data(image)
+    }
+}
+
+impl From<PathBuf> for ImageSource {
+    fn from(path: PathBuf) -> Self {
+        Self::file(path)
+    }
+}
+
+impl From<&Path> for ImageSource {
+    fn from(path: &Path) -> Self {
+        Self::file(path)
+    }
+}
+
+impl From<String> for ImageSource {
+    fn from(path: String) -> Self {
+        Self::file(path)
+    }
+}
+
+impl From<&str> for ImageSource {
+    fn from(path: &str) -> Self {
+        Self::file(path)
+    }
 }
