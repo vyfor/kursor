@@ -127,13 +127,19 @@ impl Subcell {
 
     pub fn edge_cell(self, src: Cell, underlay: Cell, direction: Direction, amount: f32) -> Cell {
         let ch = match direction {
-            Direction::Left => self.fill_left(amount),
-            Direction::Right => self.fill_right(amount),
-            Direction::Up => self.fill_top(amount),
-            Direction::Down => self.fill_bottom(amount),
+            Direction::Left => self.fill_right(amount),
+            Direction::Right => self.fill_left(amount),
+            Direction::Up => self.fill_bottom(amount),
+            Direction::Down => self.fill_top(amount),
         };
         let fg = match src.style.bg {
-            Color::Reset => src.style.fg,
+            Color::Reset => match underlay.style.bg {
+                Color::Reset => match src.style.fg {
+                    Color::Reset => underlay.style.fg,
+                    fg => fg,
+                },
+                bg => bg,
+            },
             bg => bg,
         };
         Cell::new(ch, Style::new().fg(fg).bg(underlay.style.bg))

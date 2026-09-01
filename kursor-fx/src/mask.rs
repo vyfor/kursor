@@ -78,8 +78,16 @@ impl Spread {
             return progress.clamp(0.0, 1.0);
         }
 
-        let nx = x as f32 / area.width.max(1) as f32;
-        let ny = y as f32 / area.height.max(1) as f32;
+        let nx = if area.width > 1 {
+            x as f32 / (area.width - 1) as f32
+        } else {
+            0.0
+        };
+        let ny = if area.height > 1 {
+            y as f32 / (area.height - 1) as f32
+        } else {
+            0.0
+        };
         let local = match self {
             Self::Uniform => 0.0,
             Self::Towards(Direction::Right) => nx,
@@ -87,8 +95,10 @@ impl Spread {
             Self::Towards(Direction::Down) => ny,
             Self::Towards(Direction::Up) => 1.0 - ny,
             Self::Radial => {
-                let dx = nx - 0.5;
-                let dy = ny - 0.5;
+                let rnx = x as f32 / area.width.max(1) as f32;
+                let rny = y as f32 / area.height.max(1) as f32;
+                let dx = rnx - 0.5;
+                let dy = rny - 0.5;
                 (dx * dx + dy * dy).sqrt().min(1.0)
             }
         };

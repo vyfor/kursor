@@ -1,14 +1,10 @@
 mod color;
 mod direction;
-mod fade;
-mod slide;
+mod reveal;
+mod shift;
 mod tint;
-mod translate;
-mod wipe;
 
 pub use direction::Direction;
-pub use fade::{Fade, fade_from, fade_in, fade_out, fade_to};
-pub use slide::{Slide, slide_in, slide_out};
+pub use reveal::{Reveal, reveal};
+pub use shift::{Shift, ShiftTarget, shift};
 pub use tint::{Tint, tint_bg, tint_fg, tint_style};
-pub use translate::{Translate, translate};
-pub use wipe::{Wipe, wipe_in, wipe_out};
