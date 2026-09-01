@@ -8,6 +8,8 @@ pub enum Mask {
     Text,
     NonEmpty,
     Inner(u16),
+    Border,
+    Chars(Vec<char>),
     Not(Box<Mask>),
 }
 
@@ -28,6 +30,14 @@ impl Mask {
         Self::Inner(margin)
     }
 
+    pub fn border() -> Self {
+        Self::Border
+    }
+
+    pub fn chars(chars: &str) -> Self {
+        Self::Chars(chars.chars().collect())
+    }
+
     pub fn not(mask: impl Into<Mask>) -> Self {
         Self::Not(Box::new(mask.into()))
     }
@@ -42,6 +52,13 @@ impl Mask {
                     && x.saturating_add(*margin) < area.width
                     && y.saturating_add(*margin) < area.height
             }
+            Self::Border => {
+                x == 0
+                    || y == 0
+                    || x == area.width.saturating_sub(1)
+                    || y == area.height.saturating_sub(1)
+            }
+            Self::Chars(chars) => chars.contains(&cell.ch),
             Self::Not(mask) => !mask.includes(cell, x, y, area),
         }
     }

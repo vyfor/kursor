@@ -1024,12 +1024,12 @@ impl Runtime {
             (should_update, env_changed, declared_changed)
         };
 
-            if should_update || env_changed || declared_changed {
-                let instance = self.tree.get_mut(child).unwrap();
-                instance.available = None;
-                instance.is_measure_valid = false;
-                instance.is_layout_valid = false;
-                self.update_dirty.insert(child);
+        if should_update || env_changed || declared_changed {
+            let instance = self.tree.get_mut(child).unwrap();
+            instance.available = None;
+            instance.is_measure_valid = false;
+            instance.is_layout_valid = false;
+            self.update_dirty.insert(child);
         }
         if declared_changed {
             self.sync(child, &blueprint.children);
@@ -1282,9 +1282,7 @@ impl Runtime {
     fn apply_measure(&mut self, id: NodeId, available: Size) -> bool {
         {
             let ins = self.tree.get(id).unwrap();
-            if ins.is_measure_valid
-                && ins.available == Some(available)
-            {
+            if ins.is_measure_valid && ins.available == Some(available) {
                 return false;
             }
         }
@@ -1301,7 +1299,11 @@ impl Runtime {
 
         let mut component = {
             let ins = self.tree.get_mut(id).unwrap();
-            let ph = self.scratch.placeholder.take().unwrap_or_else(|| Box::new(Placeholder));
+            let ph = self
+                .scratch
+                .placeholder
+                .take()
+                .unwrap_or_else(|| Box::new(Placeholder));
             mem::replace(&mut ins.component, ph)
         };
         let props = {
@@ -1346,9 +1348,7 @@ impl Runtime {
             self.scratch.placeholder = Some(ph);
             changed
         };
-        if changed
-            && let Some(parent) = self.tree.parent(id)
-        {
+        if changed && let Some(parent) = self.tree.parent(id) {
             if let Some(p) = self.tree.get_mut(parent) {
                 p.is_measure_valid = false;
                 p.is_layout_valid = false;
@@ -1432,13 +1432,10 @@ impl Runtime {
 
         while let Some((id, rect, offset)) = self.scratch.layout_pending.pop() {
             let is_dirty = self.layout_dirty.remove(&id);
-            let (old_rect, old_offset, old_origin, old_clip) = self
-                .tree
-                .get(id)
-                .map_or(
-                    (Rect::default(), Offset::ZERO, Offset::ZERO, Rect::default()),
-                    |ins| (ins.rect, ins.offset, ins.origin, ins.clip),
-                );
+            let (old_rect, old_offset, old_origin, old_clip) = self.tree.get(id).map_or(
+                (Rect::default(), Offset::ZERO, Offset::ZERO, Rect::default()),
+                |ins| (ins.rect, ins.offset, ins.origin, ins.clip),
+            );
             if old_rect != rect || old_offset != offset {
                 self.paint_all = true;
             }
@@ -1464,10 +1461,7 @@ impl Runtime {
                 && old_origin == origin
                 && old_clip == clip
             {
-                let l_valid = self
-                    .tree
-                    .get(id)
-                    .is_some_and(|ins| ins.is_layout_valid);
+                let l_valid = self.tree.get(id).is_some_and(|ins| ins.is_layout_valid);
                 if l_valid {
                     continue;
                 }

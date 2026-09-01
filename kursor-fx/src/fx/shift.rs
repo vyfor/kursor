@@ -89,11 +89,19 @@ impl Fx for Shift {
                     self.finished(cx);
                     return Activity::FINISHED;
                 }
-                let amount = if self.inward { 1.0 - progress } else { progress };
+                let amount = if self.inward {
+                    1.0 - progress
+                } else {
+                    progress
+                };
                 self.apply_slide(cx, amount, *dir);
             }
             ShiftTarget::Offset(offset) => {
-                let t = if self.inward { progress } else { 1.0 - progress };
+                let t = if self.inward {
+                    progress
+                } else {
+                    1.0 - progress
+                };
                 self.apply_move(cx, t, progress, *offset);
             }
         }
@@ -321,13 +329,7 @@ impl Shift {
         }
     }
 
-    fn apply_move(
-        &self,
-        cx: &mut EffectCx<'_>,
-        t: f32,
-        progress: f32,
-        offset: Offset,
-    ) {
+    fn apply_move(&self, cx: &mut EffectCx<'_>, t: f32, progress: f32, offset: Offset) {
         let finished = progress >= 1.0;
         let (px, py) = if finished {
             if self.inward {

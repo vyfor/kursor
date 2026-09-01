@@ -5,8 +5,8 @@ use kursor_core::{
         context::Cx,
     },
     layout::{
-        offset::Offset,
         context::{LayoutCx, MeasureCx},
+        offset::Offset,
         rect::Rect,
         size::Size,
     },

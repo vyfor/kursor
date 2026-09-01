@@ -1,5 +1,36 @@
 use kursor_core::render::color::Color;
 
+pub fn hsv(h: f32, s: f32, v: f32) -> Color {
+    let h = (h - h.floor()).rem_euclid(1.0) * 6.0;
+    let c = v * s;
+    let x = c * (1.0 - (h % 2.0 - 1.0).abs());
+    let (r, g, b) = match h as u8 {
+        0 => (c, x, 0.0),
+        1 => (x, c, 0.0),
+        2 => (0.0, c, x),
+        3 => (0.0, x, c),
+        4 => (x, 0.0, c),
+        _ => (c, 0.0, x),
+    };
+    let m = v - c;
+    Color::Rgb(
+        ((r + m) * 255.0) as u8,
+        ((g + m) * 255.0) as u8,
+        ((b + m) * 255.0) as u8,
+    )
+}
+
+pub fn scale(c: Color, k: f32) -> Color {
+    match c {
+        Color::Rgb(r, g, b) => Color::Rgb(
+            (r as f32 * k) as u8,
+            (g as f32 * k) as u8,
+            (b as f32 * k) as u8,
+        ),
+        other => other,
+    }
+}
+
 pub fn mix(from: Color, to: Color, amount: f32, default: Color) -> Color {
     if from == to {
         return from;

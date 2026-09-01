@@ -70,7 +70,11 @@ impl Fx for Reveal {
                         self.finished(cx);
                         return Activity::FINISHED;
                     }
-                    let amount = if self.inward { progress } else { 1.0 - progress };
+                    let amount = if self.inward {
+                        progress
+                    } else {
+                        1.0 - progress
+                    };
                     if self.feather.is_hard() {
                         self.apply_hard_wipe(cx, amount, dir);
                     } else {
@@ -82,7 +86,11 @@ impl Fx for Reveal {
                         self.finished(cx);
                         return Activity::FINISHED;
                     }
-                    let amount = if self.inward { progress } else { 1.0 - progress };
+                    let amount = if self.inward {
+                        progress
+                    } else {
+                        1.0 - progress
+                    };
                     self.apply_radial_edge(cx, amount);
                 }
                 Spread::Uniform => {
@@ -314,7 +322,9 @@ impl Reveal {
                 let underlay = cx.underlay(x, y);
                 let boundary = distance > 0.0 && distance < 1.0;
                 let cell = if self.subcell != Subcell::None && boundary {
-                    let edge = self.subcell.edge_cell(source, underlay, direction, distance);
+                    let edge = self
+                        .subcell
+                        .edge_cell(source, underlay, direction, distance);
                     self.feather.soften(edge, underlay, distance)
                 } else {
                     self.feather.soften(source, underlay, distance)
