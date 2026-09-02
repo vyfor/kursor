@@ -6,6 +6,7 @@ pub mod column;
 pub mod divider;
 pub mod flex;
 pub mod grid;
+#[cfg(feature = "image")]
 pub mod image;
 pub mod lazy_list;
 pub mod list;
@@ -28,6 +29,7 @@ pub use column::{Column, ColumnProps};
 pub use divider::{Divider, DividerProps};
 pub use flex::{Flex, FlexBuilder, FlexItem, FlexProps, IntoFlexItems};
 pub use grid::{Grid, GridBuilder, GridItem, GridProps, IntoGridItems};
+#[cfg(feature = "image")]
 pub use image::{Image, ImageBuilder, ImageProps};
 pub use lazy_list::{LazyList, LazyListBehavior, LazyListBuilder, LazyListProps, LazyListState};
 pub use list::{

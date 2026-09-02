@@ -32,6 +32,7 @@ use kursor_core::{
     },
     runtime::Runtime,
 };
+#[cfg(feature = "image")]
 use kursor_image::Kitty;
 
 use super::Terminal;
@@ -104,8 +105,11 @@ impl Terminal for Crossterm {
             LeaveAlternateScreen,
             SetAttribute(Attribute::Reset)
         );
-        let _ = self.stdout.write_all(&Kitty::delete_all());
-        let _ = self.stdout.flush();
+        #[cfg(feature = "image")]
+        {
+            let _ = self.stdout.write_all(&Kitty::delete_all());
+            let _ = self.stdout.flush();
+        }
         let _ = terminal::disable_raw_mode();
         self.active = false;
     }

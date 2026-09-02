@@ -19,6 +19,7 @@ use kursor_core::{
     },
     runtime::Runtime,
 };
+#[cfg(feature = "image")]
 use kursor_image::Kitty;
 use termina::{
     Event as TerminaEvent, OneBased, PlatformTerminal, Terminal as TerminaTerminal,
@@ -125,8 +126,11 @@ impl Terminal for Termina {
             Self::mode(DecPrivateModeCode::ClearAndEnableAlternateScreen, false),
             Csi::Sgr(Sgr::Reset),
         );
-        let _ = self.inner.write_all(&Kitty::delete_all());
-        let _ = self.inner.flush();
+        #[cfg(feature = "image")]
+        {
+            let _ = self.inner.write_all(&Kitty::delete_all());
+            let _ = self.inner.flush();
+        }
         let _ = self.inner.enter_cooked_mode();
         self.active = false;
     }
