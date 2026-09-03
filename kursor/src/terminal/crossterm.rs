@@ -280,7 +280,7 @@ fn apply_style(out: &mut impl Write, style: Style) -> io::Result<()> {
 
 fn map_color(color: Color) -> CtColor {
     match color {
-        Color::Reset => CtColor::Reset,
+        Color::Reset | Color::Unset => CtColor::Reset,
         Color::Black => CtColor::Black,
         Color::Red => CtColor::DarkRed,
         Color::Green => CtColor::DarkGreen,

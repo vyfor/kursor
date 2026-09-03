@@ -356,7 +356,7 @@ fn apply_style(out: &mut impl Write, style: Style) -> io::Result<()> {
 
 fn map_color(color: Color) -> ColorSpec {
     match color {
-        Color::Reset => ColorSpec::Reset,
+        Color::Reset | Color::Unset => ColorSpec::Reset,
         Color::Black => ColorSpec::BLACK,
         Color::Red => ColorSpec::RED,
         Color::Green => ColorSpec::GREEN,

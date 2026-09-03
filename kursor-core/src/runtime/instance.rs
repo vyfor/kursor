@@ -3,6 +3,8 @@ use std::{
     rc::Rc,
 };
 
+#[cfg(feature = "animate")]
+use crate::component::context::Animations;
 use crate::{
     component::{AnyComponent, blueprint::Blueprint, environment::Environment, key::Key},
     layout::{offset::Offset, rect::Rect, size::Size},
@@ -25,4 +27,6 @@ pub struct Instance {
     pub inherited: Environment,
     pub origin: Offset,
     pub clip: Rect,
+    #[cfg(feature = "animate")]
+    pub(crate) animations: Animations,
 }

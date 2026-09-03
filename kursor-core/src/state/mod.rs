@@ -1,5 +1,3 @@
-#[cfg(feature = "animate")]
-pub mod animated;
 pub mod arena;
 pub mod atom;
 pub mod deps;
@@ -12,6 +10,7 @@ pub mod scope;
 pub mod signal;
 pub mod slot;
 pub mod spin;
+pub mod transition;
 pub mod value;
 
 pub trait LocalState: Clone + PartialEq + 'static {}
@@ -23,7 +22,5 @@ impl<T: LocalState + Send + Sync> SharedState for T {}
 pub use atom::Atom;
 pub use memo::Memo;
 pub use signal::Signal;
+pub use transition::{Channel, IntoChannel, Transition};
 pub use value::{IntoValue, Plain, Value};
-
-#[cfg(feature = "animate")]
-pub use animated::Animated;

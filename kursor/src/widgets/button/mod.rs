@@ -17,7 +17,7 @@ use kursor_core::{
     },
     layout::{WrapMode, context::MeasureCx, size::Size},
     render::style::Style,
-    state::{IntoValue, Signal, Value},
+    state::{IntoValue, Signal, Transition, Value},
     theme::Theme,
 };
 
@@ -36,28 +36,49 @@ pub enum ButtonIntent {
     Activate,
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub struct ButtonStyles {
-    pub normal: Option<Style>,
-    pub hovered: Option<Style>,
-    pub focused: Option<Style>,
-    pub pressed: Option<Style>,
-    pub disabled: Option<Style>,
+    pub normal: Option<Value<Style>>,
+    pub hovered: Option<Value<Style>>,
+    pub focused: Option<Value<Style>>,
+    pub pressed: Option<Value<Style>>,
+    pub disabled: Option<Value<Style>>,
 }
 
 kursor_core::into_value!(ButtonStyles);
 
-impl PartialEq for ButtonStyles {
-    fn eq(&self, other: &Self) -> bool {
-        self.normal == other.normal
-            && self.hovered == other.hovered
-            && self.focused == other.focused
-            && self.pressed == other.pressed
-            && self.disabled == other.disabled
+impl Eq for ButtonStyles {}
+
+impl ButtonStyles {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn normal(mut self, style: impl IntoValue<Style>) -> Self {
+        self.normal = Some(style.into_value());
+        self
+    }
+
+    pub fn hovered(mut self, style: impl IntoValue<Style>) -> Self {
+        self.hovered = Some(style.into_value());
+        self
+    }
+
+    pub fn focused(mut self, style: impl IntoValue<Style>) -> Self {
+        self.focused = Some(style.into_value());
+        self
+    }
+
+    pub fn pressed(mut self, style: impl IntoValue<Style>) -> Self {
+        self.pressed = Some(style.into_value());
+        self
+    }
+
+    pub fn disabled(mut self, style: impl IntoValue<Style>) -> Self {
+        self.disabled = Some(style.into_value());
+        self
     }
 }
-
-impl Eq for ButtonStyles {}
 
 #[derive(Default)]
 pub struct ButtonBehavior;
@@ -92,6 +113,7 @@ pub struct ButtonProps {
     pub disabled: Value<bool>,
     pub behavior: Arc<dyn Behavior<State = ButtonState, Intent = ButtonIntent>>,
     pub on_press: Arc<dyn Fn(&mut Cx)>,
+    pub transition: Option<Transition>,
 }
 
 impl ButtonProps {
@@ -103,6 +125,7 @@ impl ButtonProps {
             disabled: Value::plain(false),
             behavior: Arc::new(ButtonBehavior),
             on_press: Arc::new(on_press),
+            transition: None,
         }
     }
 }
@@ -114,6 +137,7 @@ pub struct Button {
     label: Signal<String>,
     border: Signal<Border>,
     style: Signal<Option<Style>>,
+    transition: Option<Transition>,
 }
 
 impl Button {
@@ -129,20 +153,20 @@ impl Button {
         Blueprint::new::<Self>(props)
     }
 
-    fn style(&self, theme: Theme) -> Style {
-        if self.disabled {
-            return self.styles.disabled.unwrap_or(theme.disabled);
-        }
-        if self.state.pressed {
-            return self.styles.pressed.unwrap_or(theme.focus);
-        }
-        if self.state.focused {
-            return self.styles.focused.unwrap_or(theme.focus);
-        }
-        if self.state.hovered {
-            return self.styles.hovered.unwrap_or(theme.primary);
-        }
-        self.styles.normal.unwrap_or(theme.surface)
+    fn style(&self, cx: &mut Cx, theme: Theme) -> Style {
+        let (val, fallback) = if self.disabled {
+            (&self.styles.disabled, theme.disabled)
+        } else if self.state.pressed {
+            (&self.styles.pressed, theme.focus)
+        } else if self.state.focused {
+            (&self.styles.focused, theme.focus)
+        } else if self.state.hovered {
+            (&self.styles.hovered, theme.primary)
+        } else {
+            (&self.styles.normal, theme.surface)
+        };
+
+        cx.resolve_or("style", val, fallback, self.transition.clone())
     }
 }
 
@@ -157,6 +181,7 @@ impl Component for Button {
             label: cx.signal(String::new()),
             border: cx.signal(Border::Rounded),
             style: cx.signal(None),
+            transition: None,
         }
     }
 
@@ -165,6 +190,7 @@ impl Component for Button {
             || old.border != new.border
             || old.styles != new.styles
             || old.disabled != new.disabled
+            || old.transition != new.transition
             || !Arc::ptr_eq(&old.behavior, &new.behavior)
             || !Arc::ptr_eq(&old.on_press, &new.on_press)
     }
@@ -203,11 +229,13 @@ impl Component for Button {
             BlockProps {
                 border: self.border.clone().into_value(),
                 style: self.style.clone().into_value(),
+                transition: None,
             },
             Text::with(super::TextProps {
                 text: self.label.clone().into_text(),
                 style: self.style.clone().into_value(),
                 wrap: Value::plain(WrapMode::None),
+                transition: None,
             }),
         ));
     }
@@ -220,10 +248,11 @@ impl Component for Button {
         let old_style = self.style.peek();
         self.styles = styles;
         self.disabled = disabled;
+        self.transition = props.transition.clone();
         self.label.set(label);
         self.border.set(border);
         let theme = *cx.theme();
-        let style = self.style(theme);
+        let style = self.style(cx, theme);
         if old_style != Some(style) {
             self.style.set(Some(style));
         }

@@ -1,119 +1,155 @@
 use crate::{
     layout::{Alignment, Insets, Orientation, ScrollDirection, WrapMode},
-    render::style::Style,
+    render::{color::Color, style::Style},
     theme::Theme,
 };
 
-#[cfg(feature = "animate")]
-use super::Animated;
+use super::Transition;
 use super::{LocalState, atom::Atom, memo::Memo, signal::Signal};
-#[cfg(feature = "animate")]
-use std::rc::Rc;
 
-pub enum Value<T: LocalState> {
+#[derive(Clone)]
+pub struct Value<T: LocalState> {
+    pub(crate) source: ValueSource<T>,
+    pub(crate) transition: Option<Transition>,
+}
+
+#[derive(Clone)]
+pub enum ValueSource<T: LocalState> {
     Plain(T),
     Signal(Signal<T>),
     Atom(Atom<T>),
     Memo(Memo<T>),
-    #[cfg(feature = "animate")]
-    Animated(Animated<T>),
 }
 
 impl<T: LocalState> Value<T> {
     pub fn plain(value: T) -> Self {
-        Self::Plain(value)
+        Self {
+            source: ValueSource::Plain(value),
+            transition: None,
+        }
     }
 
     pub fn atom(atom: Atom<T>) -> Self {
-        Self::Atom(atom)
+        Self {
+            source: ValueSource::Atom(atom),
+            transition: None,
+        }
     }
 
     pub fn signal(signal: Signal<T>) -> Self {
-        Self::Signal(signal)
+        Self {
+            source: ValueSource::Signal(signal),
+            transition: None,
+        }
     }
 
     pub fn memo(memo: Memo<T>) -> Self {
-        Self::Memo(memo)
+        Self {
+            source: ValueSource::Memo(memo),
+            transition: None,
+        }
+    }
+
+    pub fn source(&self) -> &ValueSource<T> {
+        &self.source
+    }
+
+    pub fn as_plain(&self) -> Option<&T> {
+        match &self.source {
+            ValueSource::Plain(value) => Some(value),
+            _ => None,
+        }
     }
 
     pub fn get(&self) -> T {
-        match self {
-            Self::Plain(value) => value.clone(),
-            Self::Signal(signal) => signal.read(),
-            Self::Atom(atom) => atom.read(),
-            Self::Memo(memo) => memo.get(),
-            #[cfg(feature = "animate")]
-            Self::Animated(animated) => animated.get(),
+        match &self.source {
+            ValueSource::Plain(value) => value.clone(),
+            ValueSource::Signal(signal) => signal.read(),
+            ValueSource::Atom(atom) => atom.read(),
+            ValueSource::Memo(memo) => memo.get(),
         }
     }
 
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
-        match self {
-            Self::Plain(value) => f(value),
-            Self::Signal(signal) => signal.with(f),
-            Self::Atom(atom) => atom.with(f),
-            Self::Memo(memo) => memo.with(f),
-            #[cfg(feature = "animate")]
-            Self::Animated(animated) => f(&animated.get()),
+        match &self.source {
+            ValueSource::Plain(value) => f(value),
+            ValueSource::Signal(signal) => signal.with(f),
+            ValueSource::Atom(atom) => atom.with(f),
+            ValueSource::Memo(memo) => memo.with(f),
         }
+    }
+
+    pub fn transition(mut self, transition: impl Into<Transition>) -> Self {
+        self.transition = Some(transition.into());
+        self
+    }
+
+    pub fn get_transition(&self) -> Option<Transition> {
+        self.transition
     }
 }
 
 impl<T: LocalState + Default> Default for Value<T> {
     fn default() -> Self {
-        Self::Plain(T::default())
-    }
-}
-
-impl<T: LocalState> Clone for Value<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Plain(value) => Self::Plain(value.clone()),
-            Self::Signal(signal) => Self::Signal(signal.clone()),
-            Self::Atom(atom) => Self::Atom(*atom),
-            Self::Memo(memo) => Self::Memo(memo.clone()),
-            #[cfg(feature = "animate")]
-            Self::Animated(animated) => Self::Animated(animated.clone()),
-        }
+        Self::plain(T::default())
     }
 }
 
 impl<T: LocalState> PartialEq for Value<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.source == other.source && self.transition == other.transition
+    }
+}
+
+impl<T: LocalState> Eq for Value<T> {}
+
+impl<T: LocalState> PartialEq for ValueSource<T> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Plain(a), Self::Plain(b)) => a == b,
             (Self::Signal(a), Self::Signal(b)) => a == b,
             (Self::Atom(a), Self::Atom(b)) => a == b,
             (Self::Memo(a), Self::Memo(b)) => a == b,
-            #[cfg(feature = "animate")]
-            (Self::Animated(a), Self::Animated(b)) => Rc::ptr_eq(&a.inner, &b.inner),
             _ => false,
         }
     }
 }
 
-impl<T: LocalState> Eq for Value<T> {}
+impl<T: LocalState> Eq for ValueSource<T> {}
 
-#[cfg(feature = "animate")]
-impl<T: LocalState> Value<T> {
-    pub fn animate<A>(self, animation: A) -> Self
-    where
-        A: animate::Animation<Value = T> + 'static,
-    {
-        Self::Animated(Animated::with(self, animation))
+impl<T: LocalState> From<T> for Value<T> {
+    fn from(value: T) -> Self {
+        Value::plain(value)
     }
 }
 
+impl<T: LocalState> From<Signal<T>> for Value<T> {
+    fn from(signal: Signal<T>) -> Self {
+        Value::signal(signal)
+    }
+}
+
+impl<T: LocalState> From<Memo<T>> for Value<T> {
+    fn from(memo: Memo<T>) -> Self {
+        Value::memo(memo)
+    }
+}
+
+impl<T: LocalState + Send + Sync> From<Atom<T>> for Value<T> {
+    fn from(atom: Atom<T>) -> Self {
+        Value::atom(atom)
+    }
+}
+
+#[cfg(feature = "animate")]
 pub trait IntoValue<T: LocalState> {
     fn into_value(self) -> Value<T>;
 
-    #[cfg(feature = "animate")]
-    fn animate<A>(self, animation: A) -> Value<T>
+    fn transition(self, transition: impl Into<Transition>) -> Value<T>
     where
-        A: animate::Animation<Value = T> + 'static,
         Self: Sized,
     {
-        self.into_value().animate(animation)
+        self.into_value().transition(transition)
     }
 }
 
@@ -123,7 +159,7 @@ macro_rules! into_value {
         $(
             impl $crate::state::value::IntoValue<$type> for $type {
                 fn into_value(self) -> $crate::state::value::Value<$type> {
-                    $crate::state::value::Value::Plain(self)
+                    $crate::state::value::Value::plain(self)
                 }
             }
         )+
@@ -138,19 +174,19 @@ impl<T: LocalState> IntoValue<T> for Value<T> {
 
 impl<T: LocalState + Send + Sync> IntoValue<T> for Atom<T> {
     fn into_value(self) -> Value<T> {
-        Value::Atom(self)
+        Value::atom(self)
     }
 }
 
 impl<T: LocalState> IntoValue<T> for Signal<T> {
     fn into_value(self) -> Value<T> {
-        Value::Signal(self)
+        Value::signal(self)
     }
 }
 
 impl<T: LocalState> IntoValue<T> for Memo<T> {
     fn into_value(self) -> Value<T> {
-        Value::Memo(self)
+        Value::memo(self)
     }
 }
 
@@ -164,7 +200,7 @@ impl<T: LocalState> Plain<T> {
 
 impl<T: LocalState> IntoValue<T> for Plain<T> {
     fn into_value(self) -> Value<T> {
-        Value::Plain(self.0)
+        Value::plain(self.0)
     }
 }
 
@@ -191,24 +227,31 @@ into_value!(
     Orientation,
     ScrollDirection,
     WrapMode,
+    Color,
     Style,
     Theme,
 );
 
 impl<T: LocalState> IntoValue<Option<T>> for Option<T> {
     fn into_value(self) -> Value<Option<T>> {
-        Value::Plain(self)
+        Value::plain(self)
+    }
+}
+
+impl IntoValue<Option<Color>> for Color {
+    fn into_value(self) -> Value<Option<Color>> {
+        Value::plain(Some(self))
     }
 }
 
 impl IntoValue<Option<Style>> for Style {
     fn into_value(self) -> Value<Option<Style>> {
-        Value::Plain(Some(self))
+        Value::plain(Some(self))
     }
 }
 
 impl IntoValue<String> for &str {
     fn into_value(self) -> Value<String> {
-        Value::Plain(self.to_owned())
+        Value::plain(self.to_owned())
     }
 }

@@ -28,10 +28,7 @@ impl PaddingBuilder {
     }
 
     pub fn horizontal(mut self, value: u16) -> Self {
-        let mut insets = match self.insets {
-            Value::Plain(insets) => insets,
-            _ => Insets::default(),
-        };
+        let mut insets = self.insets.as_plain().copied().unwrap_or_default();
         insets.left = value;
         insets.right = value;
         self.insets = Value::plain(insets);
@@ -39,10 +36,7 @@ impl PaddingBuilder {
     }
 
     pub fn vertical(mut self, value: u16) -> Self {
-        let mut insets = match self.insets {
-            Value::Plain(insets) => insets,
-            _ => Insets::default(),
-        };
+        let mut insets = self.insets.as_plain().copied().unwrap_or_default();
         insets.top = value;
         insets.bottom = value;
         self.insets = Value::plain(insets);

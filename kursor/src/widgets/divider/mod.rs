@@ -5,14 +5,15 @@ use kursor_core::{
     component::{Component, Update, blueprint::Blueprint, context::Cx},
     layout::{Orientation, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
-    state::Value,
+    state::{Transition, Value},
 };
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq)]
 pub struct DividerProps {
     pub orientation: Value<Orientation>,
     pub style: Value<Option<Style>>,
     pub glyph: Value<char>,
+    pub transition: Option<Transition>,
 }
 
 impl Default for DividerProps {
@@ -21,6 +22,7 @@ impl Default for DividerProps {
             orientation: Value::plain(Orientation::Horizontal),
             style: Value::plain(None),
             glyph: Value::plain('─'),
+            transition: None,
         }
     }
 }
@@ -29,6 +31,7 @@ pub struct Divider {
     orientation: Orientation,
     style: Option<Style>,
     glyph: char,
+    transition: Option<Transition>,
 }
 
 impl Divider {
@@ -65,6 +68,7 @@ impl Component for Divider {
             orientation: Orientation::Horizontal,
             style: None,
             glyph: '─',
+            transition: None,
         }
     }
 
@@ -76,12 +80,14 @@ impl Component for Divider {
         let orientation = props.orientation.get();
         let style = props.style.get();
         let glyph = props.glyph.get();
+        let transition = props.transition.clone();
         let orientation_changed = self.orientation != orientation;
-        let style_changed = self.style != style;
+        let style_changed = self.style != style || self.transition != transition;
         let glyph_changed = self.glyph != glyph;
         self.orientation = orientation;
         self.style = style;
         self.glyph = glyph;
+        self.transition = transition;
         if orientation_changed {
             Update::MEASURE
         } else if style_changed || glyph_changed {
@@ -104,13 +110,14 @@ impl Component for Divider {
         }
     }
 
-    fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
+    fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
         let rect = cx.rect;
         if rect.width == 0 || rect.height == 0 {
             return;
         }
 
-        let style = self.style.unwrap_or(cx.theme().surface);
+        let fallback = cx.theme().surface;
+        let style = cx.resolve_or("style", &props.style, fallback, self.transition.clone());
         match self.orientation {
             Orientation::Horizontal => {
                 for x in rect.left()..rect.right() {

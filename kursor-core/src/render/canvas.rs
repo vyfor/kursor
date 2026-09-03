@@ -5,6 +5,7 @@ use crate::{
     render::{
         buffer::{Buffer, GraphicsOp},
         cell::Cell,
+        color::Color,
         style::Style,
     },
     tree::id::NodeId,
@@ -39,11 +40,23 @@ impl<'a> Canvas<'a> {
         self.set(x, y, ch, style);
     }
 
-    pub fn set_cell(&mut self, x: u16, y: u16, cell: Cell) {
+    pub fn set_cell(&mut self, x: u16, y: u16, mut cell: Cell) {
         let x = self.origin.x.saturating_add(i32::from(x));
         let y = self.origin.y.saturating_add(i32::from(y));
         if x >= 0 && y >= 0 && self.clip.contains(x as u16, y as u16) {
-            self.buffer.set(x as u16, y as u16, cell);
+            let x = x as u16;
+            let y = y as u16;
+            if cell.style.bg == Color::Unset || cell.style.fg == Color::Unset {
+                if let Some(existing) = self.buffer.cell(x, y) {
+                    if cell.style.bg == Color::Unset {
+                        cell.style.bg = existing.style.bg;
+                    }
+                    if cell.style.fg == Color::Unset {
+                        cell.style.fg = existing.style.fg;
+                    }
+                }
+            }
+            self.buffer.set(x, y, cell);
         }
     }
 

@@ -12,4 +12,4 @@ readme = "../README.md"
 
 [dependencies]
 kursor-core = { version = "0.1.0", path = "../kursor-core", features = ["animate"] }
-animate = { version = "0.5", default-features = false }
+animate = { version = "0.7" }

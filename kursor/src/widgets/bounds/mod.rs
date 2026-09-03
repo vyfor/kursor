@@ -173,11 +173,11 @@ impl Component for Bounds {
         old != new
     }
 
-    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
-        let min_width = props.min_width.as_ref().map(Value::get);
-        let max_width = props.max_width.as_ref().map(Value::get);
-        let min_height = props.min_height.as_ref().map(Value::get);
-        let max_height = props.max_height.as_ref().map(Value::get);
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        let min_width = props.min_width.as_ref().map(|v| cx.resolve("min_w", v));
+        let max_width = props.max_width.as_ref().map(|v| cx.resolve("max_w", v));
+        let min_height = props.min_height.as_ref().map(|v| cx.resolve("min_h", v));
+        let max_height = props.max_height.as_ref().map(|v| cx.resolve("max_h", v));
         if self.min_width == min_width
             && self.max_width == max_width
             && self.min_height == min_height

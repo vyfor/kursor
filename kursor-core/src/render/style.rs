@@ -12,8 +12,8 @@ pub struct Style {
 
 impl Style {
     pub const DEFAULT: Self = Self {
-        fg: Color::Reset,
-        bg: Color::Reset,
+        fg: Color::Unset,
+        bg: Color::Unset,
         attrs: Attrs::DEFAULT,
     };
 
@@ -57,10 +57,10 @@ impl Style {
     }
 
     pub fn patch(mut self, other: Style) -> Self {
-        if other.fg != Color::Reset {
+        if other.fg != Color::Unset {
             self.fg = other.fg;
         }
-        if other.bg != Color::Reset {
+        if other.bg != Color::Unset {
             self.bg = other.bg;
         }
         if other.attrs.bold {
@@ -82,5 +82,59 @@ impl Style {
             self.attrs.strikethrough = true;
         }
         self
+    }
+}
+
+#[cfg(feature = "animate")]
+impl animate::Interpolate for Style {
+    fn lerp(start: &Self, end: &Self, t: f32) -> Self {
+        Self {
+            fg: animate::Interpolate::lerp(&start.fg, &end.fg, t),
+            bg: animate::Interpolate::lerp(&start.bg, &end.bg, t),
+            attrs: if t < 1.0 { start.attrs } else { end.attrs },
+        }
+    }
+}
+
+#[cfg(feature = "animate")]
+impl animate::Distance for Style {
+    fn distance(&self, other: &Self) -> f32 {
+        let d_fg = animate::Distance::distance(&self.fg, &other.fg);
+        let d_bg = animate::Distance::distance(&self.bg, &other.bg);
+        (d_fg * d_fg + d_bg * d_bg).sqrt()
+    }
+}
+
+#[cfg(feature = "animate")]
+impl animate::Integrate for Style {
+    type Velocity = [f32; 6];
+
+    fn integrate(
+        &self,
+        target: &Self,
+        velocity: &Self::Velocity,
+        params: animate::SpringSpec,
+        dt: f32,
+    ) -> (Self, Self::Velocity) {
+        let fg_vel = [velocity[0], velocity[1], velocity[2]];
+        let bg_vel = [velocity[3], velocity[4], velocity[5]];
+
+        let (fg, fg_nvel) = self.fg.integrate(&target.fg, &fg_vel, params, dt);
+        let (bg, bg_nvel) = self.bg.integrate(&target.bg, &bg_vel, params, dt);
+
+        (
+            Style {
+                fg,
+                bg,
+                attrs: if fg == target.fg && bg == target.bg {
+                    target.attrs
+                } else {
+                    self.attrs
+                },
+            },
+            [
+                fg_nvel[0], fg_nvel[1], fg_nvel[2], bg_nvel[0], bg_nvel[1], bg_nvel[2],
+            ],
+        )
     }
 }

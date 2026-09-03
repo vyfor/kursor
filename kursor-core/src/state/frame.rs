@@ -10,7 +10,6 @@ pub(crate) enum Phase {
 
 #[derive(Clone, Copy)]
 pub(crate) struct FrameContext {
-    pub frame_id: u64,
     pub elapsed: Duration,
     pub delta: Duration,
     pub phase: Phase,

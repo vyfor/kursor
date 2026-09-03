@@ -13,7 +13,7 @@ use kursor_core::{
         size::Size,
     },
     render::{canvas::Canvas, style::Style},
-    state::Value,
+    state::{Transition, Value},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -67,10 +67,11 @@ pub enum Border {
 
 crate::core::into_value!(Border);
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq)]
 pub struct BlockProps {
     pub border: Value<Border>,
     pub style: Value<Option<Style>>,
+    pub transition: Option<Transition>,
 }
 
 impl Default for BlockProps {
@@ -78,6 +79,7 @@ impl Default for BlockProps {
         Self {
             border: Value::plain(Border::Plain),
             style: Value::plain(None),
+            transition: None,
         }
     }
 }
@@ -85,6 +87,7 @@ impl Default for BlockProps {
 pub struct Block {
     border: Border,
     style: Option<Style>,
+    transition: Option<Transition>,
 }
 
 impl Block {
@@ -101,6 +104,7 @@ impl Block {
             BlockProps {
                 border: Value::plain(Border::Plain),
                 style: Value::plain(None),
+                transition: None,
             },
             child,
         )
@@ -111,6 +115,7 @@ impl Block {
             BlockProps {
                 border: Value::plain(Border::Rounded),
                 style: Value::plain(None),
+                transition: None,
             },
             child,
         )
@@ -121,6 +126,7 @@ impl Block {
             BlockProps {
                 border: Value::plain(Border::Double),
                 style: Value::plain(None),
+                transition: None,
             },
             child,
         )
@@ -152,6 +158,7 @@ impl Component for Block {
         Self {
             border: Border::Plain,
             style: None,
+            transition: None,
         }
     }
 
@@ -162,10 +169,12 @@ impl Component for Block {
     fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
         let border = props.border.get();
         let style = props.style.get();
+        let transition = props.transition.clone();
         let border_changed = self.border != border;
-        let style_changed = self.style != style;
+        let style_changed = self.style != style || self.transition != transition;
         self.border = border;
         self.style = style;
+        self.transition = transition;
         if border_changed {
             Update::MEASURE
         } else if style_changed {
@@ -211,13 +220,14 @@ impl Component for Block {
         );
     }
 
-    fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
+    fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
         let rect = cx.rect;
         if rect.width == 0 || rect.height == 0 {
             return;
         }
 
-        let style = self.style.unwrap_or(cx.theme().surface);
+        let fallback = cx.theme().surface;
+        let style = cx.resolve_or("style", &props.style, fallback, self.transition.clone());
         canvas.fill(rect, ' ', style);
 
         let chars = match self.border {

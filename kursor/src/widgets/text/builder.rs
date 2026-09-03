@@ -2,7 +2,10 @@ use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
     layout::WrapMode,
     render::style::Style,
-    state::value::{IntoValue, Value},
+    state::{
+        Transition,
+        value::{IntoValue, Value},
+    },
 };
 
 use super::{Text, TextProps};
@@ -18,6 +21,7 @@ impl TextBuilder {
                 text: text.into_text(),
                 style: Value::plain(None),
                 wrap: Value::plain(WrapMode::None),
+                transition: None,
             },
         }
     }
@@ -29,6 +33,11 @@ impl TextBuilder {
 
     pub fn wrap(mut self, mode: impl IntoValue<WrapMode>) -> Self {
         self.props.wrap = mode.into_value();
+        self
+    }
+
+    pub fn transition(mut self, transition: impl Into<Transition>) -> Self {
+        self.props.transition = Some(transition.into());
         self
     }
 }

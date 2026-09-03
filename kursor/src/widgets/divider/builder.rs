@@ -2,7 +2,7 @@ use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
     layout::Orientation,
     render::style::Style,
-    state::IntoValue,
+    state::{IntoValue, Transition},
 };
 
 use super::{Divider, DividerProps};
@@ -30,6 +30,11 @@ impl DividerBuilder {
 
     pub fn style(mut self, style: Style) -> Self {
         self.props.style = Some(style).into_value();
+        self
+    }
+
+    pub fn transition(mut self, transition: impl Into<Transition>) -> Self {
+        self.props.transition = Some(transition.into());
         self
     }
 }

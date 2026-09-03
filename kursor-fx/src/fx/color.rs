@@ -77,7 +77,7 @@ fn rgb(color: Color) -> Option<(u8, u8, u8)> {
         Color::White => Some(ansi_to_rgb(15)),
         Color::Rgb(r, g, b) => Some((r, g, b)),
         Color::Ansi(value) => Some(ansi_to_rgb(value)),
-        Color::Reset => None,
+        Color::Reset | Color::Unset => None,
     }
 }
 

@@ -1,7 +1,7 @@
 use kursor_core::{
     component::blueprint::{Blueprint, IntoBlueprint},
     render::style::Style,
-    state::IntoValue,
+    state::{IntoValue, Transition},
 };
 
 use super::{Block, BlockProps, Border};
@@ -24,6 +24,11 @@ impl BlockBuilder {
 
     pub fn style(mut self, style: impl IntoValue<Option<Style>>) -> Self {
         self.props.style = style.into_value();
+        self
+    }
+
+    pub fn transition(mut self, transition: impl Into<Transition>) -> Self {
+        self.props.transition = Some(transition.into());
         self
     }
 

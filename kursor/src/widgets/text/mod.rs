@@ -9,7 +9,7 @@ use kursor_core::{
     component::{Component, Update, blueprint::Blueprint, context::Cx},
     layout::{WrapMode, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
-    state::{IntoValue, Signal, Value, atom::Atom, memo::Memo},
+    state::{IntoValue, Signal, Transition, Value, atom::Atom, memo::Memo},
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
@@ -119,12 +119,14 @@ pub struct TextProps {
     pub text: TextContent,
     pub style: Value<Option<Style>>,
     pub wrap: Value<WrapMode>,
+    pub transition: Option<Transition>,
 }
 
 pub struct Text {
     lines: Vec<Line>,
     style: Option<Style>,
     wrap: WrapMode,
+    transition: Option<Transition>,
 }
 
 impl Text {
@@ -137,6 +139,7 @@ impl Text {
             text: text.into_text(),
             style: Value::plain(None),
             wrap: Value::plain(WrapMode::None),
+            transition: None,
         })
     }
 
@@ -145,6 +148,7 @@ impl Text {
             text: text.into_text(),
             style: style.into_value(),
             wrap: Value::plain(WrapMode::None),
+            transition: None,
         })
     }
 
@@ -205,6 +209,7 @@ impl Component for Text {
             lines: Vec::new(),
             style: None,
             wrap: WrapMode::None,
+            transition: None,
         }
     }
 
@@ -219,12 +224,14 @@ impl Component for Text {
         };
         let style = props.style.get();
         let wrap = props.wrap.get();
+        let transition = props.transition.clone();
         let text_changed = self.lines != lines;
-        let style_changed = self.style != style;
+        let style_changed = self.style != style || self.transition != transition;
         let wrap_changed = self.wrap != wrap;
         self.lines = lines;
         self.style = style;
         self.wrap = wrap;
+        self.transition = transition;
         if text_changed || wrap_changed {
             Update::MEASURE
         } else if style_changed {
@@ -249,8 +256,9 @@ impl Component for Text {
         )
     }
 
-    fn paint(&self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
-        let default_style = self.style.unwrap_or(cx.theme().text);
+    fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
+        let fallback = cx.theme().text;
+        let default_style = cx.resolve_or("style", &props.style, fallback, self.transition.clone());
         let lines = wrap_lines(&self.lines, self.wrap, cx.rect.width);
         for (row, line) in lines.iter().enumerate() {
             let y = cx.rect.y.saturating_add(row as u16);

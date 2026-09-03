@@ -6,7 +6,7 @@ use kursor_core::{
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
-    state::IntoValue,
+    state::{IntoValue, Transition},
 };
 
 use super::{Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles};
@@ -52,6 +52,11 @@ impl ButtonBuilder {
 
     pub fn on_press(mut self, on_press: impl Fn(&mut Cx) + 'static) -> Self {
         self.props.on_press = Arc::new(on_press);
+        self
+    }
+
+    pub fn transition(mut self, transition: impl Into<Transition>) -> Self {
+        self.props.transition = Some(transition.into());
         self
     }
 }

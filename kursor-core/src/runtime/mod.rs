@@ -104,8 +104,6 @@ pub struct Runtime {
     graphics_reset: bool,
     scratch: Scratch,
     #[cfg(feature = "animate")]
-    frame_id: u64,
-    #[cfg(feature = "animate")]
     started_at: Instant,
     #[cfg(feature = "animate")]
     last_frame: Instant,
@@ -150,8 +148,6 @@ impl Runtime {
             graphics_committed: BTreeMap::new(),
             graphics_reset: false,
             scratch: Scratch::new(),
-            #[cfg(feature = "animate")]
-            frame_id: 0,
             #[cfg(feature = "animate")]
             started_at: now,
             #[cfg(feature = "animate")]
@@ -224,8 +220,9 @@ impl Runtime {
     #[cfg(feature = "animate")]
     fn begin_frame(&mut self) {
         let now = Instant::now();
-        self.frame_id = self.frame_id.wrapping_add(1);
-        self.frame_delta = now.saturating_duration_since(self.last_frame);
+        self.frame_delta = now
+            .saturating_duration_since(self.last_frame)
+            .min(Duration::from_millis(16));
         self.frame_elapsed = now.saturating_duration_since(self.started_at);
         self.frame_now = now;
         self.last_frame = now;
@@ -429,7 +426,6 @@ impl Runtime {
     pub fn flush(&mut self) {
         #[cfg(feature = "animate")]
         let _frame = frame::enter(frame::FrameContext {
-            frame_id: self.frame_id,
             elapsed: self.frame_elapsed,
             delta: self.frame_delta,
             phase: frame::Phase::Update,
@@ -450,7 +446,6 @@ impl Runtime {
         self.begin_frame();
         #[cfg(feature = "animate")]
         let _frame = frame::enter(frame::FrameContext {
-            frame_id: self.frame_id,
             elapsed: self.frame_elapsed,
             delta: self.frame_delta,
             phase: frame::Phase::Passive,
@@ -458,6 +453,7 @@ impl Runtime {
             runtime: self as *mut Runtime as *mut (),
             request_frame,
         });
+        let _signals = signal::enter(&self.local_queue);
         let _scope = scope::enter();
         self.flush();
         self.do_paint();
@@ -660,6 +656,8 @@ impl Runtime {
                 actions: Some(&mut self.scratch.actions),
                 global_input: None,
                 env: ins.env.clone(),
+                #[cfg(feature = "animate")]
+                animations: Some(&mut ins.animations),
             };
             ins.component
                 .event_any(&mut cx, ins.props.as_ref(), event, phase)
@@ -802,6 +800,8 @@ impl Runtime {
                 actions: None,
                 global_input: Some(&mut global_key_listener),
                 env: inherited.clone(),
+                #[cfg(feature = "animate")]
+                animations: Some(&mut ins.animations),
             };
             let update = ins.component.update_any(&mut cx, ins.props.as_ref());
             ins.inherited = inherited.clone();
@@ -1090,6 +1090,8 @@ impl Runtime {
                 actions: None,
                 global_input: None,
                 env: ins.env.clone(),
+                #[cfg(feature = "animate")]
+                animations: Some(&mut ins.animations),
             };
 
             ins.component.drop_any(&mut cx);
@@ -1137,6 +1139,8 @@ impl Runtime {
                 actions: None,
                 global_input: None,
                 env: inherited.clone(),
+                #[cfg(feature = "animate")]
+                animations: None,
             },
             bp.props.as_ref(),
         );
@@ -1158,6 +1162,8 @@ impl Runtime {
             inherited,
             origin: Offset::ZERO,
             clip: Rect::new(0, 0, 0, 0),
+            #[cfg(feature = "animate")]
+            animations: Default::default(),
         };
 
         let id = match parent {
@@ -1194,6 +1200,8 @@ impl Runtime {
                 actions: None,
                 global_input: Some(&mut global_key_listener),
                 env: inherited.clone(),
+                #[cfg(feature = "animate")]
+                animations: Some(&mut ins.animations),
             };
             ins.component
                 .mount_any(&mut cx, ins.props.as_ref(), &mut children);
@@ -1329,6 +1337,8 @@ impl Runtime {
                 actions: None,
                 global_input: None,
                 env,
+                #[cfg(feature = "animate")]
+                animations: None,
             };
             let mut children = MeasureCx::new(&mut measure, child_count, available);
             component.measure_any(&mut cx, props.as_ref(), available, &mut children)
@@ -1401,6 +1411,8 @@ impl Runtime {
                 actions: None,
                 global_input: None,
                 env,
+                #[cfg(feature = "animate")]
+                animations: None,
             };
             let mut children = MeasureCx::new(&mut measure, child_count, available);
             component.measure_any(&mut cx, props.as_ref(), available, &mut children)
@@ -1497,6 +1509,8 @@ impl Runtime {
                     actions: None,
                     global_input: None,
                     env: ins.env.clone(),
+                    #[cfg(feature = "animate")]
+                    animations: Some(&mut ins.animations),
                 };
                 let mut children = LayoutCx::new(
                     &self.scratch.child_sizes,
@@ -1623,14 +1637,17 @@ impl Runtime {
         #[cfg(feature = "animate")]
         let _node_frame = frame::enter_node(Some(id), frame::Phase::Passive);
         self.back.remove_graphics(id);
+        self.scratch.actions.clear();
         {
             let ins = self.tree.get_mut(id).unwrap();
             let mut cx = Cx {
                 node: Some(id),
                 rect: Self::local_rect(ins.rect),
-                actions: None,
+                actions: Some(&mut self.scratch.actions),
                 global_input: None,
                 env: ins.env.clone(),
+                #[cfg(feature = "animate")]
+                animations: Some(&mut ins.animations),
             };
             let mut canvas = Canvas::new(&mut self.back, clip, origin, id);
             ins.component
@@ -1638,6 +1655,8 @@ impl Runtime {
             ins.component
                 .paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
         }
+        let actions = mem::take(&mut self.scratch.actions);
+        self.apply_actions(actions);
 
         let children: Vec<NodeId> = self.tree.children(id).to_vec();
         for child in children {
@@ -1661,19 +1680,24 @@ impl Runtime {
             self.apply_paint(child, child_origin, child_clip);
         }
 
+        self.scratch.actions.clear();
         let running = {
             let ins = self.tree.get_mut(id).unwrap();
             let mut cx = Cx {
                 node: Some(id),
                 rect: Self::local_rect(ins.rect),
-                actions: None,
+                actions: Some(&mut self.scratch.actions),
                 global_input: None,
                 env: ins.env.clone(),
+                #[cfg(feature = "animate")]
+                animations: Some(&mut ins.animations),
             };
             let mut canvas = Canvas::new(&mut self.back, clip, origin, id);
             ins.component
                 .post_paint_any(&mut cx, ins.props.as_ref(), &mut canvas)
         };
+        let actions = mem::take(&mut self.scratch.actions);
+        self.apply_actions(actions);
         if running {
             #[cfg(feature = "animate")]
             self.request_animation_frame(id);
