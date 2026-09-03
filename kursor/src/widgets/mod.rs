@@ -8,6 +8,7 @@ pub mod flex;
 pub mod grid;
 #[cfg(feature = "image")]
 pub mod image;
+pub mod input;
 pub mod lazy_list;
 pub mod list;
 pub mod overlay;
@@ -31,6 +32,10 @@ pub use flex::{Flex, FlexBuilder, FlexItem, FlexProps, IntoFlexItems};
 pub use grid::{Grid, GridBuilder, GridItem, GridProps, IntoGridItems};
 #[cfg(feature = "image")]
 pub use image::{Image, ImageBuilder, ImageProps};
+pub use input::{
+    Input, InputBehavior, InputBuilder, InputDisplay, InputIntent, InputProps, InputState,
+    InputStyles,
+};
 pub use lazy_list::{LazyList, LazyListBehavior, LazyListBuilder, LazyListProps, LazyListState};
 pub use list::{
     IntoListSelection, List, ListBehavior, ListBuilder, ListFit, ListIntent, ListProps,
