@@ -4,3 +4,4 @@ pub mod canvas;
 pub mod cell;
 pub mod color;
 pub mod style;
+pub mod subcell;

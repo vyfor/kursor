@@ -1,9 +1,11 @@
-use kursor_core::render::{cell::Cell, color::Color, style::Style};
+use crate::{
+    layout::{Direction, Orientation},
+    render::{cell::Cell, color::Color, style::Style},
+};
 
-use crate::fx::Direction;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Subcell {
+    #[default]
     None,
     Half,
     Eighth,
@@ -12,28 +14,18 @@ pub enum Subcell {
     Braille,
 }
 
-impl Default for Subcell {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Axis {
-    Vertical,
-    Horizontal,
-}
+crate::into_value!(Subcell);
 
 impl Subcell {
-    pub fn levels(self, axis: Axis) -> u8 {
-        match (self, axis) {
+    pub fn levels(self, orientation: Orientation) -> u8 {
+        match (self, orientation) {
             (Self::None, _) => 1,
             (Self::Half, _) => 2,
-            (Self::Eighth, Axis::Vertical) => 8,
-            (Self::Eighth, Axis::Horizontal) => 2,
+            (Self::Eighth, Orientation::Vertical) => 8,
+            (Self::Eighth, Orientation::Horizontal) => 2,
             (Self::EighthExt, _) => 8,
-            (Self::Braille, Axis::Vertical) => 4,
-            (Self::Braille, Axis::Horizontal) => 2,
+            (Self::Braille, Orientation::Vertical) => 4,
+            (Self::Braille, Orientation::Horizontal) => 2,
         }
     }
 

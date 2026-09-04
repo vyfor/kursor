@@ -1,10 +1,13 @@
 use std::time::Duration;
 
 use animate::{Activity, Time};
-use kursor_core::render::{cell::Cell, color::Color, style::Style};
+use kursor_core::{
+    layout::Direction,
+    render::{cell::Cell, color::Color, style::Style, subcell::Subcell},
+};
 
 use super::color::mix;
-use crate::{Direction, EffectCx, Feather, Fx, Mask, Spread, Subcell};
+use crate::{EffectCx, Feather, Fx, Mask, Spread};
 
 #[derive(Clone)]
 pub struct Reveal {

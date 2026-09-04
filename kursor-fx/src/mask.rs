@@ -1,6 +1,7 @@
-use kursor_core::{layout::rect::Rect, render::cell::Cell};
-
-use crate::fx::Direction;
+use kursor_core::{
+    layout::{Direction, rect::Rect},
+    render::cell::Cell,
+};
 
 #[derive(Clone)]
 pub enum Mask {

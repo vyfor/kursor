@@ -2,11 +2,11 @@ use std::time::Duration;
 
 use animate::{Activity, Time};
 use kursor_core::{
-    layout::Offset,
-    render::{cell::Cell, color::Color, style::Style},
+    layout::{Direction, Offset},
+    render::{cell::Cell, color::Color, style::Style, subcell::Subcell},
 };
 
-use crate::{Direction, EffectCx, Feather, Fx, Mask, Spread, Subcell};
+use crate::{EffectCx, Feather, Fx, Mask, Spread};
 
 #[derive(Clone)]
 pub struct Shift {

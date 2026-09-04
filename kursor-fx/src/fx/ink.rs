@@ -2,12 +2,12 @@ use std::rc::Rc;
 
 use animate::Time;
 use kursor_core::{
-    layout::size::Size,
+    layout::{Direction, Orientation, size::Size},
     render::{cell::Cell, color::Color},
 };
 
 use crate::color::{hsv, scale};
-use crate::{Axis, Direction, fx::color};
+use crate::fx::color;
 
 pub trait Ink: InkClone + 'static {
     fn color(&self, x: u16, y: u16, cell: Cell, size: Size, time: Time) -> Color;
@@ -161,16 +161,16 @@ impl Ink for Source {
     }
 }
 
-pub fn axis(axis: Axis) -> Source {
-    match axis {
-        Axis::Vertical => source(|_x, y, size| {
+pub fn axis(orientation: Orientation) -> Source {
+    match orientation {
+        Orientation::Vertical => source(|_x, y, size| {
             if size.height > 1 {
                 y as f32 / (size.height - 1) as f32
             } else {
                 0.0
             }
         }),
-        Axis::Horizontal => source(|x, _y, size| {
+        Orientation::Horizontal => source(|x, _y, size| {
             if size.width > 1 {
                 x as f32 / (size.width - 1) as f32
             } else {
@@ -182,10 +182,10 @@ pub fn axis(axis: Axis) -> Source {
 
 pub fn directional(dir: Direction) -> Source {
     match dir {
-        Direction::Right => axis(Axis::Horizontal),
-        Direction::Left => axis(Axis::Horizontal).map(|v| 1.0 - v),
-        Direction::Down => axis(Axis::Vertical),
-        Direction::Up => axis(Axis::Vertical).map(|v| 1.0 - v),
+        Direction::Right => axis(Orientation::Horizontal),
+        Direction::Left => axis(Orientation::Horizontal).map(|v| 1.0 - v),
+        Direction::Down => axis(Orientation::Vertical),
+        Direction::Up => axis(Orientation::Vertical).map(|v| 1.0 - v),
     }
 }
 
@@ -282,7 +282,7 @@ pub fn gradient(from: Color, to: Color, dir: Direction) -> Source {
 }
 
 pub fn hue(speed: f32) -> Source {
-    axis(Axis::Horizontal).flow(speed).hue(0.85, 1.0)
+    axis(Orientation::Horizontal).flow(speed).hue(0.85, 1.0)
 }
 
 impl Source {

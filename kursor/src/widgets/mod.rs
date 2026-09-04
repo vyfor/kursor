@@ -13,6 +13,7 @@ pub mod lazy_list;
 pub mod list;
 pub mod overlay;
 pub mod padding;
+pub mod progress_bar;
 pub mod row;
 pub mod scroll;
 pub mod show;
@@ -43,6 +44,10 @@ pub use list::{
 };
 pub use overlay::{Anchor, Layer, Overlay, OverlayProps, Overlays};
 pub use padding::{Padding, PaddingProps};
+pub use progress_bar::{
+    Progress, ProgressBar, ProgressBarBuilder, ProgressBarProps, ProgressBarStyles,
+    ProgressSegment,
+};
 pub use row::{Row, RowProps};
 pub use scroll::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};
 pub use show::{Show, ShowBuilder, ShowProps};

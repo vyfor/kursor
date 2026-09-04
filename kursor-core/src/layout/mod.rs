@@ -1,5 +1,6 @@
 pub mod alignment;
 pub mod context;
+pub mod direction;
 pub mod insets;
 pub mod offset;
 pub mod orientation;
@@ -9,6 +10,7 @@ pub mod size;
 pub mod wrap_mode;
 
 pub use alignment::{Alignment, HAlign, VAlign};
+pub use direction::Direction;
 pub use insets::Insets;
 pub use offset::Offset;
 pub use orientation::Orientation;

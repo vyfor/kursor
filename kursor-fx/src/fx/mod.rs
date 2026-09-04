@@ -1,13 +1,11 @@
 pub mod color;
 mod colorize;
-mod direction;
 mod ink;
 mod reveal;
 mod shift;
 mod tint;
 
 pub use colorize::{Colorize, colorize};
-pub use direction::Direction;
 pub use ink::{
     CharColor, Ink, InkClone, Lerp, Solid, Source, axis, char_color, constant, directional, edge,
     gradient, hue, lerp, perimeter, radial, random, solid, source,
