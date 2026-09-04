@@ -3,6 +3,7 @@ use unicode_width::UnicodeWidthChar;
 use crate::{
     layout::{offset::Offset, rect::Rect},
     render::{
+        border,
         buffer::{Buffer, GraphicsOp},
         cell::Cell,
         color::Color,
@@ -16,6 +17,7 @@ pub struct Canvas<'a> {
     clip: Rect,
     origin: Offset,
     node: NodeId,
+    merge_borders: bool,
 }
 
 impl<'a> Canvas<'a> {
@@ -29,7 +31,13 @@ impl<'a> Canvas<'a> {
             clip,
             origin,
             node,
+            merge_borders: true,
         }
+    }
+
+    pub fn merge_borders(&mut self, enabled: bool) -> &mut Self {
+        self.merge_borders = enabled;
+        self
     }
 
     pub fn set(&mut self, x: u16, y: u16, ch: char, style: Style) {
@@ -46,13 +54,16 @@ impl<'a> Canvas<'a> {
         if x >= 0 && y >= 0 && self.clip.contains(x as u16, y as u16) {
             let x = x as u16;
             let y = y as u16;
-            if cell.style.bg == Color::Unset || cell.style.fg == Color::Unset {
-                if let Some(existing) = self.buffer.cell(x, y) {
-                    if cell.style.bg == Color::Unset {
-                        cell.style.bg = existing.style.bg;
-                    }
-                    if cell.style.fg == Color::Unset {
-                        cell.style.fg = existing.style.fg;
+            if let Some(existing) = self.buffer.cell(x, y) {
+                if cell.style.bg == Color::Unset {
+                    cell.style.bg = existing.style.bg;
+                }
+                if cell.style.fg == Color::Unset {
+                    cell.style.fg = existing.style.fg;
+                }
+                if self.merge_borders {
+                    if let Some(merged_ch) = border::merge_borders(existing.ch, cell.ch) {
+                        cell.ch = merged_ch;
                     }
                 }
             }

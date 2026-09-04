@@ -3,7 +3,10 @@ use std::{
     rc::Rc,
 };
 
-use crate::component::{AnyComponent, Component, context::Cx, key::Key};
+use crate::{
+    component::{AnyComponent, Component, context::Cx, key::Key},
+    layout::{Margin, offset::Offset},
+};
 
 pub struct Blueprint {
     pub key: Option<Key>,
@@ -11,6 +14,8 @@ pub struct Blueprint {
     pub props: Rc<dyn Any>,
     pub children: Rc<[Blueprint]>,
     pub create: fn(&mut Cx, &dyn Any) -> Box<dyn AnyComponent>,
+    pub offset: Offset,
+    pub margin: Margin,
 }
 
 impl Blueprint {
@@ -31,11 +36,65 @@ impl Blueprint {
             props,
             children: empty_children(),
             create: create::<C>,
+            offset: Offset::ZERO,
+            margin: Margin::default(),
         }
     }
 
     pub fn key(mut self, key: impl Into<Key>) -> Self {
         self.key = Some(key.into());
+        self
+    }
+
+    pub fn offset(mut self, offset: impl Into<Offset>) -> Self {
+        self.offset = offset.into();
+        self
+    }
+
+    pub fn margin(mut self, margin: impl Into<Margin>) -> Self {
+        self.margin = margin.into();
+        self
+    }
+
+    pub fn margin_all(mut self, value: i16) -> Self {
+        self.margin = Margin::all(value);
+        self
+    }
+
+    pub fn margin_symmetric(mut self, horizontal: i16, vertical: i16) -> Self {
+        self.margin = Margin::symmetric(horizontal, vertical);
+        self
+    }
+
+    pub fn margin_horizontal(mut self, value: i16) -> Self {
+        self.margin.left = value;
+        self.margin.right = value;
+        self
+    }
+
+    pub fn margin_vertical(mut self, value: i16) -> Self {
+        self.margin.top = value;
+        self.margin.bottom = value;
+        self
+    }
+
+    pub fn margin_left(mut self, value: i16) -> Self {
+        self.margin.left = value;
+        self
+    }
+
+    pub fn margin_right(mut self, value: i16) -> Self {
+        self.margin.right = value;
+        self
+    }
+
+    pub fn margin_top(mut self, value: i16) -> Self {
+        self.margin.top = value;
+        self
+    }
+
+    pub fn margin_bottom(mut self, value: i16) -> Self {
+        self.margin.bottom = value;
         self
     }
 
@@ -73,12 +132,120 @@ impl Clone for Blueprint {
             props: self.props.clone(),
             children: self.children.clone(),
             create: self.create,
+            offset: self.offset,
+            margin: self.margin,
         }
     }
 }
 
 pub trait IntoBlueprint {
     fn into_blueprint(self) -> Vec<Blueprint>;
+
+    fn offset(self, offset: impl Into<Offset>) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let off = offset.into();
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.offset = off;
+        }
+        blueprints
+    }
+
+    fn margin(self, margin: impl Into<Margin>) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let m = margin.into();
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.margin = m;
+        }
+        blueprints
+    }
+
+    fn margin_all(self, value: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        self.margin(Margin::all(value))
+    }
+
+    fn margin_symmetric(self, horizontal: i16, vertical: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        self.margin(Margin::symmetric(horizontal, vertical))
+    }
+
+    fn margin_horizontal(self, value: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.margin.left = value;
+            bp.margin.right = value;
+        }
+        blueprints
+    }
+
+    fn margin_vertical(self, value: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.margin.top = value;
+            bp.margin.bottom = value;
+        }
+        blueprints
+    }
+
+    fn margin_left(self, value: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.margin.left = value;
+        }
+        blueprints
+    }
+
+    fn margin_right(self, value: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.margin.right = value;
+        }
+        blueprints
+    }
+
+    fn margin_top(self, value: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.margin.top = value;
+        }
+        blueprints
+    }
+
+    fn margin_bottom(self, value: i16) -> Vec<Blueprint>
+    where
+        Self: Sized,
+    {
+        let mut blueprints = self.into_blueprint();
+        for bp in &mut blueprints {
+            bp.margin.bottom = value;
+        }
+        blueprints
+    }
 }
 
 impl IntoBlueprint for Blueprint {

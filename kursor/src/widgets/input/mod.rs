@@ -476,7 +476,7 @@ impl Input {
             None => false,
         }
     }
-    
+
     fn cut_sel(&mut self) -> bool {
         let had = self.state.selection.is_some();
 

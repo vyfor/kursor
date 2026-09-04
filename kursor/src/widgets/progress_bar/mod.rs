@@ -147,9 +147,7 @@ impl ProgressBar {
     }
 
     pub fn vertical(value: impl IntoValue<f32>) -> Blueprint {
-        Self::builder(value)
-            .direction(Direction::Up)
-            .build()
+        Self::builder(value).direction(Direction::Up).build()
     }
 
     pub fn with(props: ProgressBarProps) -> Blueprint {
@@ -229,9 +227,7 @@ impl Component for ProgressBar {
             Direction::Right | Direction::Left => {
                 Size::new(available.width, available.height.min(1))
             }
-            Direction::Up | Direction::Down => {
-                Size::new(available.width.min(1), available.height)
-            }
+            Direction::Up | Direction::Down => Size::new(available.width.min(1), available.height),
         }
     }
 
@@ -264,9 +260,15 @@ impl Component for ProgressBar {
         for cross_idx in 0..breadth {
             for main_idx in 0..length {
                 let (x, y) = if is_horizontal {
-                    (rect.x.saturating_add(main_idx), rect.y.saturating_add(cross_idx))
+                    (
+                        rect.x.saturating_add(main_idx),
+                        rect.y.saturating_add(cross_idx),
+                    )
                 } else {
-                    (rect.x.saturating_add(cross_idx), rect.y.saturating_add(main_idx))
+                    (
+                        rect.x.saturating_add(cross_idx),
+                        rect.y.saturating_add(main_idx),
+                    )
                 };
                 canvas.set_cell(x, y, Cell::new(self.track_char, def_track));
             }
@@ -284,30 +286,17 @@ impl Component for ProgressBar {
 
             let transition = seg.transition.clone().or_else(|| self.transition.clone());
             let cur_start: f32 = cx
-                .transition(
-                    seg_idx as u64 * 2 + 1,
-                    target_start,
-                    transition.clone(),
-                )
+                .transition(seg_idx as u64 * 2 + 1, target_start, transition.clone())
                 .clamp(0.0, 1.0);
             let cur_end: f32 = cx
-                .transition(
-                    seg_idx as u64 * 2,
-                    target_end,
-                    transition,
-                )
+                .transition(seg_idx as u64 * 2, target_end, transition)
                 .clamp(0.0, 1.0);
 
             if cur_start >= cur_end {
                 continue;
             }
 
-            let seg_style = cx.resolve_or(
-                seg_idx as u64 + 10_000,
-                &seg.style,
-                def_fill,
-                None,
-            );
+            let seg_style = cx.resolve_or(seg_idx as u64 + 10_000, &seg.style, def_fill, None);
 
             let seg_fill_fg = if seg_style.fg != Color::Unset && seg_style.fg != Color::Reset {
                 seg_style.fg
@@ -317,22 +306,14 @@ impl Component for ProgressBar {
                 theme.palette.primary
             };
 
-            let seg_subcell = seg
-                .subcell
-                .as_ref()
-                .map(Value::get)
-                .unwrap_or(self.subcell);
+            let seg_subcell = seg.subcell.as_ref().map(Value::get).unwrap_or(self.subcell);
             let seg_fill_char = seg
                 .fill_char
                 .as_ref()
                 .map(Value::get)
                 .or(self.fill_char)
                 .unwrap_or_else(|| seg_subcell.fill_left(1.0));
-            let seg_head_char = seg
-                .head_char
-                .as_ref()
-                .map(Value::get)
-                .or(self.head_char);
+            let seg_head_char = seg.head_char.as_ref().map(Value::get).or(self.head_char);
 
             let start_cells = cur_start * length as f32;
             let end_cells = cur_end * length as f32;
@@ -369,8 +350,11 @@ impl Component for ProgressBar {
                     }
                 });
 
-                let cell: Option<(char, Style)> = if fill_index >= start_whole && fill_index < end_whole {
-                    if fill_index == start_whole && start_frac > 0.0 && seg_subcell != Subcell::None {
+                let cell: Option<(char, Style)> = if fill_index >= start_whole
+                    && fill_index < end_whole
+                {
+                    if fill_index == start_whole && start_frac > 0.0 && seg_subcell != Subcell::None
+                    {
                         let fill_amount = 1.0 - start_frac;
                         let ch = match self.direction {
                             Direction::Right => seg_subcell.fill_right(fill_amount),
@@ -409,9 +393,15 @@ impl Component for ProgressBar {
                 if let Some((ch, style)) = cell {
                     for cross_idx in 0..breadth {
                         let (x, y) = if is_horizontal {
-                            (rect.x.saturating_add(main_idx), rect.y.saturating_add(cross_idx))
+                            (
+                                rect.x.saturating_add(main_idx),
+                                rect.y.saturating_add(cross_idx),
+                            )
                         } else {
-                            (rect.x.saturating_add(cross_idx), rect.y.saturating_add(main_idx))
+                            (
+                                rect.x.saturating_add(cross_idx),
+                                rect.y.saturating_add(main_idx),
+                            )
                         };
                         canvas.set_cell(x, y, Cell::new(ch, style));
                     }

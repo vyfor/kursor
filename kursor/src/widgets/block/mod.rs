@@ -228,7 +228,19 @@ impl Component for Block {
 
         let fallback = cx.theme().surface;
         let style = cx.resolve_or("style", &props.style, fallback, self.transition.clone());
-        canvas.fill(rect, ' ', style);
+
+        let has_border = !matches!(self.border, Border::None);
+        let fill_rect = if has_border {
+            Rect::new(
+                rect.x.saturating_add(1),
+                rect.y.saturating_add(1),
+                rect.width.saturating_sub(2),
+                rect.height.saturating_sub(2),
+            )
+        } else {
+            rect
+        };
+        canvas.fill(fill_rect, ' ', style);
 
         let chars = match self.border {
             Border::None => return,
@@ -241,13 +253,17 @@ impl Component for Block {
         let right = rect.right().saturating_sub(1);
         let bottom = rect.bottom().saturating_sub(1);
 
-        for x in rect.x..=right {
-            canvas.set(x, rect.y, chars.horizontal, style);
-            canvas.set(x, bottom, chars.horizontal, style);
+        if right > rect.x {
+            for x in (rect.x + 1)..right {
+                canvas.set(x, rect.y, chars.horizontal, style);
+                canvas.set(x, bottom, chars.horizontal, style);
+            }
         }
-        for y in rect.y..=bottom {
-            canvas.set(rect.x, y, chars.vertical, style);
-            canvas.set(right, y, chars.vertical, style);
+        if bottom > rect.y {
+            for y in (rect.y + 1)..bottom {
+                canvas.set(rect.x, y, chars.vertical, style);
+                canvas.set(right, y, chars.vertical, style);
+            }
         }
 
         canvas.set(rect.x, rect.y, chars.top_left, style);

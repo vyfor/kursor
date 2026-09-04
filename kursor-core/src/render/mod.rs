@@ -1,4 +1,5 @@
 pub mod attrs;
+pub mod border;
 pub mod buffer;
 pub mod canvas;
 pub mod cell;

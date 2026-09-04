@@ -1,5 +1,5 @@
 use crate::{
-    layout::{Alignment, Insets, Orientation, ScrollDirection, WrapMode},
+    layout::{Alignment, Insets, Margin, Orientation, ScrollDirection, WrapMode},
     render::{color::Color, style::Style},
     theme::Theme,
 };
@@ -141,7 +141,6 @@ impl<T: LocalState + Send + Sync> From<Atom<T>> for Value<T> {
     }
 }
 
-#[cfg(feature = "animate")]
 pub trait IntoValue<T: LocalState> {
     fn into_value(self) -> Value<T>;
 
@@ -224,6 +223,7 @@ into_value!(
     String,
     Alignment,
     Insets,
+    Margin,
     Orientation,
     ScrollDirection,
     WrapMode,

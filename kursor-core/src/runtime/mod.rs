@@ -23,6 +23,7 @@ use crate::{
     },
     layout::{
         context::{LayoutCx, MeasureCx},
+        margin::Margin,
         offset::Offset,
         rect::Rect,
         size::Size,
@@ -1004,27 +1005,41 @@ impl Runtime {
     }
 
     fn sync_existing(&mut self, child: NodeId, blueprint: &Blueprint, parent_env: &Environment) {
-        let (should_update, env_changed, declared_changed) = {
+        let (should_update, env_changed, declared_changed, offset_changed, margin_changed) = {
             let instance = self.tree.get_mut(child).unwrap();
             let should_update = instance
                 .component
                 .changed_any(instance.props.as_ref(), blueprint.props.as_ref());
             let env_changed = !instance.inherited.same(parent_env);
             let declared_changed = !Rc::ptr_eq(&instance.declared_children, &blueprint.children);
+            let offset_changed = instance.declared_offset != blueprint.offset;
+            let margin_changed = instance.margin != blueprint.margin;
 
             if should_update {
                 instance.props = blueprint.props.clone();
             }
             instance.key = blueprint.key.clone();
             instance.inherited = parent_env.clone();
+            if offset_changed {
+                instance.declared_offset = blueprint.offset;
+            }
+            if margin_changed {
+                instance.margin = blueprint.margin;
+            }
             if declared_changed {
                 instance.declared_children = blueprint.children.clone();
             }
 
-            (should_update, env_changed, declared_changed)
+            (
+                should_update,
+                env_changed,
+                declared_changed,
+                offset_changed,
+                margin_changed,
+            )
         };
 
-        if should_update || env_changed || declared_changed {
+        if should_update || env_changed || declared_changed || offset_changed || margin_changed {
             let instance = self.tree.get_mut(child).unwrap();
             instance.available = None;
             instance.is_measure_valid = false;
@@ -1153,7 +1168,10 @@ impl Runtime {
             children: empty_children(),
             type_id: bp.type_id,
             rect: Rect::new(0, 0, 0, 0),
-            offset: Offset::ZERO,
+            declared_rect: Rect::new(0, 0, 0, 0),
+            offset: bp.offset,
+            declared_offset: bp.offset,
+            margin: bp.margin,
             measured: Size::default(),
             available: None,
             is_measure_valid: false,
@@ -1259,7 +1277,9 @@ impl Runtime {
                 let rect = if self.tree.root() == Some(id) {
                     self.rect
                 } else {
-                    self.tree.get(id).map_or(Rect::new(0, 0, 0, 0), |c| c.rect)
+                    self.tree
+                        .get(id)
+                        .map_or(Rect::new(0, 0, 0, 0), |c| c.declared_rect)
                 };
 
                 let available = if self.tree.root() == Some(id) {
@@ -1300,10 +1320,30 @@ impl Runtime {
             .child_ids
             .extend_from_slice(self.tree.children(id));
         let child_count = self.scratch.child_ids.len();
-        let (env, rect) = {
+
+        let (env, rect, margin) = {
             let ins = self.tree.get(id).unwrap();
-            (ins.env.clone(), ins.rect)
+            (ins.env.clone(), ins.rect, ins.margin)
         };
+        let avail_w = if margin.horizontal_total() >= 0 {
+            available
+                .width
+                .saturating_sub(margin.horizontal_total() as u16)
+        } else {
+            available
+                .width
+                .saturating_add((-margin.horizontal_total()) as u16)
+        };
+        let avail_h = if margin.vertical_total() >= 0 {
+            available
+                .height
+                .saturating_sub(margin.vertical_total() as u16)
+        } else {
+            available
+                .height
+                .saturating_add((-margin.vertical_total()) as u16)
+        };
+        let inner_available = Size::new(avail_w, avail_h);
 
         let mut component = {
             let ins = self.tree.get_mut(id).unwrap();
@@ -1340,16 +1380,22 @@ impl Runtime {
                 #[cfg(feature = "animate")]
                 animations: None,
             };
-            let mut children = MeasureCx::new(&mut measure, child_count, available);
-            component.measure_any(&mut cx, props.as_ref(), available, &mut children)
+            let mut children = MeasureCx::new(&mut measure, child_count, inner_available);
+            component.measure_any(&mut cx, props.as_ref(), inner_available, &mut children)
         };
+
+        let layout_w =
+            (i32::from(measured.width) + i32::from(margin.horizontal_total())).max(0) as u16;
+        let layout_h =
+            (i32::from(measured.height) + i32::from(margin.vertical_total())).max(0) as u16;
+        let layout_size = Size::new(layout_w, layout_h);
 
         let changed = {
             let ins = self.tree.get_mut(id).unwrap();
-            let changed = ins.measured != measured;
+            let changed = ins.measured != layout_size;
             let ph = mem::replace(&mut ins.component, component);
             ins.props = props;
-            ins.measured = measured;
+            ins.measured = layout_size;
             ins.available = Some(available);
             ins.is_measure_valid = true;
             if changed {
@@ -1392,8 +1438,30 @@ impl Runtime {
             mem::replace(&mut ins.props, Rc::new(()))
         };
 
+        let margin = tree.get(id).map_or(Margin::default(), |ins| ins.margin);
+        let avail_w = if margin.horizontal_total() >= 0 {
+            available
+                .width
+                .saturating_sub(margin.horizontal_total() as u16)
+        } else {
+            available
+                .width
+                .saturating_add((-margin.horizontal_total()) as u16)
+        };
+        let avail_h = if margin.vertical_total() >= 0 {
+            available
+                .height
+                .saturating_sub(margin.vertical_total() as u16)
+        } else {
+            available
+                .height
+                .saturating_add((-margin.vertical_total()) as u16)
+        };
+        let inner_available = Size::new(avail_w, avail_h);
+
         let mut child_ids = Vec::new();
         child_ids.extend_from_slice(tree.children(id));
+
         let mut measure = |index: usize, child_available: Size| -> Size {
             let Some(&child_id) = child_ids.get(index) else {
                 return Size::default();
@@ -1414,16 +1482,22 @@ impl Runtime {
                 #[cfg(feature = "animate")]
                 animations: None,
             };
-            let mut children = MeasureCx::new(&mut measure, child_count, available);
-            component.measure_any(&mut cx, props.as_ref(), available, &mut children)
+            let mut children = MeasureCx::new(&mut measure, child_count, inner_available);
+            component.measure_any(&mut cx, props.as_ref(), inner_available, &mut children)
         };
+
+        let layout_w =
+            (i32::from(measured.width) + i32::from(margin.horizontal_total())).max(0) as u16;
+        let layout_h =
+            (i32::from(measured.height) + i32::from(margin.vertical_total())).max(0) as u16;
+        let layout_size = Size::new(layout_w, layout_h);
 
         {
             let ins = tree.get_mut(id).unwrap();
-            let changed = ins.measured != measured;
+            let changed = ins.measured != layout_size;
             ins.component = component;
             ins.props = props;
-            ins.measured = measured;
+            ins.measured = layout_size;
             ins.available = Some(available);
             ins.is_measure_valid = true;
             if changed {
@@ -1435,7 +1509,7 @@ impl Runtime {
                 }
             }
         }
-        measured
+        layout_size
     }
 
     fn apply_layout(&mut self, id: NodeId, rect: Rect, offset: Offset) {
@@ -1443,6 +1517,22 @@ impl Runtime {
         self.scratch.layout_pending.push((id, rect, offset));
 
         while let Some((id, rect, offset)) = self.scratch.layout_pending.pop() {
+            let decl_rect = rect;
+            let margin = if self.tree.root() == Some(id) {
+                Margin::default()
+            } else {
+                self.tree
+                    .get(id)
+                    .map_or(Margin::default(), |ins| ins.margin)
+            };
+            let actual_x = (i32::from(rect.x) + i32::from(margin.left)).max(0) as u16;
+            let actual_y = (i32::from(rect.y) + i32::from(margin.top)).max(0) as u16;
+            let actual_w =
+                (i32::from(rect.width) - i32::from(margin.horizontal_total())).max(0) as u16;
+            let actual_h =
+                (i32::from(rect.height) - i32::from(margin.vertical_total())).max(0) as u16;
+            let rect = Rect::new(actual_x, actual_y, actual_w, actual_h);
+
             let is_dirty = self.layout_dirty.remove(&id);
             let (old_rect, old_offset, old_origin, old_clip) = self.tree.get(id).map_or(
                 (Rect::default(), Offset::ZERO, Offset::ZERO, Rect::default()),
@@ -1537,6 +1627,7 @@ impl Runtime {
 
             {
                 let ins = self.tree.get_mut(id).unwrap();
+                ins.declared_rect = decl_rect;
                 ins.rect = rect;
                 ins.offset = offset;
                 ins.origin = origin;
@@ -1551,9 +1642,15 @@ impl Runtime {
                 child_ids.iter().zip(rects.iter()).zip(offsets.iter()).rev()
             {
                 if self.tree.contains(child) {
-                    self.scratch
-                        .layout_pending
-                        .push((child, child_rect, child_offset));
+                    let decl = self
+                        .tree
+                        .get(child)
+                        .map_or(Offset::ZERO, |c| c.declared_offset);
+                    let off = Offset::new(
+                        child_offset.x.saturating_add(decl.x),
+                        child_offset.y.saturating_add(decl.y),
+                    );
+                    self.scratch.layout_pending.push((child, child_rect, off));
                 }
             }
         }

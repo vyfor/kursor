@@ -11,3 +11,9 @@ impl Offset {
         Self { x, y }
     }
 }
+
+impl From<(i32, i32)> for Offset {
+    fn from((x, y): (i32, i32)) -> Self {
+        Self::new(x, y)
+    }
+}

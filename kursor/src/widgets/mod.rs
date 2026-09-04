@@ -45,8 +45,7 @@ pub use list::{
 pub use overlay::{Anchor, Layer, Overlay, OverlayProps, Overlays};
 pub use padding::{Padding, PaddingProps};
 pub use progress_bar::{
-    Progress, ProgressBar, ProgressBarBuilder, ProgressBarProps, ProgressBarStyles,
-    ProgressSegment,
+    Progress, ProgressBar, ProgressBarBuilder, ProgressBarProps, ProgressBarStyles, ProgressSegment,
 };
 pub use row::{Row, RowProps};
 pub use scroll::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};

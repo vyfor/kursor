@@ -7,7 +7,7 @@ use std::{
 use crate::component::context::Animations;
 use crate::{
     component::{AnyComponent, blueprint::Blueprint, environment::Environment, key::Key},
-    layout::{offset::Offset, rect::Rect, size::Size},
+    layout::{Margin, offset::Offset, rect::Rect, size::Size},
 };
 
 pub struct Instance {
@@ -18,7 +18,10 @@ pub struct Instance {
     pub children: Rc<[Blueprint]>,
     pub type_id: TypeId,
     pub rect: Rect,
+    pub declared_rect: Rect,
     pub offset: Offset,
+    pub declared_offset: Offset,
+    pub margin: Margin,
     pub measured: Size,
     pub available: Option<Size>,
     pub is_measure_valid: bool,
