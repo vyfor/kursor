@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{ops::Range, rc::Rc};
 
 use kursor_core::{
     component::{
@@ -10,17 +10,38 @@ use kursor_core::{
     state::IntoValue,
 };
 
-use super::{IntoListSelection, List, ListFit, ListIntent, ListProps, ListState};
+use super::{IntoListSelection, List, ListData, ListFit, ListIntent, ListProps, ListState};
 
 #[derive(Default)]
 pub struct ListBuilder {
-    children: Vec<Blueprint>,
     props: ListProps,
 }
 
 impl ListBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn children(mut self, children: impl IntoBlueprint) -> Self {
+        let mut items: Vec<Blueprint> = match self.props.data {
+            ListData::Static(existing) => existing.as_ref().to_vec(),
+            ListData::Lazy { .. } => Vec::new(),
+        };
+        items.extend(children.into_blueprint());
+        self.props.data = ListData::Static(items.into());
+        self
+    }
+
+    pub fn lazy(
+        mut self,
+        count: impl IntoValue<usize>,
+        item_builder: impl Fn(usize) -> Blueprint + 'static,
+    ) -> Self {
+        self.props.data = ListData::Lazy {
+            count: count.into_value(),
+            builder: Rc::new(item_builder),
+        };
+        self
     }
 
     pub fn orientation(mut self, orientation: impl IntoValue<Orientation>) -> Self {
@@ -53,6 +74,16 @@ impl ListBuilder {
         self
     }
 
+    pub fn overscan(mut self, overscan: impl IntoValue<usize>) -> Self {
+        self.props.overscan = overscan.into_value();
+        self
+    }
+
+    pub fn prefetch(mut self, prefetch: impl IntoValue<usize>) -> Self {
+        self.props.prefetch = prefetch.into_value();
+        self
+    }
+
     pub fn wrap(mut self, wrap: impl IntoValue<bool>) -> Self {
         self.props.wrap = wrap.into_value();
         self
@@ -73,13 +104,18 @@ impl ListBuilder {
         self
     }
 
-    pub fn children(mut self, children: impl IntoBlueprint) -> Self {
-        self.children.extend(children.into_blueprint());
+    pub fn on_visible_range(mut self, callback: impl Fn(Range<usize>) + 'static) -> Self {
+        self.props.on_visible_range = Some(Rc::new(callback));
+        self
+    }
+
+    pub fn on_request_range(mut self, callback: impl Fn(Range<usize>) + 'static) -> Self {
+        self.props.on_request_range = Some(Rc::new(callback));
         self
     }
 
     pub fn build(self) -> Blueprint {
-        List::with(self.props, self.children)
+        List::with(self.props)
     }
 }
 

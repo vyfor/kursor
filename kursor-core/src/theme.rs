@@ -52,27 +52,27 @@ impl Theme {
         palette: Palette::DEFAULT,
         text: Style {
             fg: Color::White,
-            bg: Color::Reset,
+            bg: Color::Unset,
             attrs: Attrs::DEFAULT,
         },
         surface: Style {
             fg: Color::White,
-            bg: Color::Reset,
+            bg: Color::Unset,
             attrs: Attrs::DEFAULT,
         },
         primary: Style {
             fg: Color::LightBlue,
-            bg: Color::Reset,
+            bg: Color::Unset,
             attrs: Attrs::DEFAULT,
         },
         focus: Style {
-            fg: Color::Reset,
+            fg: Color::Unset,
             bg: Color::LightBlue,
             attrs: Attrs::DEFAULT,
         },
         disabled: Style {
             fg: Color::Gray,
-            bg: Color::Reset,
+            bg: Color::Unset,
             attrs: Attrs::DEFAULT,
         },
     };
@@ -86,7 +86,7 @@ impl Theme {
             palette,
             text: Style {
                 fg: palette.fg,
-                bg: palette.bg,
+                bg: Color::Unset,
                 attrs: Default::default(),
             },
             surface: Style {
@@ -96,7 +96,7 @@ impl Theme {
             },
             primary: Style {
                 fg: palette.primary,
-                bg: palette.bg,
+                bg: Color::Unset,
                 attrs: Default::default(),
             },
             focus: Style {
@@ -106,7 +106,7 @@ impl Theme {
             },
             disabled: Style {
                 fg: palette.muted,
-                bg: palette.bg,
+                bg: Color::Unset,
                 attrs: Default::default(),
             },
         }

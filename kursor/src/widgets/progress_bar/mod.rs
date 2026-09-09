@@ -238,10 +238,14 @@ impl Component for ProgressBar {
         }
 
         let theme = *cx.theme();
+        let fb = Style {
+            bg: Color::Unset,
+            ..theme.surface
+        };
         let def_track = cx.resolve_or(
             "track_style",
             &props.styles.get().track,
-            theme.surface,
+            fb,
             self.transition.clone(),
         );
         let def_fill = cx.resolve_or(

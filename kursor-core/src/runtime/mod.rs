@@ -577,9 +577,10 @@ impl Runtime {
         self.scratch.sent_nodes.clear();
         let mut res = EventResult::Ignored;
         let path_len = self.scratch.path.len();
+        let dispatch_path: Vec<NodeId> = self.scratch.path.iter().copied().collect();
 
         for i in (0..path_len).rev() {
-            let node = self.scratch.path[i];
+            let node = dispatch_path[i];
             let cur_res = self.send_event(node, event, Phase::Capture);
             if cur_res.is_handled() {
                 self.scratch.sent_nodes.push(node);
@@ -592,7 +593,7 @@ impl Runtime {
 
         if !res.should_stop() {
             for i in 0..path_len {
-                let node = self.scratch.path[i];
+                let node = dispatch_path[i];
                 let cur_res = self.send_event(node, event, Phase::Bubble);
                 if cur_res.is_handled() {
                     self.scratch.sent_nodes.push(node);
