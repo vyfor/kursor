@@ -9,7 +9,6 @@ pub mod grid;
 #[cfg(feature = "image")]
 pub mod image;
 pub mod input;
-pub mod lazy_list;
 pub mod list;
 pub mod overlay;
 pub mod padding;
@@ -19,6 +18,7 @@ pub mod scroll;
 pub mod show;
 pub mod spacer;
 pub mod stack;
+pub mod table;
 pub mod text;
 pub mod themed;
 pub mod wrap;
@@ -37,9 +37,8 @@ pub use input::{
     Input, InputBehavior, InputBuilder, InputDisplay, InputIntent, InputProps, InputState,
     InputStyles,
 };
-pub use lazy_list::{LazyList, LazyListBehavior, LazyListBuilder, LazyListProps, LazyListState};
 pub use list::{
-    IntoListSelection, List, ListBehavior, ListBuilder, ListFit, ListIntent, ListProps,
+    IntoListSelection, List, ListBehavior, ListBuilder, ListData, ListFit, ListIntent, ListProps,
     ListSelection, ListState,
 };
 pub use overlay::{Anchor, Layer, Overlay, OverlayProps, Overlays};
@@ -52,6 +51,11 @@ pub use scroll::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};
 pub use show::{Show, ShowBuilder, ShowProps};
 pub use spacer::{Spacer, SpacerProps};
 pub use stack::{Stack, StackProps};
+pub use table::{
+    IntoTCell, IntoTColumn, IntoTColumns, IntoTRow, IntoTSelection, TColumn, TData, TMode, TRow,
+    TSelection, Table, TableBehavior, TableBuilder, TableIntent, TableProps, TableState,
+    TableTarget,
+};
 pub use text::{Line, Span, Text, TextProps};
 pub use themed::Themed;
 pub use wrap::{Wrap, WrapProps};

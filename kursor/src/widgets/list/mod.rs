@@ -300,13 +300,11 @@ impl List {
     }
 
     pub fn vertical(children: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ListProps {
-                orientation: Value::plain(Orientation::Vertical),
-                data: ListData::Static(children.into_blueprint().into()),
-                ..Default::default()
-            },
-        )
+        Self::with(ListProps {
+            orientation: Value::plain(Orientation::Vertical),
+            data: ListData::Static(children.into_blueprint().into()),
+            ..Default::default()
+        })
     }
 
     pub fn horizontal(children: impl IntoBlueprint) -> Blueprint {
@@ -359,8 +357,8 @@ impl List {
         } else {
             self.overscan
         };
-        let desired = visible.start.saturating_sub(prefetch)
-            ..(visible.end + prefetch).min(self.state.count);
+        let desired =
+            visible.start.saturating_sub(prefetch)..(visible.end + prefetch).min(self.state.count);
         let Some(previous) = self.requested_range.clone() else {
             callback(desired.clone());
             self.requested_range = Some(desired);
@@ -645,7 +643,8 @@ impl Component for List {
 
         let viewport = self.state.viewport_size;
         let (visible_range, rendered_range) =
-            self.virt.range_at(self.state.scroll_offset, viewport, self.overscan);
+            self.virt
+                .range_at(self.state.scroll_offset, viewport, self.overscan);
 
         let range_changed = self.rendered_range != rendered_range;
         self.visible_range = visible_range.clone();
@@ -752,7 +751,11 @@ impl Component for List {
                             area.x,
                             area.y.saturating_add(position),
                             cross_size,
-                            if hidden { 0 } else { item_size.min(u32::from(u16::MAX)) as u16 },
+                            if hidden {
+                                0
+                            } else {
+                                item_size.min(u32::from(u16::MAX)) as u16
+                            },
                         ),
                     );
                     children.translate(local_idx, Offset::new(0, offset));
@@ -769,7 +772,11 @@ impl Component for List {
                         Rect::new(
                             area.x.saturating_add(position),
                             area.y,
-                            if hidden { 0 } else { item_size.min(u32::from(u16::MAX)) as u16 },
+                            if hidden {
+                                0
+                            } else {
+                                item_size.min(u32::from(u16::MAX)) as u16
+                            },
                             cross_size,
                         ),
                     );
@@ -779,7 +786,9 @@ impl Component for List {
             let _ = rendered_start;
         }
 
-        let (visible_range, _) = self.virt.range_at(scroll_offset, viewport_size, self.overscan);
+        let (visible_range, _) = self
+            .virt
+            .range_at(scroll_offset, viewport_size, self.overscan);
         if self.visible_range != visible_range {
             self.visible_range = visible_range.clone();
             if let Some(on_visible) = &props.on_visible_range {

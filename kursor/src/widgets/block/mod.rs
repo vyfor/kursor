@@ -53,6 +53,24 @@ impl BorderChars {
         bottom_left: '╚',
         bottom_right: '╝',
     };
+
+    pub const HEAVY: Self = Self {
+        horizontal: '━',
+        vertical: '┃',
+        top_left: '┏',
+        top_right: '┓',
+        bottom_left: '┗',
+        bottom_right: '┛',
+    };
+
+    pub const ASCII: Self = Self {
+        horizontal: '-',
+        vertical: '|',
+        top_left: '+',
+        top_right: '+',
+        bottom_left: '+',
+        bottom_right: '+',
+    };
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -63,6 +81,25 @@ pub enum Border {
     Rounded,
     Double,
     Custom(BorderChars),
+}
+
+impl Border {
+    pub const fn chars(&self) -> BorderChars {
+        match self {
+            Self::Plain => BorderChars::PLAIN,
+            Self::Rounded => BorderChars::ROUNDED,
+            Self::Double => BorderChars::DOUBLE,
+            Self::Custom(chars) => *chars,
+            Self::None => BorderChars {
+                horizontal: ' ',
+                vertical: ' ',
+                top_left: ' ',
+                top_right: ' ',
+                bottom_left: ' ',
+                bottom_right: ' ',
+            },
+        }
+    }
 }
 
 crate::core::into_value!(Border);
