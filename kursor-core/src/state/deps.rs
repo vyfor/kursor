@@ -23,7 +23,8 @@ impl Scope {
     fn finish(mut self) -> Vec<AtomId> {
         self.active = false;
         IN_SCOPE.set(self.prev);
-        SCOPES.with(|scopes| unsafe { (*scopes.get()).pop().unwrap_or_default() })
+        SCOPES
+            .with(|scopes| unsafe { (*scopes.get()).pop().unwrap_or_default() })
     }
 }
 

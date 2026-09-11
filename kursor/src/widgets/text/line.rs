@@ -2,6 +2,9 @@ use unicode_width::UnicodeWidthStr;
 
 use super::Span;
 
+/// a line of text built from one or more [`Span`]s.
+///
+/// the hierarchy is: [`Span`] -> [`Line`] -> [`Text`](super::Text)
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct Line {
     pub spans: Vec<Span>,

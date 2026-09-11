@@ -27,6 +27,8 @@ impl Default for DividerProps {
     }
 }
 
+/// draws a single character repeated across the full width or height of its
+/// given rect.
 pub struct Divider {
     orientation: Orientation,
     style: Option<Style>,
@@ -82,7 +84,8 @@ impl Component for Divider {
         let glyph = props.glyph.get();
         let transition = props.transition.clone();
         let orientation_changed = self.orientation != orientation;
-        let style_changed = self.style != style || self.transition != transition;
+        let style_changed =
+            self.style != style || self.transition != transition;
         let glyph_changed = self.glyph != glyph;
         self.orientation = orientation;
         self.style = style;
@@ -105,8 +108,12 @@ impl Component for Divider {
         _children: &mut MeasureCx,
     ) -> Size {
         match self.orientation {
-            Orientation::Horizontal => Size::new(available.width, available.height.min(1)),
-            Orientation::Vertical => Size::new(available.width.min(1), available.height),
+            Orientation::Horizontal => {
+                Size::new(available.width, available.height.min(1))
+            }
+            Orientation::Vertical => {
+                Size::new(available.width.min(1), available.height)
+            }
         }
     }
 
@@ -117,7 +124,12 @@ impl Component for Divider {
         }
 
         let fallback = cx.theme().surface;
-        let style = cx.resolve_or("style", &props.style, fallback, self.transition.clone());
+        let style = cx.resolve_or(
+            "style",
+            &props.style,
+            fallback,
+            self.transition.clone(),
+        );
         match self.orientation {
             Orientation::Horizontal => {
                 for x in rect.left()..rect.right() {

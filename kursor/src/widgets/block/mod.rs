@@ -16,6 +16,7 @@ use kursor_core::{
     state::{Transition, Value},
 };
 
+/// box-drawing border characters.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BorderChars {
     pub horizontal: char,
@@ -73,13 +74,36 @@ impl BorderChars {
     };
 }
 
+/// border kind for a `Block`.
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum Border {
+    None,
+    /// ```text
+    /// ┌──┐
+    /// │  │
+    /// └──┘
+    /// ```
     #[default]
     Plain,
-    None,
+
+    /// ```text
+    /// ╭──╮
+    /// │  │
+    /// ╰──╯
+    /// ```
     Rounded,
+    /// ```text
+    /// ╔══╗
+    /// ║  ║
+    /// ╚══╝
+    /// ```
     Double,
+    /// ```text
+    /// ┏━━┓
+    /// ┃  ┃
+    /// ┗━━┛
+    /// ```
+    Heavy,
     Custom(BorderChars),
 }
 
@@ -89,6 +113,7 @@ impl Border {
             Self::Plain => BorderChars::PLAIN,
             Self::Rounded => BorderChars::ROUNDED,
             Self::Double => BorderChars::DOUBLE,
+            Self::Heavy => BorderChars::HEAVY,
             Self::Custom(chars) => *chars,
             Self::None => BorderChars {
                 horizontal: ' ',
@@ -121,6 +146,10 @@ impl Default for BlockProps {
     }
 }
 
+/// draws a [`Border`] around a child component. the child is inset by 1 cell on
+/// each side so that its content doesn't collide with the border.
+///
+/// border merging / collapsing is handled by the [`Canvas`]
 pub struct Block {
     border: Border,
     style: Option<Style>,
@@ -169,6 +198,17 @@ impl Block {
         )
     }
 
+    pub fn heavy(child: impl IntoBlueprint) -> Blueprint {
+        Self::with(
+            BlockProps {
+                border: Value::plain(Border::Heavy),
+                style: Value::plain(None),
+                transition: None,
+            },
+            child,
+        )
+    }
+
     pub fn styled(style: Style, child: impl IntoBlueprint) -> Blueprint {
         Self::with(
             BlockProps {
@@ -208,7 +248,8 @@ impl Component for Block {
         let style = props.style.get();
         let transition = props.transition.clone();
         let border_changed = self.border != border;
-        let style_changed = self.style != style || self.transition != transition;
+        let style_changed =
+            self.style != style || self.transition != transition;
         self.border = border;
         self.style = style;
         self.transition = transition;
@@ -240,7 +281,13 @@ impl Component for Block {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         if children.is_empty() {
             return;
         }
@@ -264,7 +311,12 @@ impl Component for Block {
         }
 
         let fallback = cx.theme().surface;
-        let style = cx.resolve_or("style", &props.style, fallback, self.transition.clone());
+        let style = cx.resolve_or(
+            "style",
+            &props.style,
+            fallback,
+            self.transition.clone(),
+        );
 
         let has_border = !matches!(self.border, Border::None);
         let fill_rect = if has_border {
@@ -284,6 +336,7 @@ impl Component for Block {
             Border::Plain => BorderChars::PLAIN,
             Border::Rounded => BorderChars::ROUNDED,
             Border::Double => BorderChars::DOUBLE,
+            Border::Heavy => BorderChars::HEAVY,
             Border::Custom(chars) => chars,
         };
 

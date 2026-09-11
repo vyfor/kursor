@@ -6,7 +6,9 @@ use std::{
 #[cfg(feature = "animate")]
 use crate::component::context::Animations;
 use crate::{
-    component::{AnyComponent, blueprint::Blueprint, environment::Environment, key::Key},
+    component::{
+        AnyComponent, blueprint::Blueprint, environment::Environment, key::Key,
+    },
     layout::{Margin, offset::Offset, rect::Rect, size::Size},
 };
 

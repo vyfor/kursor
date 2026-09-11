@@ -1,5 +1,6 @@
 use kursor_core::state::{IntoValue, Value};
 
+/// sizing rules for a column or row.
 #[derive(Clone)]
 pub enum Track {
     Content,
@@ -95,9 +96,12 @@ pub(crate) fn allocate_tracks(
     for (index, track) in tracks.iter().enumerate() {
         match track {
             ResolvedTrack::Content => {
-                allocated = allocated.saturating_add(content.get(index).copied().unwrap_or(0));
+                allocated = allocated
+                    .saturating_add(content.get(index).copied().unwrap_or(0));
             }
-            ResolvedTrack::Fixed(size) => allocated = allocated.saturating_add(*size),
+            ResolvedTrack::Fixed(size) => {
+                allocated = allocated.saturating_add(*size)
+            }
             ResolvedTrack::Fill(weight) => {
                 total_weight = total_weight.saturating_add(u32::from(*weight));
                 fill_count += 1;
@@ -119,7 +123,8 @@ pub(crate) fn allocate_tracks(
                 if fills_seen == fill_count {
                     remaining.saturating_sub(distributed)
                 } else {
-                    let share = (u32::from(remaining) * u32::from(*weight) / total_weight) as u16;
+                    let share = (u32::from(remaining) * u32::from(*weight)
+                        / total_weight) as u16;
                     distributed = distributed.saturating_add(share);
                     share
                 }

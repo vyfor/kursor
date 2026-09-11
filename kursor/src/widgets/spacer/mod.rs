@@ -12,6 +12,7 @@ pub struct SpacerProps {
     pub size: Value<u16>,
 }
 
+/// reserves a fixed number of cells.
 pub struct Spacer {
     size: u16,
 }

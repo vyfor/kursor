@@ -11,6 +11,10 @@ use kursor_core::{
     theme::Theme,
 };
 
+/// a plain convenience wrapper that
+/// [`provides`](crate::core::component::context::Cx::provide) the given
+/// [`Theme`](crate::core::theme::Theme) to all descendant components via the
+/// [`Environment`](crate::core::component::environment::Environment).
 pub struct Themed;
 
 impl Themed {
@@ -18,7 +22,10 @@ impl Themed {
         ThemedBuilder::new(child)
     }
 
-    pub fn new(theme: impl IntoValue<Theme>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn new(
+        theme: impl IntoValue<Theme>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Blueprint::new::<Self>(theme.into_value()).children(child)
     }
 

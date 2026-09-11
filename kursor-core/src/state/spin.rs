@@ -23,7 +23,12 @@ impl SpinLock {
         loop {
             if self
                 .0
-                .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
+                .compare_exchange_weak(
+                    false,
+                    true,
+                    Ordering::Acquire,
+                    Ordering::Relaxed,
+                )
                 .is_ok()
             {
                 return;

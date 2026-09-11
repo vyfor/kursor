@@ -13,8 +13,11 @@ pub struct LayerCell {
 #[derive(Clone, Default)]
 pub struct EffectLayer {
     area: Rect,
+    /// what was already on the canvas (i.e. before children's `paint`).
     underlay: Vec<Cell>,
+    /// what the underlying children drew on the canvas.
     source: Vec<Cell>,
+    /// what the effect actually writes to the canvas.
     output: Vec<Cell>,
 }
 

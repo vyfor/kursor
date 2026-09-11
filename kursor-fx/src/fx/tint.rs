@@ -6,6 +6,7 @@ use kursor_core::render::{color::Color, style::Style};
 use super::color::mix;
 use crate::{EffectCx, Fx, Mask, Spread};
 
+/// applies a color overlay.
 #[derive(Clone)]
 pub struct Tint {
     fg: Option<Color>,

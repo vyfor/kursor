@@ -30,6 +30,10 @@ impl Default for WrapProps {
     }
 }
 
+/// wraps children across lines.
+///
+/// if adding the next child would exceed the available width, it starts on a
+/// new line.
 pub struct Wrap {
     gap: u16,
     line_gap: u16,
@@ -44,7 +48,10 @@ impl Wrap {
         Self::uniform(0, children)
     }
 
-    pub fn uniform(gap: impl IntoValue<u16>, children: impl IntoBlueprint) -> Blueprint {
+    pub fn uniform(
+        gap: impl IntoValue<u16>,
+        children: impl IntoBlueprint,
+    ) -> Blueprint {
         let gap = gap.into_value();
         Self::spaced(gap.clone(), gap, children)
     }
@@ -133,7 +140,13 @@ impl Component for Wrap {
         Size::new(w.min(available.width), h.min(available.height))
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         let mut lw = 0u16;
         let mut lh = 0u16;
         let mut y = area.y;

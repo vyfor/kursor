@@ -12,6 +12,7 @@ use kursor_core::{
     },
 };
 
+/// a key or mouse input binding with optional modifier keys.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Bind {
     Key {
@@ -95,7 +96,9 @@ impl Bind {
 
     fn modifiers_mut(&mut self) -> &mut Modifiers {
         match self {
-            Self::Key { modifiers, .. } | Self::Mouse { modifiers, .. } => modifiers,
+            Self::Key { modifiers, .. } | Self::Mouse { modifiers, .. } => {
+                modifiers
+            }
         }
     }
 
@@ -117,6 +120,22 @@ struct Binding<I> {
     intent: I,
 }
 
+/// input -> intent mapper.
+///
+/// maps key and mouse inputs directly to intents for widgets that take in a
+/// [`Behavior`]. this exists primarily to reduce boilerplate for trivial
+/// [`Behavior`] implementations that only handle input.
+///
+/// ## example
+///
+/// ```rust,ignore
+/// Input::builder("").behavior(
+///     Bindings::new()
+///         .bind(Bind::key(KeyCode::Left), InputIntent::CursorLeft)
+///         .bind(Bind::key(KeyCode::Right), InputIntent::CursorRight)
+///         .bind(Bind::key(KeyCode::Char('a')).ctrl(), InputIntent::SelectAll),
+/// );
+/// ```
 pub struct Bindings<S, I> {
     entries: Vec<Binding<I>>,
     state: PhantomData<fn() -> S>,
@@ -164,7 +183,9 @@ where
     S: 'static,
     I: Clone + Send + Sync + 'static,
 {
-    fn into_blueprint(self) -> Vec<kursor_core::component::blueprint::Blueprint> {
+    fn into_blueprint(
+        self,
+    ) -> Vec<kursor_core::component::blueprint::Blueprint> {
         self.builder.behavior(self.bindings).into_blueprint()
     }
 }

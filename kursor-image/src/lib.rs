@@ -16,10 +16,15 @@ pub use placement::{ImageFit, ImageTarget, fit_cells};
 pub use sixel::Sixel;
 pub use source::{ImageData, ImageSource};
 
+/// converts source image into a terminal renderable format.
 pub trait ImageEncoder {
     type Output;
 
     fn protocol(&self) -> GraphicsProtocol;
 
-    fn encode(&self, source: &ImageSource, target: &ImageTarget) -> Result<Self::Output>;
+    fn encode(
+        &self,
+        source: &ImageSource,
+        target: &ImageTarget,
+    ) -> Result<Self::Output>;
 }

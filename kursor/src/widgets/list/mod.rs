@@ -59,7 +59,8 @@ impl ListState {
             Err(i) => i.min(self.count - 1),
         };
         let start = self.offsets[idx];
-        let end = start.saturating_add(self.extents.get(idx).copied().unwrap_or(0));
+        let end =
+            start.saturating_add(self.extents.get(idx).copied().unwrap_or(0));
         if position >= start && position < end {
             Some(idx)
         } else {
@@ -111,7 +112,12 @@ impl Behavior for ListBehavior {
     type State = ListState;
     type Intent = ListIntent;
 
-    fn event(&self, cx: &BehaviorCx, event: &Event, state: &Self::State) -> Option<Self::Intent> {
+    fn event(
+        &self,
+        cx: &BehaviorCx,
+        event: &Event,
+        state: &Self::State,
+    ) -> Option<Self::Intent> {
         if cx.phase != Phase::Bubble {
             return None;
         }
@@ -128,14 +134,21 @@ impl Behavior for ListBehavior {
                 _ => None,
             },
             Event::Mouse(mouse) => match mouse.kind {
-                MouseKind::ScrollUp => Some(ListIntent::ScrollBy(-i32::from(self.wheel_step))),
-                MouseKind::ScrollDown => Some(ListIntent::ScrollBy(i32::from(self.wheel_step))),
+                MouseKind::ScrollUp => {
+                    Some(ListIntent::ScrollBy(-i32::from(self.wheel_step)))
+                }
+                MouseKind::ScrollDown => {
+                    Some(ListIntent::ScrollBy(i32::from(self.wheel_step)))
+                }
                 MouseKind::Down(MouseButton::Left) => {
                     let rel_pos = match cx.rect {
-                        rect if rect.height >= rect.width => mouse.row.saturating_sub(rect.y),
+                        rect if rect.height >= rect.width => {
+                            mouse.row.saturating_sub(rect.y)
+                        }
                         rect => mouse.column.saturating_sub(rect.x),
                     };
-                    let absolute_pos = u32::from(rel_pos).saturating_add(state.scroll_offset);
+                    let absolute_pos =
+                        u32::from(rel_pos).saturating_add(state.scroll_offset);
                     state.item_at(absolute_pos).map(ListIntent::Select)
                 }
                 _ => None,
@@ -272,6 +285,10 @@ impl Default for ListProps {
     }
 }
 
+/// virtualized list that only renders visible rows.
+///
+/// supports both eager (fixed) and lazy (dynamic) kinds of data. both kinds are
+/// virtualized.
 pub struct List {
     state: ListState,
     virt: Virtualizer,
@@ -357,8 +374,8 @@ impl List {
         } else {
             self.overscan
         };
-        let desired =
-            visible.start.saturating_sub(prefetch)..(visible.end + prefetch).min(self.state.count);
+        let desired = visible.start.saturating_sub(prefetch)
+            ..(visible.end + prefetch).min(self.state.count);
         let Some(previous) = self.requested_range.clone() else {
             callback(desired.clone());
             self.requested_range = Some(desired);
@@ -389,7 +406,8 @@ impl List {
         }
         let item_start = self.virt.offset_of(index);
         let item_end = item_start.saturating_add(self.virt.extent_of(index));
-        let margin = u32::from(self.scroll_margin).saturating_mul(self.virt.estimate());
+        let margin =
+            u32::from(self.scroll_margin).saturating_mul(self.virt.estimate());
         let viewport = self.state.viewport_size;
         let max_scroll = self.state.content_size.saturating_sub(viewport);
 
@@ -398,14 +416,20 @@ impl List {
 
         if target_min < self.state.scroll_offset {
             self.state.scroll_offset = target_min;
-        } else if target_max > self.state.scroll_offset.saturating_add(viewport) {
+        } else if target_max > self.state.scroll_offset.saturating_add(viewport)
+        {
             self.state.scroll_offset = target_max.saturating_sub(viewport);
         }
 
         self.state.scroll_offset = self.state.scroll_offset.min(max_scroll);
     }
 
-    fn set_selected(&mut self, cx: &mut Cx, props: &ListProps, index: Option<usize>) -> bool {
+    fn set_selected(
+        &mut self,
+        cx: &mut Cx,
+        props: &ListProps,
+        index: Option<usize>,
+    ) -> bool {
         let prev = self.state.selected;
         self.state.selected = index;
 
@@ -431,7 +455,12 @@ impl List {
         self.state.selected != prev
     }
 
-    fn apply(&mut self, cx: &mut Cx, props: &ListProps, intent: ListIntent) -> bool {
+    fn apply(
+        &mut self,
+        cx: &mut Cx,
+        props: &ListProps,
+        intent: ListIntent,
+    ) -> bool {
         let count = self.state.count;
         if count == 0 {
             return false;
@@ -465,7 +494,9 @@ impl List {
                 self.set_selected(cx, props, Some(next))
             }
             ListIntent::First => self.set_selected(cx, props, Some(0)),
-            ListIntent::Last => self.set_selected(cx, props, Some(count.saturating_sub(1))),
+            ListIntent::Last => {
+                self.set_selected(cx, props, Some(count.saturating_sub(1)))
+            }
             ListIntent::PageUp(step) => {
                 let curr = self.state.selected.unwrap_or(0);
                 let next = curr.saturating_sub(step);
@@ -492,7 +523,8 @@ impl List {
                     .state
                     .content_size
                     .saturating_sub(self.state.viewport_size);
-                self.state.scroll_offset = self.virt.offset_of(target).min(max_scroll);
+                self.state.scroll_offset =
+                    self.virt.offset_of(target).min(max_scroll);
                 self.state.scroll_offset != prev
             }
             ListIntent::Activate => {
@@ -517,10 +549,11 @@ impl Component for List {
             ListSelection::Optional(sig) => sig.peek(),
             ListSelection::Exact(sig) => Some(sig.peek()),
         });
-        let ext_sel = props.selection.as_ref().map(|selection| match selection {
-            ListSelection::Optional(signal) => signal.peek(),
-            ListSelection::Exact(signal) => Some(signal.peek()),
-        });
+        let ext_sel =
+            props.selection.as_ref().map(|selection| match selection {
+                ListSelection::Optional(signal) => signal.peek(),
+                ListSelection::Exact(signal) => Some(signal.peek()),
+            });
 
         Self {
             state: ListState {
@@ -562,15 +595,22 @@ impl Component for List {
             || old.selection != new.selection
             || old.data != new.data
             || !Rc::ptr_eq(&old.behavior, &new.behavior)
-            || old.on_select.as_ref().map(Rc::as_ptr) != new.on_select.as_ref().map(Rc::as_ptr)
-            || old.on_activate.as_ref().map(Rc::as_ptr) != new.on_activate.as_ref().map(Rc::as_ptr)
+            || old.on_select.as_ref().map(Rc::as_ptr)
+                != new.on_select.as_ref().map(Rc::as_ptr)
+            || old.on_activate.as_ref().map(Rc::as_ptr)
+                != new.on_activate.as_ref().map(Rc::as_ptr)
             || old.on_visible_range.as_ref().map(Rc::as_ptr)
                 != new.on_visible_range.as_ref().map(Rc::as_ptr)
             || old.on_request_range.as_ref().map(Rc::as_ptr)
                 != new.on_request_range.as_ref().map(Rc::as_ptr)
     }
 
-    fn mount(&mut self, _cx: &mut Cx, props: &Self::Props, children: &mut MountChildren) {
+    fn mount(
+        &mut self,
+        _cx: &mut Cx,
+        props: &Self::Props,
+        children: &mut MountChildren,
+    ) {
         self.orientation = props.orientation.get();
         self.gap = props.gap.get();
         self.scroll_margin = props.scroll_margin.get();
@@ -642,9 +682,11 @@ impl Component for List {
         }
 
         let viewport = self.state.viewport_size;
-        let (visible_range, rendered_range) =
-            self.virt
-                .range_at(self.state.scroll_offset, viewport, self.overscan);
+        let (visible_range, rendered_range) = self.virt.range_at(
+            self.state.scroll_offset,
+            viewport,
+            self.overscan,
+        );
 
         let range_changed = self.rendered_range != rendered_range;
         self.visible_range = visible_range.clone();
@@ -678,12 +720,16 @@ impl Component for List {
             }
             let child_available = match self.orientation {
                 Orientation::Vertical => Size::new(available.width, u16::MAX),
-                Orientation::Horizontal => Size::new(u16::MAX, available.height),
+                Orientation::Horizontal => {
+                    Size::new(u16::MAX, available.height)
+                }
             };
             let child_size = children.measure(local_idx, child_available);
             let (main_size, cross_size) = match self.orientation {
                 Orientation::Vertical => (child_size.height, child_size.width),
-                Orientation::Horizontal => (child_size.width, child_size.height),
+                Orientation::Horizontal => {
+                    (child_size.width, child_size.height)
+                }
             };
             self.virt.observe(global_idx, u32::from(main_size));
             max_cross = max_cross.max(cross_size);
@@ -704,7 +750,13 @@ impl Component for List {
         }
     }
 
-    fn layout(&mut self, _cx: &mut Cx, props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         let (viewport_size, cross_size) = match self.orientation {
             Orientation::Vertical => (u32::from(area.height), area.width),
             Orientation::Horizontal => (u32::from(area.width), area.height),
@@ -734,17 +786,23 @@ impl Component for List {
             if local_idx >= children.len() {
                 break;
             }
-            let item_offset = self.state.offsets.get(global_idx).copied().unwrap_or(0);
-            let item_size = self.state.extents.get(global_idx).copied().unwrap_or(0);
+            let item_offset =
+                self.state.offsets.get(global_idx).copied().unwrap_or(0);
+            let item_size =
+                self.state.extents.get(global_idx).copied().unwrap_or(0);
 
             match self.orientation {
                 Orientation::Vertical => {
-                    let visible_start = i64::from(item_offset) - i64::from(scroll_offset);
+                    let visible_start =
+                        i64::from(item_offset) - i64::from(scroll_offset);
                     let visible_end = visible_start + i64::from(item_size);
                     let hidden = self.fit == ListFit::Whole
-                        && (visible_start < 0 || visible_end > i64::from(viewport_size));
-                    let offset = visible_start.min(0).max(i64::from(i32::MIN)) as i32;
-                    let position = visible_start.max(0).min(i64::from(u16::MAX)) as u16;
+                        && (visible_start < 0
+                            || visible_end > i64::from(viewport_size));
+                    let offset =
+                        visible_start.min(0).max(i64::from(i32::MIN)) as i32;
+                    let position =
+                        visible_start.max(0).min(i64::from(u16::MAX)) as u16;
                     children.set(
                         local_idx,
                         Rect::new(
@@ -761,12 +819,16 @@ impl Component for List {
                     children.translate(local_idx, Offset::new(0, offset));
                 }
                 Orientation::Horizontal => {
-                    let visible_start = i64::from(item_offset) - i64::from(scroll_offset);
+                    let visible_start =
+                        i64::from(item_offset) - i64::from(scroll_offset);
                     let visible_end = visible_start + i64::from(item_size);
                     let hidden = self.fit == ListFit::Whole
-                        && (visible_start < 0 || visible_end > i64::from(viewport_size));
-                    let offset = visible_start.min(0).max(i64::from(i32::MIN)) as i32;
-                    let position = visible_start.max(0).min(i64::from(u16::MAX)) as u16;
+                        && (visible_start < 0
+                            || visible_end > i64::from(viewport_size));
+                    let offset =
+                        visible_start.min(0).max(i64::from(i32::MIN)) as i32;
+                    let position =
+                        visible_start.max(0).min(i64::from(u16::MAX)) as u16;
                     children.set(
                         local_idx,
                         Rect::new(
@@ -786,9 +848,9 @@ impl Component for List {
             let _ = rendered_start;
         }
 
-        let (visible_range, _) = self
-            .virt
-            .range_at(scroll_offset, viewport_size, self.overscan);
+        let (visible_range, _) =
+            self.virt
+                .range_at(scroll_offset, viewport_size, self.overscan);
         if self.visible_range != visible_range {
             self.visible_range = visible_range.clone();
             if let Some(on_visible) = &props.on_visible_range {

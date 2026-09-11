@@ -1,0 +1,9 @@
+# requires rustfmt nightly :(
+
+edition = "2024"
+tab_spaces = 4
+use_field_init_shorthand = true
+use_try_shorthand = true
+max_width = 80
+comment_width = 80
+wrap_comments = true

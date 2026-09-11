@@ -33,7 +33,10 @@ impl ScrollBuilder {
         Self::default()
     }
 
-    pub fn direction(mut self, direction: impl IntoValue<ScrollDirection>) -> Self {
+    pub fn direction(
+        mut self,
+        direction: impl IntoValue<ScrollDirection>,
+    ) -> Self {
         self.props.direction = direction.into_value();
         self
     }

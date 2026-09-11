@@ -16,10 +16,9 @@ fn towards(runtime: &mut Runtime, direction: isize) -> bool {
 
     let current = runtime.focus();
     let boundary = current.and_then(|id| {
-        runtime
-            .path_to_root(id)
-            .into_iter()
-            .find(|node| runtime.focus_of(*node).is_some_and(|config| config.trap))
+        runtime.path_to_root(id).into_iter().find(|node| {
+            runtime.focus_of(*node).is_some_and(|config| config.trap)
+        })
     });
     let nodes: Vec<_> = match boundary {
         Some(boundary) => runtime

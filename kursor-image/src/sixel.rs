@@ -1,7 +1,11 @@
 use std::io::Write as _;
 
-use crate::{Error, GraphicsProtocol, ImageData, ImageEncoder, ImageSource, ImageTarget, Result};
+use crate::{
+    Error, GraphicsProtocol, ImageData, ImageEncoder, ImageSource, ImageTarget,
+    Result,
+};
 
+/// https://en.wikipedia.org/wiki/Sixel
 pub struct Sixel {
     pub colors: usize,
 }
@@ -30,7 +34,11 @@ impl ImageEncoder for Sixel {
         GraphicsProtocol::Sixel
     }
 
-    fn encode(&self, source: &ImageSource, target: &ImageTarget) -> Result<Self::Output> {
+    fn encode(
+        &self,
+        source: &ImageSource,
+        target: &ImageTarget,
+    ) -> Result<Self::Output> {
         let image = source.to_data()?;
         let (mut width, mut height) = image.size();
         if width == 0 || height == 0 {
@@ -40,7 +48,8 @@ impl ImageEncoder for Sixel {
             let pw = target.size.width as u32 * u32::from(cs.width);
             let ph = target.size.height as u32 * u32::from(cs.height);
             if pw > 0 && ph > 0 && (pw != width || ph != height) {
-                let scaled = scale_rgba(image.rgba_bytes(), width, height, pw, ph);
+                let scaled =
+                    scale_rgba(image.rgba_bytes(), width, height, pw, ph);
                 width = pw;
                 height = ph;
                 ImageData::rgba(width, height, scaled)?

@@ -171,7 +171,8 @@ impl Table {
         let has_header = self.has_header();
         let header_count = if has_header { num_cols } else { 0 };
         let rendered_rows_count = rendered_range.end - rendered_range.start;
-        let mut blueprints = Vec::with_capacity(header_count + rendered_rows_count * num_cols);
+        let mut blueprints =
+            Vec::with_capacity(header_count + rendered_rows_count * num_cols);
 
         if has_header {
             for (c_idx, col) in self.columns.iter().enumerate() {
@@ -204,19 +205,25 @@ impl Table {
                     && let Some(row_key) = &row.key
                 {
                     match row_key {
-                        Key::Integer(k) => {
-                            Key::Integer(((k.wrapping_add(1)) << 16) | (c_idx as u64))
-                        }
+                        Key::Integer(k) => Key::Integer(
+                            ((k.wrapping_add(1)) << 16) | (c_idx as u64),
+                        ),
                         Key::String(s) => {
                             let mut h = 0xcbf29ce484222325_u64;
                             for &b in s.as_bytes() {
-                                h = (h ^ (b as u64)).wrapping_mul(0x100000001b3);
+                                h = (h ^ (b as u64))
+                                    .wrapping_mul(0x100000001b3);
                             }
-                            Key::Integer(((h.wrapping_add(1)) << 16) | (c_idx as u64))
+                            Key::Integer(
+                                ((h.wrapping_add(1)) << 16) | (c_idx as u64),
+                            )
                         }
                     }
                 } else {
-                    Key::Integer((((row_idx as u64).wrapping_add(1)) << 16) | (c_idx as u64))
+                    Key::Integer(
+                        (((row_idx as u64).wrapping_add(1)) << 16)
+                            | (c_idx as u64),
+                    )
                 };
 
                 let bp = if let Some(row) = &row_opt
@@ -262,13 +269,15 @@ impl Table {
     }
 
     fn adjust_scroll_x(&mut self, col_idx: usize) {
-        if col_idx >= self.state.column_positions.len() || col_idx >= self.state.column_widths.len()
+        if col_idx >= self.state.column_positions.len()
+            || col_idx >= self.state.column_widths.len()
         {
             return;
         }
 
-        let start =
-            (self.state.column_positions[col_idx] + self.state.scroll_x as i32).max(0) as u32;
+        let start = (self.state.column_positions[col_idx]
+            + self.state.scroll_x as i32)
+            .max(0) as u32;
         let end = start + u32::from(self.state.column_widths[col_idx]);
         let viewport = self.state.viewport_width;
         let max_scroll = self.state.content_width.saturating_sub(viewport);
@@ -282,7 +291,12 @@ impl Table {
         self.state.scroll_x = self.state.scroll_x.min(max_scroll);
     }
 
-    fn set_target(&mut self, cx: &mut Cx, props: &TableProps, target: Option<TableTarget>) -> bool {
+    fn set_target(
+        &mut self,
+        cx: &mut Cx,
+        props: &TableProps,
+        target: Option<TableTarget>,
+    ) -> bool {
         let prev = self.selection_cache;
         self.selection_cache = target;
 
@@ -291,7 +305,8 @@ impl Table {
                 self.state.selected_row = Some(r);
                 if let Some(TSelection::Row(sig)) = &props.selection {
                     sig.set(Some(r));
-                } else if let Some(TSelection::ExactRow(sig)) = &props.selection {
+                } else if let Some(TSelection::ExactRow(sig)) = &props.selection
+                {
                     sig.set(r);
                 }
                 self.adjust_scroll_y(r);
@@ -306,7 +321,8 @@ impl Table {
                     sig.set(Some((r, c)));
                 } else if let Some(TSelection::Row(sig)) = &props.selection {
                     sig.set(Some(r));
-                } else if let Some(TSelection::ExactRow(sig)) = &props.selection {
+                } else if let Some(TSelection::ExactRow(sig)) = &props.selection
+                {
                     sig.set(r);
                 }
                 self.adjust_scroll_y(r);
@@ -341,7 +357,12 @@ impl Table {
         prev != target
     }
 
-    fn apply(&mut self, cx: &mut Cx, props: &TableProps, intent: TableIntent) -> bool {
+    fn apply(
+        &mut self,
+        cx: &mut Cx,
+        props: &TableProps,
+        intent: TableIntent,
+    ) -> bool {
         let row_count = self.state.row_count;
         let col_count = self.columns.len();
         if row_count == 0 && col_count == 0 {
@@ -362,12 +383,22 @@ impl Table {
                     };
                     if self.mode == TMode::Cell {
                         let c = self.state.selected_col.unwrap_or(0);
-                        self.set_target(cx, props, Some(TableTarget::Cell(next_r, c)))
+                        self.set_target(
+                            cx,
+                            props,
+                            Some(TableTarget::Cell(next_r, c)),
+                        )
                     } else {
-                        self.set_target(cx, props, Some(TableTarget::Row(next_r)))
+                        self.set_target(
+                            cx,
+                            props,
+                            Some(TableTarget::Row(next_r)),
+                        )
                     }
                 }
-                TMode::Column => self.apply(cx, props, TableIntent::ScrollY(-1)),
+                TMode::Column => {
+                    self.apply(cx, props, TableIntent::ScrollY(-1))
+                }
             },
             TableIntent::Down => match self.mode {
                 TMode::Row | TMode::Cell => {
@@ -382,9 +413,17 @@ impl Table {
                     };
                     if self.mode == TMode::Cell {
                         let c = self.state.selected_col.unwrap_or(0);
-                        self.set_target(cx, props, Some(TableTarget::Cell(next_r, c)))
+                        self.set_target(
+                            cx,
+                            props,
+                            Some(TableTarget::Cell(next_r, c)),
+                        )
                     } else {
-                        self.set_target(cx, props, Some(TableTarget::Row(next_r)))
+                        self.set_target(
+                            cx,
+                            props,
+                            Some(TableTarget::Row(next_r)),
+                        )
                     }
                 }
                 TMode::Column => self.apply(cx, props, TableIntent::ScrollY(1)),
@@ -401,7 +440,11 @@ impl Table {
                     } else {
                         curr_c - 1
                     };
-                    self.set_target(cx, props, Some(TableTarget::Cell(r, next_c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Cell(r, next_c)),
+                    )
                 }
                 TMode::Column => {
                     if col_count == 0 {
@@ -413,7 +456,11 @@ impl Table {
                     } else {
                         curr_c - 1
                     };
-                    self.set_target(cx, props, Some(TableTarget::Column(next_c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Column(next_c)),
+                    )
                 }
                 TMode::Row => self.apply(cx, props, TableIntent::ScrollX(-8)),
             },
@@ -429,7 +476,11 @@ impl Table {
                     } else {
                         curr_c + 1
                     };
-                    self.set_target(cx, props, Some(TableTarget::Cell(r, next_c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Cell(r, next_c)),
+                    )
                 }
                 TMode::Column => {
                     if col_count == 0 {
@@ -441,7 +492,11 @@ impl Table {
                     } else {
                         curr_c + 1
                     };
-                    self.set_target(cx, props, Some(TableTarget::Column(next_c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Column(next_c)),
+                    )
                 }
                 TMode::Row => self.apply(cx, props, TableIntent::ScrollX(8)),
             },
@@ -464,16 +519,28 @@ impl Table {
                 let last_r = row_count - 1;
                 let last_c = col_count - 1;
                 if self.mode == TMode::Cell {
-                    self.set_target(cx, props, Some(TableTarget::Cell(last_r, last_c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Cell(last_r, last_c)),
+                    )
                 } else if self.mode == TMode::Column {
-                    self.set_target(cx, props, Some(TableTarget::Column(last_c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Column(last_c)),
+                    )
                 } else {
                     self.set_target(cx, props, Some(TableTarget::Row(last_r)))
                 }
             }
             TableIntent::PageUp(step) => {
                 if self.mode == TMode::Column {
-                    return self.apply(cx, props, TableIntent::ScrollY(-(step as i32)));
+                    return self.apply(
+                        cx,
+                        props,
+                        TableIntent::ScrollY(-(step as i32)),
+                    );
                 }
                 if row_count == 0 {
                     return false;
@@ -482,14 +549,22 @@ impl Table {
                 let next_r = curr_r.saturating_sub(step);
                 if self.mode == TMode::Cell {
                     let c = self.state.selected_col.unwrap_or(0);
-                    self.set_target(cx, props, Some(TableTarget::Cell(next_r, c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Cell(next_r, c)),
+                    )
                 } else {
                     self.set_target(cx, props, Some(TableTarget::Row(next_r)))
                 }
             }
             TableIntent::PageDown(step) => {
                 if self.mode == TMode::Column {
-                    return self.apply(cx, props, TableIntent::ScrollY(step as i32));
+                    return self.apply(
+                        cx,
+                        props,
+                        TableIntent::ScrollY(step as i32),
+                    );
                 }
                 if row_count == 0 {
                     return false;
@@ -498,7 +573,11 @@ impl Table {
                 let next_r = (curr_r + step).min(row_count - 1);
                 if self.mode == TMode::Cell {
                     let c = self.state.selected_col.unwrap_or(0);
-                    self.set_target(cx, props, Some(TableTarget::Cell(next_r, c)))
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Cell(next_r, c)),
+                    )
                 } else {
                     self.set_target(cx, props, Some(TableTarget::Row(next_r)))
                 }
@@ -510,7 +589,11 @@ impl Table {
             TableIntent::SelectCell(r, c) => {
                 let clamped_r = r.min(row_count - 1);
                 let clamped_c = c.min(col_count - 1);
-                self.set_target(cx, props, Some(TableTarget::Cell(clamped_r, clamped_c)))
+                self.set_target(
+                    cx,
+                    props,
+                    Some(TableTarget::Cell(clamped_r, clamped_c)),
+                )
             }
             TableIntent::SelectColumn(c) => {
                 let clamped = c.min(col_count - 1);
@@ -520,7 +603,11 @@ impl Table {
                 self.refresh_children = true;
                 if self.mode == TMode::Column {
                     let clamped = col_idx.min(col_count - 1);
-                    self.set_target(cx, props, Some(TableTarget::Column(clamped)));
+                    self.set_target(
+                        cx,
+                        props,
+                        Some(TableTarget::Column(clamped)),
+                    );
                 }
                 if let Some(on_header) = &props.on_header_click {
                     (on_header)(cx, col_idx);
@@ -545,7 +632,8 @@ impl Table {
                     .state
                     .content_height
                     .saturating_sub(self.state.viewport_height);
-                self.state.scroll_y = self.virt.offset_of(target).min(max_scroll);
+                self.state.scroll_y =
+                    self.virt.offset_of(target).min(max_scroll);
                 self.state.scroll_y != prev
             }
             TableIntent::ScrollX(delta) => {
@@ -561,7 +649,8 @@ impl Table {
                         .saturating_add(delta as u32)
                         .min(max_scroll);
                 } else {
-                    self.state.scroll_x = self.state.scroll_x.saturating_sub((-delta) as u32);
+                    self.state.scroll_x =
+                        self.state.scroll_x.saturating_sub((-delta) as u32);
                 }
                 self.state.scroll_x != prev
             }
@@ -577,14 +666,24 @@ impl Table {
                 self.mode = next;
                 self.state.mode = next;
 
-                let target = match (next, self.state.selected_row, self.state.selected_col) {
+                let target = match (
+                    next,
+                    self.state.selected_row,
+                    self.state.selected_col,
+                ) {
                     (TMode::Row, Some(r), _) => Some(TableTarget::Row(r)),
-                    (TMode::Cell, Some(r), c) => Some(TableTarget::Cell(r, c.unwrap_or(0))),
-                    (TMode::Column, _, c) => Some(TableTarget::Column(c.unwrap_or(0))),
+                    (TMode::Cell, Some(r), c) => {
+                        Some(TableTarget::Cell(r, c.unwrap_or(0)))
+                    }
+                    (TMode::Column, _, c) => {
+                        Some(TableTarget::Column(c.unwrap_or(0)))
+                    }
                     _ => None,
                 };
                 self.selection_cache = target;
-                if let Some(TableTarget::Cell(_, c)) | Some(TableTarget::Column(c)) = target {
+                if let Some(TableTarget::Cell(_, c))
+                | Some(TableTarget::Column(c)) = target
+                {
                     self.state.selected_col = Some(c);
                     self.adjust_scroll_x(c);
                 }
@@ -609,13 +708,17 @@ impl Component for Table {
 
     fn create(_cx: &mut Cx, props: &Self::Props) -> Self {
         let (init_row, init_col, init_target) = match &props.selection {
-            Some(TSelection::Row(sig)) => (sig.peek(), None, sig.peek().map(TableTarget::Row)),
+            Some(TSelection::Row(sig)) => {
+                (sig.peek(), None, sig.peek().map(TableTarget::Row))
+            }
             Some(TSelection::ExactRow(sig)) => {
                 let r = sig.peek();
                 (Some(r), None, Some(TableTarget::Row(r)))
             }
             Some(TSelection::Cell(sig)) => match sig.peek() {
-                Some((r, c)) => (Some(r), Some(c), Some(TableTarget::Cell(r, c))),
+                Some((r, c)) => {
+                    (Some(r), Some(c), Some(TableTarget::Cell(r, c)))
+                }
                 None => (None, None, None),
             },
             Some(TSelection::Column(sig)) => {
@@ -689,13 +792,20 @@ impl Component for Table {
             || old.divider_style != new.divider_style
             || !Rc::ptr_eq(&old.columns, &new.columns)
             || !Rc::ptr_eq(&old.behavior, &new.behavior)
-            || old.on_activate.as_ref().map(Rc::as_ptr) != new.on_activate.as_ref().map(Rc::as_ptr)
-            || old.on_select.as_ref().map(Rc::as_ptr) != new.on_select.as_ref().map(Rc::as_ptr)
+            || old.on_activate.as_ref().map(Rc::as_ptr)
+                != new.on_activate.as_ref().map(Rc::as_ptr)
+            || old.on_select.as_ref().map(Rc::as_ptr)
+                != new.on_select.as_ref().map(Rc::as_ptr)
             || old.on_header_click.as_ref().map(Rc::as_ptr)
                 != new.on_header_click.as_ref().map(Rc::as_ptr)
     }
 
-    fn mount(&mut self, _cx: &mut Cx, props: &Self::Props, children: &mut MountChildren) {
+    fn mount(
+        &mut self,
+        _cx: &mut Cx,
+        props: &Self::Props,
+        children: &mut MountChildren,
+    ) {
         self.mode = props.mode.get();
         self.declared_mode = self.mode;
         self.border = props.border.get();
@@ -757,8 +867,9 @@ impl Component for Table {
         self.data = props.data.clone();
 
         let row_count = self.data.count();
-        let mut structure_changed =
-            columns_changed || data_changed || self.state.row_count != row_count;
+        let mut structure_changed = columns_changed
+            || data_changed
+            || self.state.row_count != row_count;
         self.state.row_count = row_count;
         self.state.column_count = self.columns.len();
         self.virt.set_count(row_count);
@@ -812,7 +923,9 @@ impl Component for Table {
             let ext_target = match selection {
                 TSelection::Row(sig) => sig.read().map(TableTarget::Row),
                 TSelection::ExactRow(sig) => Some(TableTarget::Row(sig.read())),
-                TSelection::Cell(sig) => sig.read().map(|(r, c)| TableTarget::Cell(r, c)),
+                TSelection::Cell(sig) => {
+                    sig.read().map(|(r, c)| TableTarget::Cell(r, c))
+                }
                 TSelection::Column(sig) => sig.read().map(TableTarget::Column),
             };
             if self.selection_cache != ext_target {
@@ -842,10 +955,12 @@ impl Component for Table {
         }
 
         let viewport = self.state.viewport_height;
-        let (visible_range, rendered_range) = self.ranges(if viewport > 0 { viewport } else { 50 });
+        let (visible_range, rendered_range) =
+            self.ranges(if viewport > 0 { viewport } else { 50 });
 
         let range_changed = self.state.rendered_rows != rendered_range;
-        let needs_children = structure_changed || range_changed || self.refresh_children;
+        let needs_children =
+            structure_changed || range_changed || self.refresh_children;
         self.refresh_children = false;
 
         self.state.visible_rows = visible_range;
@@ -889,8 +1004,11 @@ impl Component for Table {
 
             if has_header {
                 for c in 0..num_cols {
-                    if self.column_tracks[c] == ResolvedTrack::Content && c < children.len() {
-                        let size = children.measure(c, Size::new(avail_w, self.header_height));
+                    if self.column_tracks[c] == ResolvedTrack::Content
+                        && c < children.len()
+                    {
+                        let size = children
+                            .measure(c, Size::new(avail_w, self.header_height));
                         content_widths[c] = content_widths[c].max(size.width);
                     }
                 }
@@ -899,9 +1017,13 @@ impl Component for Table {
             for (local_row, _) in self.state.rendered_rows.clone().enumerate() {
                 for c in 0..num_cols {
                     let child_idx = header_count + local_row * num_cols + c;
-                    if self.column_tracks[c] == ResolvedTrack::Content && child_idx < children.len()
+                    if self.column_tracks[c] == ResolvedTrack::Content
+                        && child_idx < children.len()
                     {
-                        let size = children.measure(child_idx, Size::new(avail_w, self.row_height));
+                        let size = children.measure(
+                            child_idx,
+                            Size::new(avail_w, self.row_height),
+                        );
                         content_widths[c] = content_widths[c].max(size.width);
                     }
                 }
@@ -913,15 +1035,21 @@ impl Component for Table {
         } else {
             self.column_gap
         };
-        let allocated_widths =
-            allocate_tracks(&self.column_tracks, &content_widths, avail_w, col_gap);
+        let allocated_widths = allocate_tracks(
+            &self.column_tracks,
+            &content_widths,
+            avail_w,
+            col_gap,
+        );
 
         let total_width = allocated_widths.iter().copied().sum::<u16>()
             + col_gap * (allocated_widths.len() - 1) as u16
             + inset * 2;
 
         let top_height = self.top_height();
-        let total_height = u32::from(top_height) + self.virt.total_extent() + u32::from(inset * 2);
+        let total_height = u32::from(top_height)
+            + self.virt.total_extent()
+            + u32::from(inset * 2);
 
         Size::new(
             total_width.min(available.width),
@@ -929,7 +1057,13 @@ impl Component for Table {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         let num_cols = self.columns.len();
         if num_cols == 0 {
             return;
@@ -950,7 +1084,8 @@ impl Component for Table {
         let total_body_height = self.virt.total_extent();
         self.state.content_height = total_body_height;
 
-        let max_scroll_y = total_body_height.saturating_sub(self.state.viewport_height);
+        let max_scroll_y =
+            total_body_height.saturating_sub(self.state.viewport_height);
         self.state.scroll_y = self.state.scroll_y.min(max_scroll_y);
 
         let (visible_range, _) = self.ranges(u32::from(body_height));
@@ -975,7 +1110,8 @@ impl Component for Table {
                 for local_row in 0..self.state.rendered_rows.len() {
                     let child_idx = header_count + local_row * num_cols + c;
                     if child_idx < children.len() {
-                        content_widths[c] = content_widths[c].max(children.size(child_idx).width);
+                        content_widths[c] = content_widths[c]
+                            .max(children.size(child_idx).width);
                     }
                 }
             }
@@ -986,8 +1122,12 @@ impl Component for Table {
         } else {
             self.column_gap
         };
-        let allocated_widths =
-            allocate_tracks(&self.column_tracks, &content_widths, inner_w, col_gap);
+        let allocated_widths = allocate_tracks(
+            &self.column_tracks,
+            &content_widths,
+            inner_w,
+            col_gap,
+        );
 
         let total_width = allocated_widths.iter().copied().sum::<u16>()
             + col_gap * (allocated_widths.len() - 1) as u16;
@@ -1020,7 +1160,12 @@ impl Component for Table {
                     let width = self.state.column_widths[c];
                     children.set(
                         c,
-                        Rect::new(inner_x + pos_x, inner_y, width, self.header_height),
+                        Rect::new(
+                            inner_x + pos_x,
+                            inner_y,
+                            width,
+                            self.header_height,
+                        ),
                     );
                     if offset_x != 0 {
                         children.translate(c, Offset::new(offset_x, 0));
@@ -1029,10 +1174,14 @@ impl Component for Table {
             }
         }
 
-        for (local_row, row_idx) in self.state.rendered_rows.clone().enumerate() {
-            let item_pos = self.state.row_offsets.get(row_idx).copied().unwrap_or(0);
-            let extent = self.state.row_extents.get(row_idx).copied().unwrap_or(1);
-            let visible_pos = i64::from(item_pos) - i64::from(self.state.scroll_y);
+        for (local_row, row_idx) in self.state.rendered_rows.clone().enumerate()
+        {
+            let item_pos =
+                self.state.row_offsets.get(row_idx).copied().unwrap_or(0);
+            let extent =
+                self.state.row_extents.get(row_idx).copied().unwrap_or(1);
+            let visible_pos =
+                i64::from(item_pos) - i64::from(self.state.scroll_y);
 
             let row_hidden = visible_pos + i64::from(extent) <= 0;
             let pos_y = visible_pos.max(0).min(i64::from(u16::MAX)) as u16;
@@ -1085,8 +1234,12 @@ impl Component for Table {
             Style::new().bold(),
             None,
         );
-        let selected_style =
-            cx.resolve_or("selected_style", &props.selected_style, theme_focus, None);
+        let selected_style = cx.resolve_or(
+            "selected_style",
+            &props.selected_style,
+            theme_focus,
+            None,
+        );
         let divider_style = cx.resolve_or(
             "divider_style",
             &props.divider_style,
@@ -1099,7 +1252,8 @@ impl Component for Table {
             .map(|s| cx.resolve("alternate_style", s));
 
         let default_surface = cx.theme().surface;
-        let default_row_style = cx.resolve_or("row_style", &props.row_style, default_surface, None);
+        let default_row_style =
+            cx.resolve_or("row_style", &props.row_style, default_surface, None);
 
         let top_height = self.top_height();
         let body_y = inner_y + top_height;
@@ -1151,8 +1305,8 @@ impl Component for Table {
                     let cell_w = self.state.column_widths[col_idx];
                     let cell_x = i32::from(area.x) + rel_x;
                     let clipped_x = cell_x.max(i32::from(inner_x));
-                    let clipped_end =
-                        (cell_x + i32::from(cell_w)).min(i32::from(inner_x + inner_w));
+                    let clipped_end = (cell_x + i32::from(cell_w))
+                        .min(i32::from(inner_x + inner_w));
                     if clipped_end > clipped_x {
                         let rect = Rect::new(
                             clipped_x as u16,
@@ -1169,14 +1323,18 @@ impl Component for Table {
         let mut last_painted_y = body_y;
 
         for row_idx in self.state.visible_rows.clone() {
-            let item_pos = self.state.row_offsets.get(row_idx).copied().unwrap_or(0);
-            let extent = self.state.row_extents.get(row_idx).copied().unwrap_or(1);
-            let visible_pos = i64::from(item_pos) - i64::from(self.state.scroll_y);
+            let item_pos =
+                self.state.row_offsets.get(row_idx).copied().unwrap_or(0);
+            let extent =
+                self.state.row_extents.get(row_idx).copied().unwrap_or(1);
+            let visible_pos =
+                i64::from(item_pos) - i64::from(self.state.scroll_y);
             if visible_pos < 0 || visible_pos >= i64::from(body_height) {
                 continue;
             }
             let row_y = body_y.saturating_add(visible_pos as u16);
-            let row_h = (extent as u16).min((inner_y + inner_h).saturating_sub(row_y));
+            let row_h =
+                (extent as u16).min((inner_y + inner_h).saturating_sub(row_y));
             if row_h == 0 {
                 continue;
             }
@@ -1197,7 +1355,8 @@ impl Component for Table {
                 && self.state.selected_row == Some(row_idx))
                 || self.mode == TMode::Column;
 
-            if is_col_highlighted && let Some(col_idx) = self.state.selected_col {
+            if is_col_highlighted && let Some(col_idx) = self.state.selected_col
+            {
                 if col_idx < self.state.column_positions.len()
                     && col_idx < self.state.column_widths.len()
                 {
@@ -1205,8 +1364,8 @@ impl Component for Table {
                     let cell_w = self.state.column_widths[col_idx];
                     let cell_x = i32::from(area.x) + rel_x;
                     let clipped_x = cell_x.max(i32::from(inner_x));
-                    let clipped_end =
-                        (cell_x + i32::from(cell_w)).min(i32::from(inner_x + inner_w));
+                    let clipped_end = (cell_x + i32::from(cell_w))
+                        .min(i32::from(inner_x + inner_w));
                     if clipped_end > clipped_x {
                         let rect = Rect::new(
                             clipped_x as u16,
@@ -1247,7 +1406,12 @@ impl Component for Table {
             let right = area.right() - 1;
             if div_y < area.bottom() {
                 for x in inner_x..(inner_x + inner_w) {
-                    canvas.set(x, div_y, header_chars.horizontal, divider_style);
+                    canvas.set(
+                        x,
+                        div_y,
+                        header_chars.horizontal,
+                        divider_style,
+                    );
                 }
                 if self.border != Border::None {
                     let left_junc = if header_chars.horizontal == '═' {
@@ -1266,13 +1430,16 @@ impl Component for Table {
             }
         }
 
-        if self.column_divider && !self.state.column_positions.is_empty() && inner_h > 0 {
+        if self.column_divider
+            && !self.state.column_positions.is_empty()
+            && inner_h > 0
+        {
             let right = area.right() - 1;
             let bottom = area.bottom() - 1;
 
             for c in 0..num_cols - 1 {
-                let rel_end =
-                    self.state.column_positions[c] + i32::from(self.state.column_widths[c]);
+                let rel_end = self.state.column_positions[c]
+                    + i32::from(self.state.column_widths[c]);
                 let div_x = i32::from(area.x) + rel_end;
                 if div_x > i32::from(area.x) && div_x < i32::from(right) {
                     let x = div_x as u16;
@@ -1290,13 +1457,21 @@ impl Component for Table {
         if self.row_divider && inner_w > 0 {
             let right = area.right() - 1;
             for row_idx in self.state.visible_rows.clone() {
-                let item_pos = self.state.row_offsets.get(row_idx).copied().unwrap_or(0);
-                let extent = self.state.row_extents.get(row_idx).copied().unwrap_or(1);
-                let visible_pos = i64::from(item_pos) - i64::from(self.state.scroll_y);
+                let item_pos =
+                    self.state.row_offsets.get(row_idx).copied().unwrap_or(0);
+                let extent =
+                    self.state.row_extents.get(row_idx).copied().unwrap_or(1);
+                let visible_pos =
+                    i64::from(item_pos) - i64::from(self.state.scroll_y);
                 let div_y = body_y + visible_pos.max(0) as u16 + extent as u16;
                 if visible_pos >= 0 && div_y >= body_y && div_y < inner_bottom {
                     for x in inner_x..(inner_x + inner_w) {
-                        canvas.set(x, div_y, border_chars.horizontal, divider_style);
+                        canvas.set(
+                            x,
+                            div_y,
+                            border_chars.horizontal,
+                            divider_style,
+                        );
                     }
                     if self.border != Border::None {
                         canvas.set(area.left(), div_y, '├', divider_style);

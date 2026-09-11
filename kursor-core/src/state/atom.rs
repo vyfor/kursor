@@ -8,6 +8,10 @@ use crate::state::{
     slot::{Guard, Slot},
 };
 
+/// thread-safe reactive long-lived state.
+///
+/// atoms are assumed to be long-lived because they are never freed once
+/// allocated.
 pub struct Atom<T: LocalState> {
     slot: NonNull<Slot<T>>,
     _marker: PhantomData<fn() -> T>,
@@ -46,21 +50,27 @@ impl<T: LocalState> Atom<T> {
         self.slot().borrow()
     }
 
+    /// clones the value out.
+    ///
+    /// if accessed inside a component, subscribes that component to this atom.
     #[inline(always)]
     pub fn read(&self) -> T {
         self.slot().read()
     }
 
+    /// clones the value out without subscribing.
     #[inline(always)]
     pub fn peek(&self) -> T {
         self.slot().peek()
     }
 
+    /// replaces the value.
     #[inline(always)]
     pub fn set(&self, value: T) {
         self.slot().set(value);
     }
 
+    /// mutates the value in place.
     #[inline(always)]
     pub fn update<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
         self.slot().update(f)

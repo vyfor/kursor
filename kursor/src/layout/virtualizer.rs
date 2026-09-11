@@ -1,5 +1,6 @@
 use std::ops::Range;
 
+/// virtualization engine for variable-sized items.
 #[derive(Clone, Debug)]
 pub struct Virtualizer {
     extents: Vec<u32>,
@@ -37,7 +38,8 @@ impl Virtualizer {
             for &extent in &self.extents[count..] {
                 if extent != 0 {
                     self.measured_count = self.measured_count.saturating_sub(1);
-                    self.measured_sum = self.measured_sum.saturating_sub(u64::from(extent));
+                    self.measured_sum =
+                        self.measured_sum.saturating_sub(u64::from(extent));
                 }
             }
             self.extents.truncate(count);
@@ -64,7 +66,8 @@ impl Virtualizer {
         if self.measured_count == 0 {
             self.seed
         } else {
-            ((self.measured_sum + self.measured_count as u64 / 2) / self.measured_count as u64)
+            ((self.measured_sum + self.measured_count as u64 / 2)
+                / self.measured_count as u64)
                 .max(1) as u32
         }
     }
@@ -178,7 +181,8 @@ impl Virtualizer {
             end += 1;
         }
         let visible = start..end.max(start).min(count);
-        let rendered = visible.start.saturating_sub(overscan)..(visible.end + overscan).min(count);
+        let rendered = visible.start.saturating_sub(overscan)
+            ..(visible.end + overscan).min(count);
         (visible, rendered)
     }
 }

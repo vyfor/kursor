@@ -8,7 +8,8 @@ use std::{
 use kursor_core::term_info::TermInfo;
 
 use super::{
-    ProbeParser, ProbeSession, UnixRoute, direct_queries, passthrough_queries, unix_route,
+    ProbeParser, ProbeSession, UnixRoute, direct_queries, passthrough_queries,
+    unix_route,
 };
 
 pub fn query(timeout: Duration, info: &mut TermInfo) -> io::Result<bool> {
@@ -26,7 +27,8 @@ pub fn query(timeout: Duration, info: &mut TermInfo) -> io::Result<bool> {
     let route = unix_route();
     let mut parser = ProbeParser::default();
     let mut session = ProbeSession::new(info);
-    let result = exchange(&mut tty, fd, timeout, &mut parser, &mut session, route);
+    let result =
+        exchange(&mut tty, fd, timeout, &mut parser, &mut session, route);
 
     if unsafe { libc::tcsetattr(fd, libc::TCSANOW, &original) } != 0 {
         return Err(io::Error::last_os_error());

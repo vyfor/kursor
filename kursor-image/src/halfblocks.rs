@@ -2,6 +2,7 @@ use kursor_core::render::{cell::Cell, color::Color, style::Style};
 
 use crate::{GraphicsProtocol, ImageEncoder, ImageSource, ImageTarget, Result};
 
+/// unicode half block characters `▀`, `▄`.
 pub struct Halfblocks;
 
 impl ImageEncoder for Halfblocks {
@@ -11,7 +12,11 @@ impl ImageEncoder for Halfblocks {
         GraphicsProtocol::Halfblocks
     }
 
-    fn encode(&self, source: &ImageSource, target: &ImageTarget) -> Result<Self::Output> {
+    fn encode(
+        &self,
+        source: &ImageSource,
+        target: &ImageTarget,
+    ) -> Result<Self::Output> {
         let image = source.to_data()?;
         let width = u32::from(target.size.width);
         let height = u32::from(target.size.height);
@@ -60,10 +65,12 @@ fn sample(
     target_width: u32,
     target_height: u32,
 ) -> [u8; 4] {
-    let sx = ((u64::from(x) * u64::from(source_width)) / u64::from(target_width))
-        .min(u64::from(source_width - 1)) as u32;
-    let sy = ((u64::from(y) * u64::from(source_height)) / u64::from(target_height))
-        .min(u64::from(source_height - 1)) as u32;
+    let sx = ((u64::from(x) * u64::from(source_width))
+        / u64::from(target_width))
+    .min(u64::from(source_width - 1)) as u32;
+    let sy = ((u64::from(y) * u64::from(source_height))
+        / u64::from(target_height))
+    .min(u64::from(source_height - 1)) as u32;
     let index = ((sy * source_width + sx) * 4) as usize;
     [
         pixels[index],
@@ -80,8 +87,12 @@ fn half_cell(top: [u8; 4], bottom: [u8; 4]) -> Cell {
     let bottom_color = Color::Rgb(bottom[0], bottom[1], bottom[2]);
 
     match (top_opaque, bottom_opaque) {
-        (true, true) if top[..3] == bottom[..3] => Cell::new(' ', Style::new().bg(top_color)),
-        (true, true) => Cell::new('▀', Style::new().fg(top_color).bg(bottom_color)),
+        (true, true) if top[..3] == bottom[..3] => {
+            Cell::new(' ', Style::new().bg(top_color))
+        }
+        (true, true) => {
+            Cell::new('▀', Style::new().fg(top_color).bg(bottom_color))
+        }
         (true, false) => Cell::new('▀', Style::new().fg(top_color)),
         (false, true) => Cell::new('▄', Style::new().fg(bottom_color)),
         (false, false) => Cell::new(' ', Style::new()),

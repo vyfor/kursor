@@ -5,7 +5,10 @@ use kursor_core::{
     component::{Component, Update, blueprint::Blueprint, context::Cx},
     into_value,
     layout::{Direction, context::MeasureCx, size::Size},
-    render::{canvas::Canvas, cell::Cell, color::Color, style::Style, subcell::Subcell},
+    render::{
+        canvas::Canvas, cell::Cell, color::Color, style::Style,
+        subcell::Subcell,
+    },
     state::{IntoValue, Transition, Value},
 };
 
@@ -122,6 +125,10 @@ impl Default for ProgressBarProps {
     }
 }
 
+/// fills the given area proportionally to a value between 0.0 and 1.0.
+///
+/// provides multi-segment ranges and
+/// [Subcell](`crate::core::render::subcell::Subcell`) rendering.
 pub struct ProgressBar {
     ranges: Vec<(f32, f32)>,
     direction: Direction,
@@ -138,7 +145,9 @@ impl ProgressBar {
         ProgressBarBuilder::new(value)
     }
 
-    pub fn segmented(segments: impl IntoIterator<Item = ProgressSegment>) -> ProgressBarBuilder {
+    pub fn segmented(
+        segments: impl IntoIterator<Item = ProgressSegment>,
+    ) -> ProgressBarBuilder {
         ProgressBarBuilder::segmented(segments)
     }
 
@@ -227,7 +236,9 @@ impl Component for ProgressBar {
             Direction::Right | Direction::Left => {
                 Size::new(available.width, available.height.min(1))
             }
-            Direction::Up | Direction::Down => Size::new(available.width.min(1), available.height),
+            Direction::Up | Direction::Down => {
+                Size::new(available.width.min(1), available.height)
+            }
         }
     }
 
@@ -255,7 +266,8 @@ impl Component for ProgressBar {
             self.transition.clone(),
         );
 
-        let (length, breadth, is_horizontal, is_reversed) = match self.direction {
+        let (length, breadth, is_horizontal, is_reversed) = match self.direction
+        {
             Direction::Right => (rect.width, rect.height, true, false),
             Direction::Left => (rect.width, rect.height, true, true),
             Direction::Down => (rect.height, rect.width, false, false),
@@ -279,18 +291,26 @@ impl Component for ProgressBar {
         }
 
         for (seg_idx, seg) in props.segments.iter().enumerate() {
-            let (target_start, target_end) = self.ranges.get(seg_idx).copied().map_or_else(
-                || {
-                    let s = seg.start.get();
-                    let e = seg.end.get();
-                    (s.min(e).clamp(0.0, 1.0), e.max(s).clamp(0.0, 1.0))
-                },
-                |(s, e)| (s.min(e).clamp(0.0, 1.0), e.max(s).clamp(0.0, 1.0)),
-            );
+            let (target_start, target_end) =
+                self.ranges.get(seg_idx).copied().map_or_else(
+                    || {
+                        let s = seg.start.get();
+                        let e = seg.end.get();
+                        (s.min(e).clamp(0.0, 1.0), e.max(s).clamp(0.0, 1.0))
+                    },
+                    |(s, e)| {
+                        (s.min(e).clamp(0.0, 1.0), e.max(s).clamp(0.0, 1.0))
+                    },
+                );
 
-            let transition = seg.transition.clone().or_else(|| self.transition.clone());
+            let transition =
+                seg.transition.clone().or_else(|| self.transition.clone());
             let cur_start: f32 = cx
-                .transition(seg_idx as u64 * 2 + 1, target_start, transition.clone())
+                .transition(
+                    seg_idx as u64 * 2 + 1,
+                    target_start,
+                    transition.clone(),
+                )
                 .clamp(0.0, 1.0);
             let cur_end: f32 = cx
                 .transition(seg_idx as u64 * 2, target_end, transition)
@@ -300,29 +320,41 @@ impl Component for ProgressBar {
                 continue;
             }
 
-            let seg_style = cx.resolve_or(seg_idx as u64 + 10_000, &seg.style, def_fill, None);
+            let seg_style = cx.resolve_or(
+                seg_idx as u64 + 10_000,
+                &seg.style,
+                def_fill,
+                None,
+            );
 
-            let seg_fill_fg = if seg_style.fg != Color::Unset && seg_style.fg != Color::Reset {
+            let seg_fill_fg = if seg_style.fg != Color::Unset
+                && seg_style.fg != Color::Reset
+            {
                 seg_style.fg
-            } else if seg_style.bg != Color::Unset && seg_style.bg != Color::Reset {
+            } else if seg_style.bg != Color::Unset
+                && seg_style.bg != Color::Reset
+            {
                 seg_style.bg
             } else {
                 theme.palette.primary
             };
 
-            let seg_subcell = seg.subcell.as_ref().map(Value::get).unwrap_or(self.subcell);
+            let seg_subcell =
+                seg.subcell.as_ref().map(Value::get).unwrap_or(self.subcell);
             let seg_fill_char = seg
                 .fill_char
                 .as_ref()
                 .map(Value::get)
                 .or(self.fill_char)
                 .unwrap_or_else(|| seg_subcell.fill_left(1.0));
-            let seg_head_char = seg.head_char.as_ref().map(Value::get).or(self.head_char);
+            let seg_head_char =
+                seg.head_char.as_ref().map(Value::get).or(self.head_char);
 
             let start_cells = cur_start * length as f32;
             let end_cells = cur_end * length as f32;
 
-            let start_whole = (start_cells.floor() as usize).min(length as usize);
+            let start_whole =
+                (start_cells.floor() as usize).min(length as usize);
             let start_frac = (start_cells - start_whole as f32).clamp(0.0, 1.0);
 
             let end_whole = (end_cells.floor() as usize).min(length as usize);
@@ -345,9 +377,13 @@ impl Component for ProgressBar {
                 let underlay = existing.map_or(def_track.bg, |c| {
                     if c.ch == '\u{2588}' {
                         c.style.fg
-                    } else if c.style.bg != Color::Unset && c.style.bg != Color::Reset {
+                    } else if c.style.bg != Color::Unset
+                        && c.style.bg != Color::Reset
+                    {
                         c.style.bg
-                    } else if c.style.fg != Color::Unset && c.style.fg != Color::Reset {
+                    } else if c.style.fg != Color::Unset
+                        && c.style.fg != Color::Reset
+                    {
                         c.style.fg
                     } else {
                         def_track.bg
@@ -357,18 +393,29 @@ impl Component for ProgressBar {
                 let cell: Option<(char, Style)> = if fill_index >= start_whole
                     && fill_index < end_whole
                 {
-                    if fill_index == start_whole && start_frac > 0.0 && seg_subcell != Subcell::None
+                    if fill_index == start_whole
+                        && start_frac > 0.0
+                        && seg_subcell != Subcell::None
                     {
                         let fill_amount = 1.0 - start_frac;
                         let ch = match self.direction {
-                            Direction::Right => seg_subcell.fill_right(fill_amount),
-                            Direction::Left => seg_subcell.fill_left(fill_amount),
-                            Direction::Down => seg_subcell.fill_bottom(fill_amount),
+                            Direction::Right => {
+                                seg_subcell.fill_right(fill_amount)
+                            }
+                            Direction::Left => {
+                                seg_subcell.fill_left(fill_amount)
+                            }
+                            Direction::Down => {
+                                seg_subcell.fill_bottom(fill_amount)
+                            }
                             Direction::Up => seg_subcell.fill_top(fill_amount),
                         };
                         Some((ch, Style::new().fg(seg_fill_fg).bg(underlay)))
                     } else {
-                        Some((seg_fill_char, Style::new().fg(seg_fill_fg).bg(underlay)))
+                        Some((
+                            seg_fill_char,
+                            Style::new().fg(seg_fill_fg).bg(underlay),
+                        ))
                     }
                 } else if fill_index == end_whole {
                     if let Some(head) = seg_head_char {
@@ -383,9 +430,15 @@ impl Component for ProgressBar {
                         if ch == ' ' {
                             None
                         } else if ch == seg_fill_char {
-                            Some((seg_fill_char, Style::new().fg(seg_fill_fg).bg(underlay)))
+                            Some((
+                                seg_fill_char,
+                                Style::new().fg(seg_fill_fg).bg(underlay),
+                            ))
                         } else {
-                            Some((ch, Style::new().fg(seg_fill_fg).bg(underlay)))
+                            Some((
+                                ch,
+                                Style::new().fg(seg_fill_fg).bg(underlay),
+                            ))
                         }
                     } else {
                         None

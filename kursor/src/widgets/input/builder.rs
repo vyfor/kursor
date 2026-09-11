@@ -9,7 +9,9 @@ use kursor_core::{
     state::{IntoValue, Transition},
 };
 
-use super::{Input, InputDisplay, InputIntent, InputProps, InputState, InputStyles};
+use super::{
+    Input, InputDisplay, InputIntent, InputProps, InputState, InputStyles,
+};
 
 pub struct InputBuilder {
     props: InputProps,
@@ -59,7 +61,10 @@ impl InputBuilder {
         self.display(Arc::new(|_, _, _| '*'))
     }
 
-    pub fn on_change(mut self, on_change: impl Fn(&mut Cx, &str) + 'static) -> Self {
+    pub fn on_change(
+        mut self,
+        on_change: impl Fn(&mut Cx, &str) + 'static,
+    ) -> Self {
         self.props.on_change = Arc::new(on_change);
         self
     }

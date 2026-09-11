@@ -23,6 +23,7 @@ pub struct BoundsProps {
     pub max_height: Option<Value<u16>>,
 }
 
+/// constricts a child to given minimum and/or maximum dimensions.
 pub struct Bounds {
     min_width: Option<u16>,
     max_width: Option<u16>,
@@ -53,7 +54,10 @@ impl Bounds {
         )
     }
 
-    pub fn width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn width(
+        width: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         let width = width.into_value();
         Self::with(
             BoundsProps {
@@ -65,7 +69,10 @@ impl Bounds {
         )
     }
 
-    pub fn height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn height(
+        height: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         let height = height.into_value();
         Self::with(
             BoundsProps {
@@ -77,7 +84,10 @@ impl Bounds {
         )
     }
 
-    pub fn square(size: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn square(
+        size: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         let size = size.into_value();
         Self::exact(size.clone(), size, child)
     }
@@ -112,7 +122,10 @@ impl Bounds {
         )
     }
 
-    pub fn min_width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn min_width(
+        width: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Self::with(
             BoundsProps {
                 min_width: Some(width.into_value()),
@@ -122,7 +135,10 @@ impl Bounds {
         )
     }
 
-    pub fn max_width(width: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn max_width(
+        width: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Self::with(
             BoundsProps {
                 max_width: Some(width.into_value()),
@@ -132,7 +148,10 @@ impl Bounds {
         )
     }
 
-    pub fn min_height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn min_height(
+        height: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Self::with(
             BoundsProps {
                 min_height: Some(height.into_value()),
@@ -142,7 +161,10 @@ impl Bounds {
         )
     }
 
-    pub fn max_height(height: impl IntoValue<u16>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn max_height(
+        height: impl IntoValue<u16>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Self::with(
             BoundsProps {
                 max_height: Some(height.into_value()),
@@ -174,10 +196,14 @@ impl Component for Bounds {
     }
 
     fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
-        let min_width = props.min_width.as_ref().map(|v| cx.resolve("min_w", v));
-        let max_width = props.max_width.as_ref().map(|v| cx.resolve("max_w", v));
-        let min_height = props.min_height.as_ref().map(|v| cx.resolve("min_h", v));
-        let max_height = props.max_height.as_ref().map(|v| cx.resolve("max_h", v));
+        let min_width =
+            props.min_width.as_ref().map(|v| cx.resolve("min_w", v));
+        let max_width =
+            props.max_width.as_ref().map(|v| cx.resolve("max_w", v));
+        let min_height =
+            props.min_height.as_ref().map(|v| cx.resolve("min_h", v));
+        let max_height =
+            props.max_height.as_ref().map(|v| cx.resolve("max_h", v));
         if self.min_width == min_width
             && self.max_width == max_width
             && self.min_height == min_height
@@ -210,7 +236,8 @@ impl Component for Bounds {
         let child_size = if children.is_empty() {
             Size::default()
         } else {
-            children.measure(0, Size::new(child_avail_width, child_avail_height))
+            children
+                .measure(0, Size::new(child_avail_width, child_avail_height))
         };
 
         let mut width = child_size.width;
@@ -232,7 +259,13 @@ impl Component for Bounds {
         Size::new(width.min(available.width), height.min(available.height))
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         if children.is_empty() {
             return;
         }

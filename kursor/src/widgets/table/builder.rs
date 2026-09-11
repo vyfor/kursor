@@ -43,7 +43,8 @@ pub struct TableBuilder {
     alternate_row_style: Option<Value<Style>>,
     selected_style: Option<Value<Style>>,
     divider_style: Option<Value<Style>>,
-    behavior: Option<Rc<dyn Behavior<State = TableState, Intent = TableIntent>>>,
+    behavior:
+        Option<Rc<dyn Behavior<State = TableState, Intent = TableIntent>>>,
     on_activate: Option<Rc<dyn Fn(&mut Cx, TableTarget)>>,
     on_select: Option<Rc<dyn Fn(&mut Cx, TableTarget)>>,
     on_header_click: Option<Rc<dyn Fn(&mut Cx, usize)>>,
@@ -123,7 +124,10 @@ impl TableBuilder {
         self
     }
 
-    pub fn rows(mut self, rows: impl IntoIterator<Item = impl IntoTRow>) -> Self {
+    pub fn rows(
+        mut self,
+        rows: impl IntoIterator<Item = impl IntoTRow>,
+    ) -> Self {
         self.static_rows
             .extend(rows.into_iter().map(IntoTRow::into_trow));
         self
@@ -198,17 +202,26 @@ impl TableBuilder {
         self
     }
 
-    pub fn on_activate(mut self, callback: impl Fn(&mut Cx, TableTarget) + 'static) -> Self {
+    pub fn on_activate(
+        mut self,
+        callback: impl Fn(&mut Cx, TableTarget) + 'static,
+    ) -> Self {
         self.on_activate = Some(Rc::new(callback));
         self
     }
 
-    pub fn on_select(mut self, callback: impl Fn(&mut Cx, TableTarget) + 'static) -> Self {
+    pub fn on_select(
+        mut self,
+        callback: impl Fn(&mut Cx, TableTarget) + 'static,
+    ) -> Self {
         self.on_select = Some(Rc::new(callback));
         self
     }
 
-    pub fn on_header_click(mut self, callback: impl Fn(&mut Cx, usize) + 'static) -> Self {
+    pub fn on_header_click(
+        mut self,
+        callback: impl Fn(&mut Cx, usize) + 'static,
+    ) -> Self {
         self.on_header_click = Some(Rc::new(callback));
         self
     }
@@ -254,13 +267,15 @@ impl TableBuilder {
                         self.columns[idx].header = Some(cell);
                     }
                 } else {
-                    self.columns.push(TColumn::new(Track::Content).header(cell));
+                    self.columns
+                        .push(TColumn::new(Track::Content).header(cell));
                 }
             }
         }
 
         if self.columns.is_empty() {
-            let num = self.static_rows.first().map(|r| r.cells.len()).unwrap_or(0);
+            let num =
+                self.static_rows.first().map(|r| r.cells.len()).unwrap_or(0);
             if num > 0 {
                 self.columns = (0..num).map(|_| TColumn::fill(1)).collect();
             }

@@ -2,6 +2,7 @@ use animate::Activity;
 
 use crate::{EffectCx, Fx};
 
+/// runs effects one after another.
 pub fn seq() -> Sequence {
     Sequence {
         effects: Vec::new(),
@@ -9,6 +10,7 @@ pub fn seq() -> Sequence {
     }
 }
 
+/// runs effects one after another.
 pub struct Sequence {
     effects: Vec<Box<dyn Fx>>,
     index: usize,

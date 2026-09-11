@@ -15,8 +15,8 @@ use kursor_core::{
     term_info::TermInfo,
 };
 use kursor_image::{
-    GraphicsProtocol, Halfblocks, ImageData, ImageEncoder, ImageFit, ImageSource, ImageTarget,
-    Iterm2, Kitty, Sixel, Transmission, fit_cells,
+    GraphicsProtocol, Halfblocks, ImageData, ImageEncoder, ImageFit,
+    ImageSource, ImageTarget, Iterm2, Kitty, Sixel, Transmission, fit_cells,
 };
 
 #[derive(Clone, PartialEq)]
@@ -118,7 +118,10 @@ impl Component for Image {
         let info = cx.get::<TermInfo>().copied().unwrap_or_default();
         let protocol = self.prefer.unwrap_or_else(|| pick_protocol(&info));
         let cell = cell_size(cx).unwrap_or(Size::new(8, 16));
-        let target = ImageTarget::with_cell_size(Size::new(area.width, area.height), cell);
+        let target = ImageTarget::with_cell_size(
+            Size::new(area.width, area.height),
+            cell,
+        );
         let key = gkey(&self.source, protocol, self.transmission);
 
         match protocol {
@@ -127,7 +130,11 @@ impl Component for Image {
                     return;
                 };
                 for (i, cell) in cells.iter().enumerate() {
-                    canvas.set_cell((i as u16) % area.width, (i as u16) / area.width, *cell);
+                    canvas.set_cell(
+                        (i as u16) % area.width,
+                        (i as u16) / area.width,
+                        *cell,
+                    );
                 }
             }
             GraphicsProtocol::Kitty => {
@@ -164,7 +171,8 @@ impl Component for Image {
                 });
             }
             GraphicsProtocol::Sixel => {
-                let Ok(data) = Sixel::new().encode(&self.source, &target) else {
+                let Ok(data) = Sixel::new().encode(&self.source, &target)
+                else {
                     return;
                 };
                 canvas.push_graphics(GraphicsOp {
@@ -209,7 +217,11 @@ fn pixel_size(source: &ImageSource, cx: &Cx) -> Option<(u32, u32)> {
     }
 }
 
-fn gkey(source: &ImageSource, protocol: GraphicsProtocol, transmission: Transmission) -> u64 {
+fn gkey(
+    source: &ImageSource,
+    protocol: GraphicsProtocol,
+    transmission: Transmission,
+) -> u64 {
     let mut hasher = DefaultHasher::new();
     source.hash(&mut hasher);
     protocol.hash(&mut hasher);

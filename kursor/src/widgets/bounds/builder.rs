@@ -16,7 +16,11 @@ impl BoundsBuilder {
         Self::default()
     }
 
-    pub fn exact(mut self, width: impl IntoValue<u16>, height: impl IntoValue<u16>) -> Self {
+    pub fn exact(
+        mut self,
+        width: impl IntoValue<u16>,
+        height: impl IntoValue<u16>,
+    ) -> Self {
         let width = width.into_value();
         let height = height.into_value();
         self.props.min_width = Some(width.clone());

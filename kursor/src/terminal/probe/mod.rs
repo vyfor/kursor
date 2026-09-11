@@ -166,12 +166,19 @@ impl<'a> ProbeSession<'a> {
         self.route
     }
 
-    pub fn accept(&mut self, replies: impl IntoIterator<Item = ProbeReply>) -> bool {
+    pub fn accept(
+        &mut self,
+        replies: impl IntoIterator<Item = ProbeReply>,
+    ) -> bool {
         let mut fence = false;
         for reply in replies {
             match reply {
-                ProbeReply::Foreground(color) => self.info.foreground = Some(color),
-                ProbeReply::Background(color) => self.info.background = Some(color),
+                ProbeReply::Foreground(color) => {
+                    self.info.foreground = Some(color)
+                }
+                ProbeReply::Background(color) => {
+                    self.info.background = Some(color)
+                }
                 ProbeReply::PaletteEntry { index, color } => {
                     if let Some(slot) = self.info.palette.get_mut(index) {
                         *slot = Some(color);
@@ -225,11 +232,9 @@ impl ProbeParser {
         let mut replies = Vec::new();
 
         loop {
-            let Some(start) = self
-                .buffer
-                .iter()
-                .position(|byte| matches!(*byte, 0x1b | 0x90 | 0x9b | 0x9d | 0x9f))
-            else {
+            let Some(start) = self.buffer.iter().position(|byte| {
+                matches!(*byte, 0x1b | 0x90 | 0x9b | 0x9d | 0x9f)
+            }) else {
                 self.buffer.clear();
                 break;
             };
@@ -254,22 +259,28 @@ impl ProbeParser {
                         break;
                     };
                     let end = body_start + relative_end;
-                    if let Some(reply) = parse_csi(self.buffer[end], &self.buffer[body_start..end])
-                    {
+                    if let Some(reply) = parse_csi(
+                        self.buffer[end],
+                        &self.buffer[body_start..end],
+                    ) {
                         replies.push(reply);
                     }
                     self.buffer.drain(..=end);
                 }
                 Sequence::Osc | Sequence::Dcs | Sequence::Apc => {
-                    let Some((relative_end, terminator_length)) = end(&self.buffer[body_start..])
+                    let Some((relative_end, terminator_length)) =
+                        end(&self.buffer[body_start..])
                     else {
                         break;
                     };
                     let end = body_start + relative_end;
                     if kind == Sequence::Osc {
-                        replies.extend(parse_osc(&self.buffer[body_start..end]));
+                        replies
+                            .extend(parse_osc(&self.buffer[body_start..end]));
                     } else if kind == Sequence::Apc {
-                        if let Some(reply) = parse_apc(&self.buffer[body_start..end]) {
+                        if let Some(reply) =
+                            parse_apc(&self.buffer[body_start..end])
+                        {
                             replies.push(reply);
                         }
                     }
@@ -330,7 +341,9 @@ fn parse_csi(final_byte: u8, params: &[u8]) -> Option<ProbeReply> {
             }
             Some(ProbeReply::CursorPosition { row, column })
         }
-        b'u' if params.first() == Some(&b'?') => Some(ProbeReply::KeyboardReport),
+        b'u' if params.first() == Some(&b'?') => {
+            Some(ProbeReply::KeyboardReport)
+        }
         b'y' => {
             let value = params.strip_prefix(b"?2026;")?.strip_suffix(b"$")?;
             let status = parse_u16(value)?.try_into().ok()?;
@@ -350,7 +363,9 @@ fn parse_csi(final_byte: u8, params: &[u8]) -> Option<ProbeReply> {
                 _ => None,
             }
         }
-        b'c' if params.first() == Some(&b'?') || params.first() == Some(&b'>') => {
+        b'c' if params.first() == Some(&b'?')
+            || params.first() == Some(&b'>') =>
+        {
             let primary = params.first() == Some(&b'?');
             let params = params[1..]
                 .split(|byte| *byte == b';')
@@ -380,7 +395,9 @@ fn parse_osc(payload: &[u8]) -> Vec<ProbeReply> {
             }
         }
         4 => {
-            while let (Some(index), Some(value)) = (fields.next(), fields.next()) {
+            while let (Some(index), Some(value)) =
+                (fields.next(), fields.next())
+            {
                 let Some(index) = parse_u16(index)
                     .map(usize::from)
                     .filter(|index| *index < 16)

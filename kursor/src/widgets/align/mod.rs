@@ -21,6 +21,7 @@ pub struct AlignProps {
     pub alignment: Value<Alignment>,
 }
 
+/// positions a child at a specific `alignment` within the allocated rect.
 pub struct Align {
     alignment: Alignment,
 }
@@ -30,7 +31,10 @@ impl Align {
         AlignBuilder::new()
     }
 
-    pub fn new(alignment: impl IntoValue<Alignment>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn new(
+        alignment: impl IntoValue<Alignment>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Blueprint::new::<Self>(AlignProps {
             alignment: alignment.into_value(),
         })
@@ -120,7 +124,8 @@ impl Component for Align {
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
-        let Some(size) = (!children.is_empty()).then(|| children.size(0)) else {
+        let Some(size) = (!children.is_empty()).then(|| children.size(0))
+        else {
             return Size::default();
         };
         Size::new(
@@ -129,22 +134,34 @@ impl Component for Align {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         for index in 0..children.len() {
             let size = children.size(index);
             let width = size.width.min(area.width);
             let height = size.height.min(area.height);
             let x = match self.alignment.horizontal {
                 HAlign::Left => area.x,
-                HAlign::Center => area.x.saturating_add(area.width.saturating_sub(width) / 2),
-                HAlign::Right => area.x.saturating_add(area.width.saturating_sub(width)),
+                HAlign::Center => {
+                    area.x.saturating_add(area.width.saturating_sub(width) / 2)
+                }
+                HAlign::Right => {
+                    area.x.saturating_add(area.width.saturating_sub(width))
+                }
             };
             let y = match self.alignment.vertical {
                 VAlign::Top => area.y,
                 VAlign::Center => area
                     .y
                     .saturating_add(area.height.saturating_sub(height) / 2),
-                VAlign::Bottom => area.y.saturating_add(area.height.saturating_sub(height)),
+                VAlign::Bottom => {
+                    area.y.saturating_add(area.height.saturating_sub(height))
+                }
             };
             children.set(index, Rect::new(x, y, width, height));
         }

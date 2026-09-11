@@ -91,6 +91,10 @@ pub struct GridProps {
     items: Rc<[GridItem]>,
 }
 
+/// grid implementation inspired by css.
+///
+/// arranges its children into rows and columns, with each row and column sized
+/// independently through [`Track`]s.
 pub struct Grid {
     columns: Rc<[Track]>,
     rows: Rc<[Track]>,
@@ -102,7 +106,10 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn builder(columns: impl IntoTracks, rows: impl IntoTracks) -> GridBuilder {
+    pub fn builder(
+        columns: impl IntoTracks,
+        rows: impl IntoTracks,
+    ) -> GridBuilder {
         GridBuilder::new(columns, rows)
     }
 
@@ -138,7 +145,11 @@ impl Grid {
         tracks.iter().map(Track::resolve).collect()
     }
 
-    fn content_sizes(&self, children: &mut MeasureCx, available: Size) -> (Vec<u16>, Vec<u16>) {
+    fn content_sizes(
+        &self,
+        children: &mut MeasureCx,
+        available: Size,
+    ) -> (Vec<u16>, Vec<u16>) {
         let mut columns = vec![0; self.column_tracks.len()];
         let mut rows = vec![0; self.row_tracks.len()];
         for (index, item) in self.items.iter().enumerate() {
@@ -159,7 +170,10 @@ impl Grid {
         (columns, rows)
     }
 
-    fn content_sizes_layouted(&self, children: &LayoutCx) -> (Vec<u16>, Vec<u16>) {
+    fn content_sizes_layouted(
+        &self,
+        children: &LayoutCx,
+    ) -> (Vec<u16>, Vec<u16>) {
         let mut columns = vec![0; self.column_tracks.len()];
         let mut rows = vec![0; self.row_tracks.len()];
         for (index, item) in self.items.iter().enumerate() {
@@ -200,7 +214,12 @@ impl Component for Grid {
         true
     }
 
-    fn mount(&mut self, _cx: &mut Cx, props: &Self::Props, children: &mut MountChildren) {
+    fn mount(
+        &mut self,
+        _cx: &mut Cx,
+        props: &Self::Props,
+        children: &mut MountChildren,
+    ) {
         self.columns = props.columns.clone();
         self.rows = props.rows.clone();
         self.items = props.items.clone();
@@ -240,7 +259,8 @@ impl Component for Grid {
         available: Size,
         children: &mut MeasureCx,
     ) -> Size {
-        let (column_content, row_content) = self.content_sizes(children, available);
+        let (column_content, row_content) =
+            self.content_sizes(children, available);
         let columns = allocate_tracks(
             &self.column_tracks,
             &column_content,
@@ -265,15 +285,27 @@ impl Component for Grid {
         Size::new(width.min(available.width), height.min(available.height))
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
-        let (column_content, row_content) = self.content_sizes_layouted(children);
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
+        let (column_content, row_content) =
+            self.content_sizes_layouted(children);
         let columns = allocate_tracks(
             &self.column_tracks,
             &column_content,
             area.width,
             self.column_gap,
         );
-        let rows = allocate_tracks(&self.row_tracks, &row_content, area.height, self.row_gap);
+        let rows = allocate_tracks(
+            &self.row_tracks,
+            &row_content,
+            area.height,
+            self.row_gap,
+        );
 
         let mut x = Vec::with_capacity(columns.len());
         let mut cursor = area.x;
@@ -287,16 +319,25 @@ impl Component for Grid {
         let mut cursor = area.y;
         for height in &rows {
             y.push(cursor);
-            cursor = cursor.saturating_add(*height).saturating_add(self.row_gap);
+            cursor =
+                cursor.saturating_add(*height).saturating_add(self.row_gap);
         }
 
         for (index, item) in self.items.iter().enumerate() {
-            if index >= children.len() || item.column >= columns.len() || item.row >= rows.len() {
+            if index >= children.len()
+                || item.column >= columns.len()
+                || item.row >= rows.len()
+            {
                 continue;
             }
-            let width = columns[item.column].min(area.right().saturating_sub(x[item.column]));
-            let height = rows[item.row].min(area.bottom().saturating_sub(y[item.row]));
-            children.set(index, Rect::new(x[item.column], y[item.row], width, height));
+            let width = columns[item.column]
+                .min(area.right().saturating_sub(x[item.column]));
+            let height =
+                rows[item.row].min(area.bottom().saturating_sub(y[item.row]));
+            children.set(
+                index,
+                Rect::new(x[item.column], y[item.row], width, height),
+            );
         }
     }
 }

@@ -4,12 +4,17 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use kursor_core::{layout::size::Size, util::base64};
 
-use crate::{Error, GraphicsProtocol, ImageEncoder, ImageFormat, ImageSource, ImageTarget, Result};
+use crate::{
+    Error, GraphicsProtocol, ImageEncoder, ImageFormat, ImageSource,
+    ImageTarget, Result,
+};
 
+/// https://sw.kovidgoyal.net/kitty/graphics-protocol
 pub struct Kitty {
     transmission: Transmission,
 }
 
+/// how image data is sent to the terminal.
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
 pub enum Transmission {
     #[default]
@@ -38,7 +43,8 @@ impl Kitty {
     }
 
     pub fn transmit(&self, source: &ImageSource, id: u32) -> Result<Vec<u8>> {
-        let (control, payload) = self.transmit_parts(source, Some(id), false)?;
+        let (control, payload) =
+            self.transmit_parts(source, Some(id), false)?;
         Ok(write_chunks(&control, &payload))
     }
 
@@ -82,7 +88,11 @@ impl ImageEncoder for Kitty {
         GraphicsProtocol::Kitty
     }
 
-    fn encode(&self, source: &ImageSource, target: &ImageTarget) -> Result<Self::Output> {
+    fn encode(
+        &self,
+        source: &ImageSource,
+        target: &ImageTarget,
+    ) -> Result<Self::Output> {
         let (control, payload) = self.transmit_parts(source, None, true)?;
         let control = format!(
             "{control},c={},r={},C=1",
@@ -104,7 +114,8 @@ impl Kitty {
         match source {
             ImageSource::File { path, format } => match format {
                 ImageFormat::Png => {
-                    let absolute = std::fs::canonicalize(path).map_err(Error::Io)?;
+                    let absolute =
+                        std::fs::canonicalize(path).map_err(Error::Io)?;
                     let control = format!("a={action},t=f,f=100{id_part},q=2");
                     Ok((
                         control,
@@ -117,7 +128,9 @@ impl Kitty {
                 }
             },
             ImageSource::Data(image) => match self.transmission {
-                Transmission::Direct => self.transmit_data(image, action, &id_part),
+                Transmission::Direct => {
+                    self.transmit_data(image, action, &id_part)
+                }
                 Transmission::TempFile => {
                     let path = write_temp_file(&image.rgba_bytes().to_vec())?;
                     let control = format!(
@@ -145,9 +158,12 @@ impl Kitty {
             ImageSource::Encoded { .. } => {
                 let image = source.to_data()?;
                 match self.transmission {
-                    Transmission::Direct => self.transmit_data(&image, action, &id_part),
+                    Transmission::Direct => {
+                        self.transmit_data(&image, action, &id_part)
+                    }
                     Transmission::TempFile => {
-                        let path = write_temp_file(&image.rgba_bytes().to_vec())?;
+                        let path =
+                            write_temp_file(&image.rgba_bytes().to_vec())?;
                         let control = format!(
                             "a={action},t=t,f=32,s={},v={}{id_part},q=2",
                             image.width(),
@@ -179,7 +195,8 @@ static TEMP_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 fn write_temp_file(bytes: &[u8]) -> Result<String> {
     let unique = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!("kursor-img-{}-{unique}.tmp", std::process::id()));
+    let path = std::env::temp_dir()
+        .join(format!("kursor-img-{}-{unique}.tmp", std::process::id()));
     std::fs::write(&path, bytes).map_err(Error::Io)?;
     Ok(path.to_string_lossy().into_owned())
 }

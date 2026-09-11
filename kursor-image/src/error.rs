@@ -15,11 +15,15 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidDimensions => f.write_str("image dimensions must be >0"),
+            Self::InvalidDimensions => {
+                f.write_str("image dimensions must be >0")
+            }
             Self::InvalidPixelData { expected, actual } => {
                 write!(f, "invalid rgba data length: {expected} vs {actual}")
             }
-            Self::UnsupportedFormat(format) => write!(f, "unsupported image format: {format:?}"),
+            Self::UnsupportedFormat(format) => {
+                write!(f, "unsupported image format: {format:?}")
+            }
             Self::Io(error) => error.fmt(f),
             Self::Decode(error) => f.write_str(error),
             Self::Encode(error) => f.write_str(error),

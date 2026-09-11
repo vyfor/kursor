@@ -2,6 +2,8 @@ use kursor_core::render::{cell::Cell, color::Color};
 
 use crate::fx::color::mix;
 
+/// controls how soft is the boundary between the effect and the untouched
+/// cells.
 #[derive(Clone, Copy, Debug)]
 pub struct Feather {
     width: f32,
@@ -102,7 +104,8 @@ impl Feather {
         let mut cell = cell;
         cell.style.fg = mix(fg_from, cell.style.fg, factor, Color::White);
         if cell.style.bg != underlay.style.bg {
-            cell.style.bg = mix(underlay.style.bg, cell.style.bg, factor, Color::Black);
+            cell.style.bg =
+                mix(underlay.style.bg, cell.style.bg, factor, Color::Black);
         }
         cell
     }

@@ -14,6 +14,8 @@ use kursor_core::{
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct StackProps;
 
+/// places children on top of each other, at the same position. later
+/// children draw on top of earlier ones.
 pub struct Stack;
 
 impl Stack {
@@ -52,7 +54,13 @@ impl Component for Stack {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         for index in 0..children.len() {
             children.set(index, area);
         }

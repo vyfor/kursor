@@ -38,7 +38,12 @@ impl<T> Tree<T> {
         id
     }
 
-    pub fn insert_at(&mut self, parent: NodeId, position: usize, data: T) -> NodeId {
+    pub fn insert_at(
+        &mut self,
+        parent: NodeId,
+        position: usize,
+        data: T,
+    ) -> NodeId {
         let children_len = self.nodes[parent.index as usize].children.len();
         let position = position.min(children_len);
         let id = self.insert_node(Some(parent), data);
@@ -75,7 +80,8 @@ impl<T> Tree<T> {
         }
 
         let node = self.nodes.remove(id.index as usize);
-        self.generations[id.index as usize] = self.generations[id.index as usize].wrapping_add(1);
+        self.generations[id.index as usize] =
+            self.generations[id.index as usize].wrapping_add(1);
 
         if let Some(parent) = node.parent {
             self.nodes[parent.index as usize]

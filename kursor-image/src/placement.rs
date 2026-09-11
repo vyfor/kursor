@@ -1,5 +1,6 @@
 use kursor_core::layout::size::Size;
 
+/// how an image is scaled to fit.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ImageFit {
     #[default]
@@ -42,7 +43,11 @@ pub fn fit_cells(
     cell_size: Option<Size>,
     fit: ImageFit,
 ) -> Option<Size> {
-    if width == 0 || height == 0 || available.width == 0 || available.height == 0 {
+    if width == 0
+        || height == 0
+        || available.width == 0
+        || available.height == 0
+    {
         return None;
     }
 
@@ -63,8 +68,10 @@ pub fn fit_cells(
         ImageFit::Fill => available,
         ImageFit::Contain => {
             let scale = f64::from(available.width)
-                / f64::from(natural.width.max(1))
-                    .min(f64::from(available.height) / f64::from(natural.height.max(1)));
+                / f64::from(natural.width.max(1)).min(
+                    f64::from(available.height)
+                        / f64::from(natural.height.max(1)),
+                );
             Size::new(
                 (f64::from(natural.width) * scale).floor().max(1.0) as u16,
                 (f64::from(natural.height) * scale).floor().max(1.0) as u16,
@@ -72,8 +79,10 @@ pub fn fit_cells(
         }
         ImageFit::Cover => {
             let scale = f64::from(available.width)
-                / f64::from(natural.width.max(1))
-                    .max(f64::from(available.height) / f64::from(natural.height.max(1)));
+                / f64::from(natural.width.max(1)).max(
+                    f64::from(available.height)
+                        / f64::from(natural.height.max(1)),
+                );
             Size::new(
                 (f64::from(natural.width) * scale).floor().max(1.0) as u16,
                 (f64::from(natural.height) * scale).floor().max(1.0) as u16,

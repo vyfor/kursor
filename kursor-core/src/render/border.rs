@@ -333,9 +333,14 @@ pub fn junction_to_char(b: BorderJunction) -> char {
         (Double, Plain, Double, Plain) => '╫',
 
         _ => {
-            let has_double =
-                b.up == Double || b.right == Double || b.down == Double || b.left == Double;
-            let has_heavy = b.up == Heavy || b.right == Heavy || b.down == Heavy || b.left == Heavy;
+            let has_double = b.up == Double
+                || b.right == Double
+                || b.down == Double
+                || b.left == Double;
+            let has_heavy = b.up == Heavy
+                || b.right == Heavy
+                || b.down == Heavy
+                || b.left == Heavy;
 
             let count = (b.up != None) as u8
                 + (b.right != None) as u8
@@ -441,6 +446,8 @@ pub fn junction_to_char(b: BorderJunction) -> char {
     }
 }
 
+/// combines two border glyphs into their unified intersection, given it
+/// exists.
 pub fn merge_borders(a: char, b: char) -> Option<char> {
     let j1 = char_to_junction(a)?;
     let j2 = char_to_junction(b)?;

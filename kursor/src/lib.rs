@@ -6,6 +6,7 @@ pub mod terminal;
 pub mod widgets;
 
 pub use bindings::{Bind, Bindings};
+#[doc(inline)]
 pub use kursor_core as core;
 
 #[cfg(feature = "crossterm")]

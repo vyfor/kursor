@@ -7,7 +7,9 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
 };
 
-use crate::state::{LocalState, SharedState, deps, id::AtomId, queue::dirty_queue, scope};
+use crate::state::{
+    LocalState, SharedState, deps, id::AtomId, queue::dirty_queue, scope,
+};
 
 pub static CURRENT_FRAME_EPOCH: AtomicU32 = AtomicU32::new(1);
 
@@ -75,7 +77,12 @@ impl<T: LocalState> Slot<T> {
         while self
             .head
             .writer
-            .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .compare_exchange_weak(
+                false,
+                true,
+                Ordering::Acquire,
+                Ordering::Relaxed,
+            )
             .is_err()
         {
             std::hint::spin_loop();
@@ -92,7 +99,8 @@ impl<T: LocalState> Slot<T> {
         deps::record(self.id);
         if scope::is_active() {
             let node = self.head.current.load(Ordering::Acquire);
-            let val = unsafe { (*node).value.get().cast::<T>().as_ref().unwrap() };
+            let val =
+                unsafe { (*node).value.get().cast::<T>().as_ref().unwrap() };
             f(val)
         } else {
             let guard = self.acquire();
@@ -159,7 +167,8 @@ impl<T: LocalState> Slot<T> {
         let current = self.head.current.load(Ordering::Acquire);
         let readers = unsafe { &(*current).flags };
 
-        let current_val = unsafe { (*current).value.get().cast::<T>().as_ref().unwrap() };
+        let current_val =
+            unsafe { (*current).value.get().cast::<T>().as_ref().unwrap() };
         if *current_val == val {
             self.unlock_writer();
             return;
@@ -168,12 +177,18 @@ impl<T: LocalState> Slot<T> {
         if readers.load(Ordering::Acquire) == 0
             && !scope::is_active()
             && readers
-                .compare_exchange(0, WRITING, Ordering::SeqCst, Ordering::Acquire)
+                .compare_exchange(
+                    0,
+                    WRITING,
+                    Ordering::SeqCst,
+                    Ordering::Acquire,
+                )
                 .is_ok()
         {
             if !scope::is_active() {
                 unsafe {
-                    let target = (*current).value.get().cast::<T>().as_mut().unwrap();
+                    let target =
+                        (*current).value.get().cast::<T>().as_mut().unwrap();
                     *target = val;
                 }
                 readers.store(0, Ordering::Release);
@@ -199,12 +214,22 @@ impl<T: LocalState> Slot<T> {
         let claimed = readers.load(Ordering::Acquire) == 0
             && !scope::is_active()
             && readers
-                .compare_exchange(0, WRITING, Ordering::SeqCst, Ordering::Acquire)
+                .compare_exchange(
+                    0,
+                    WRITING,
+                    Ordering::SeqCst,
+                    Ordering::Acquire,
+                )
                 .is_ok();
         if claimed && !scope::is_active() {
-            let before = unsafe { (*current).value.get().cast::<T>().as_ref().unwrap().clone() };
-            let result = unsafe { f((*current).value.get().cast::<T>().as_mut().unwrap()) };
-            let after = unsafe { (*current).value.get().cast::<T>().as_ref().unwrap() };
+            let before = unsafe {
+                (*current).value.get().cast::<T>().as_ref().unwrap().clone()
+            };
+            let result = unsafe {
+                f((*current).value.get().cast::<T>().as_mut().unwrap())
+            };
+            let after =
+                unsafe { (*current).value.get().cast::<T>().as_ref().unwrap() };
             let changed = *after != before;
             readers.store(0, Ordering::Release);
             self.unlock_writer();
@@ -217,11 +242,14 @@ impl<T: LocalState> Slot<T> {
             readers.store(0, Ordering::Release);
         }
 
-        let old_ref = unsafe { (*current).value.get().cast::<T>().as_ref().unwrap() };
+        let old_ref =
+            unsafe { (*current).value.get().cast::<T>().as_ref().unwrap() };
         let before = old_ref.clone();
         let next = self.prepare_with(|| old_ref.clone());
-        let res = unsafe { f((*next).value.get().cast::<T>().as_mut().unwrap()) };
-        let after = unsafe { (*next).value.get().cast::<T>().as_ref().unwrap() };
+        let res =
+            unsafe { f((*next).value.get().cast::<T>().as_mut().unwrap()) };
+        let after =
+            unsafe { (*next).value.get().cast::<T>().as_ref().unwrap() };
         let changed = *after != before;
         self.publish(next);
         self.unlock_writer();
@@ -282,7 +310,8 @@ impl<T: LocalState> Slot<T> {
         let mut index = 0;
         while index < retired.len() {
             let item = &retired[index];
-            let readers = unsafe { (*item.node).flags.load(Ordering::Acquire) & READERS };
+            let readers =
+                unsafe { (*item.node).flags.load(Ordering::Acquire) & READERS };
             if readers == 0 && scope::reclaimable(item.epoch) {
                 let item = retired.swap_remove(index);
                 unsafe {

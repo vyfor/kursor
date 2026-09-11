@@ -40,6 +40,7 @@ impl EffectCx<'_> {
     }
 }
 
+/// visual post-processing "shader" for terminal cells.
 pub trait Fx: FxClone + 'static {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity;
 

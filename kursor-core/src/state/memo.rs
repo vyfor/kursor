@@ -73,6 +73,8 @@ pub(crate) fn refresh_dependents(sources: &[AtomId]) -> Vec<AtomId> {
         .collect()
 }
 
+/// derived state that caches its result and recomputes only when dependency
+/// state observes changes.
 pub struct Memo<T: LocalState> {
     inner: Rc<Inner<T>>,
 }
@@ -114,10 +116,12 @@ impl<T: LocalState> Memo<T> {
         self.inner.id
     }
 
+    /// returns the cached value, recomputing if dependency state changed.
     pub fn get(&self) -> T {
         self.with(|val| val.clone())
     }
 
+    /// borrows the cached value, recomputing if dependency state changed.
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
         deps::record(self.id());
         if scope::is_active() {
@@ -202,8 +206,11 @@ impl<T: LocalState> Inner<T> {
             registry.depths.insert(self.id, depth);
             for dep in old_deps.drain(..) {
                 if let Some(entries) = registry.dependents.get_mut(&dep) {
-                    entries
-                        .retain(|entry| entry.upgrade().is_some_and(|entry| entry.id() != self.id));
+                    entries.retain(|entry| {
+                        entry
+                            .upgrade()
+                            .is_some_and(|entry| entry.id() != self.id)
+                    });
                     if entries.is_empty() {
                         registry.dependents.remove(&dep);
                     }

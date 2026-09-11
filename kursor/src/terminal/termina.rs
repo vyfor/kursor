@@ -22,10 +22,11 @@ use kursor_core::{
 #[cfg(feature = "image")]
 use kursor_image::Kitty;
 use termina::{
-    Event as TerminaEvent, OneBased, PlatformTerminal, Terminal as TerminaTerminal,
+    Event as TerminaEvent, OneBased, PlatformTerminal,
+    Terminal as TerminaTerminal,
     escape::csi::{
-        Csi, Cursor, DecPrivateMode, DecPrivateModeCode, Edit, EraseInDisplay, Mode, Sgr,
-        SgrAttributes, SgrModifiers,
+        Csi, Cursor, DecPrivateMode, DecPrivateModeCode, Edit, EraseInDisplay,
+        Mode, Sgr, SgrAttributes, SgrModifiers,
     },
     event::{
         KeyCode as TerminaKeyCode, KeyEventKind, Modifiers as TerminaModifiers,
@@ -97,7 +98,10 @@ impl Terminal for Termina {
             write!(
                 self.inner,
                 "{}{}{}{}{}",
-                Self::mode(DecPrivateModeCode::ClearAndEnableAlternateScreen, true),
+                Self::mode(
+                    DecPrivateModeCode::ClearAndEnableAlternateScreen,
+                    true
+                ),
                 Self::mode(DecPrivateModeCode::FocusTracking, true),
                 Self::mode(DecPrivateModeCode::AnyEventMouse, true),
                 Self::mode(DecPrivateModeCode::SGRMouse, true),
@@ -123,7 +127,10 @@ impl Terminal for Termina {
             Self::mode(DecPrivateModeCode::AnyEventMouse, false),
             Self::mode(DecPrivateModeCode::FocusTracking, false),
             Self::mode(DecPrivateModeCode::ShowCursor, true),
-            Self::mode(DecPrivateModeCode::ClearAndEnableAlternateScreen, false),
+            Self::mode(
+                DecPrivateModeCode::ClearAndEnableAlternateScreen,
+                false
+            ),
             Csi::Sgr(Sgr::Reset),
         );
         #[cfg(feature = "image")]
@@ -176,7 +183,9 @@ impl Terminal for Termina {
 
         for change in changes {
             let need_move = match last_pos {
-                Some((lx, ly)) => ly != change.y || lx.saturating_add(1) != change.x,
+                Some((lx, ly)) => {
+                    ly != change.y || lx.saturating_add(1) != change.x
+                }
                 None => true,
             };
             if need_move {
@@ -225,23 +234,32 @@ impl Drop for Termina {
 
 fn translate(event: TerminaEvent) -> Result<Option<Event>, io::Error> {
     Ok(match event {
-        TerminaEvent::Key(key) if key.kind != KeyEventKind::Release => translate_code(key.code)
-            .map(|code| {
+        TerminaEvent::Key(key) if key.kind != KeyEventKind::Release => {
+            translate_code(key.code).map(|code| {
                 Event::Key(KeyEvent {
                     code,
                     modifiers: translate_modifiers(key.modifiers),
                 })
-            }),
+            })
+        }
         TerminaEvent::Key(_) => None,
         TerminaEvent::Mouse(mouse) => {
             let kind = match mouse.kind {
-                MouseEventKind::Down(button) => MouseKind::Down(translate_button(button)),
-                MouseEventKind::Up(button) => MouseKind::Up(translate_button(button)),
-                MouseEventKind::Drag(button) => MouseKind::Drag(translate_button(button)),
+                MouseEventKind::Down(button) => {
+                    MouseKind::Down(translate_button(button))
+                }
+                MouseEventKind::Up(button) => {
+                    MouseKind::Up(translate_button(button))
+                }
+                MouseEventKind::Drag(button) => {
+                    MouseKind::Drag(translate_button(button))
+                }
                 MouseEventKind::Moved => MouseKind::Move,
                 MouseEventKind::ScrollDown => MouseKind::ScrollDown,
                 MouseEventKind::ScrollUp => MouseKind::ScrollUp,
-                MouseEventKind::ScrollLeft | MouseEventKind::ScrollRight => return Ok(None),
+                MouseEventKind::ScrollLeft | MouseEventKind::ScrollRight => {
+                    return Ok(None);
+                }
             };
             Some(Event::Mouse(MouseEvent {
                 kind,
@@ -250,11 +268,15 @@ fn translate(event: TerminaEvent) -> Result<Option<Event>, io::Error> {
                 modifiers: translate_modifiers(mouse.modifiers),
             }))
         }
-        TerminaEvent::WindowResized(size) => Some(Event::Resize(size.cols, size.rows)),
+        TerminaEvent::WindowResized(size) => {
+            Some(Event::Resize(size.cols, size.rows))
+        }
         TerminaEvent::Paste(text) => Some(Event::Paste(text)),
         TerminaEvent::FocusIn => Some(Event::WindowFocus(true)),
         TerminaEvent::FocusOut => Some(Event::WindowFocus(false)),
-        TerminaEvent::Csi(_) | TerminaEvent::Osc(_) | TerminaEvent::Dcs(_) => None,
+        TerminaEvent::Csi(_) | TerminaEvent::Osc(_) | TerminaEvent::Dcs(_) => {
+            None
+        }
     })
 }
 

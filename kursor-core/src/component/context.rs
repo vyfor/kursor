@@ -89,6 +89,7 @@ impl<'a> Cx<'a> {
         self.get::<T>().cloned()
     }
 
+    /// creates a new signal attached to the current runtime.
     pub fn signal<T: LocalState>(&self, value: T) -> Signal<T> {
         Signal::new(value)
     }
@@ -101,7 +102,10 @@ impl<'a> Cx<'a> {
     }
 
     #[cfg(feature = "animate")]
-    pub fn animate<A: animate::Animation>(&mut self, animation: &mut A) -> animate::Activity {
+    pub fn animate<A: animate::Animation>(
+        &mut self,
+        animation: &mut A,
+    ) -> animate::Activity {
         let activity = animation.advance(self.time());
         if activity.running {
             crate::state::frame::request_frame();
@@ -109,6 +113,7 @@ impl<'a> Cx<'a> {
         activity
     }
 
+    /// runs an animated transition towards the target.
     #[cfg(feature = "animate")]
     pub fn transition<K: IntoChannel, T: Transitionable>(
         &mut self,
@@ -162,6 +167,8 @@ impl<'a> Cx<'a> {
         target
     }
 
+    /// resolves a [`Value`] to its current value (taking any transition into
+    /// account).
     pub fn resolve<K: IntoChannel, T: Transitionable>(
         &mut self,
         channel: K,
@@ -172,6 +179,7 @@ impl<'a> Cx<'a> {
         self.transition(channel, target, transition)
     }
 
+    /// like [`Self::resolve`] but falls back to the given default value.
     pub fn resolve_or<K: IntoChannel, T: Transitionable, V: ResolveValue<T>>(
         &mut self,
         channel: K,
@@ -182,6 +190,7 @@ impl<'a> Cx<'a> {
         value.resolve_or(self, channel, fallback, default_transition)
     }
 
+    /// current [`Theme`] from the [`Environment`], or default.
     pub fn theme(&self) -> &Theme {
         match self.get() {
             Some(theme) => theme,
@@ -189,6 +198,7 @@ impl<'a> Cx<'a> {
         }
     }
 
+    /// requests or discards keyboard focus.
     pub fn focus(&mut self, focused: bool) {
         if let Some(actions) = self.actions.as_deref_mut() {
             match (focused, self.node) {
@@ -199,6 +209,10 @@ impl<'a> Cx<'a> {
         }
     }
 
+    /// grabs all mouse events until explicitly released.
+    ///
+    /// this is mainly useful for mouse dragging where the mouse might leave
+    /// the widget boundary.
     pub fn capture(&mut self, captured: bool) {
         if let Some(actions) = self.actions.as_deref_mut() {
             match (captured, self.node) {
@@ -245,12 +259,20 @@ impl<'a> Cx<'a> {
         }
     }
 
+    /// sets the terminal cursor position.
     pub fn cursor(&mut self, position: Option<(u16, u16)>) {
-        if let (Some(actions), Some(node)) = (self.actions.as_deref_mut(), self.node) {
+        if let (Some(actions), Some(node)) =
+            (self.actions.as_deref_mut(), self.node)
+        {
             actions.push(Action::Cursor(node, position));
         }
     }
 
+    /// normally, keyboard events only reach the focused component.
+    ///
+    /// with this, you can opt into receiving all keyboard events regardless of
+    /// focus state (hence the name `global`), *unless* the event is
+    /// intercepted/handled by another component on its way.
     pub fn global_input(&mut self, enabled: bool) {
         if let Some(global_input) = self.global_input.as_deref_mut() {
             *global_input = Some(enabled);

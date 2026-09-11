@@ -1,5 +1,8 @@
 use kursor_core::render::style::Style;
 
+/// a piece of optionally styled text.
+///
+/// the hierarchy is: [`Span`] -> [`Line`](super::Line) -> [`Text`](super::Text)
 #[derive(Clone, PartialEq, Eq)]
 pub struct Span {
     pub text: String,

@@ -9,7 +9,9 @@ use kursor_core::{
     state::{IntoValue, Transition},
 };
 
-use super::{Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles};
+use super::{
+    Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles,
+};
 
 pub struct ButtonBuilder {
     props: ButtonProps,

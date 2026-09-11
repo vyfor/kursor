@@ -8,6 +8,7 @@ use kursor_core::{
 
 use crate::{EffectCx, Feather, Fx, Mask, Spread};
 
+/// moves its content in or out of the area.
 #[derive(Clone)]
 pub struct Shift {
     duration: Duration,
@@ -131,7 +132,12 @@ impl Shift {
         }
     }
 
-    fn apply_slide(&self, cx: &mut EffectCx<'_>, amount: f32, direction: Direction) {
+    fn apply_slide(
+        &self,
+        cx: &mut EffectCx<'_>,
+        amount: f32,
+        direction: Direction,
+    ) {
         let total = match direction {
             Direction::Left | Direction::Right => cx.layer.width() as f32,
             Direction::Up | Direction::Down => cx.layer.height() as f32,
@@ -204,9 +210,12 @@ impl Shift {
                 if cx.includes(&self.mask, x, 0) {
                     let src = cx.source(x, 0);
                     let underlay = cx.underlay(x, edge_y);
-                    let cell = self
-                        .subcell
-                        .edge_cell(src, underlay, Direction::Down, 1.0 - frac);
+                    let cell = self.subcell.edge_cell(
+                        src,
+                        underlay,
+                        Direction::Down,
+                        1.0 - frac,
+                    );
                     cx.set(x, edge_y, cell);
                 }
             }
@@ -244,9 +253,12 @@ impl Shift {
                 if cx.includes(&self.mask, x, src_row) {
                     let src = cx.source(x, src_row);
                     let underlay = cx.underlay(x, edge_y);
-                    let cell = self
-                        .subcell
-                        .edge_cell(src, underlay, Direction::Up, 1.0 - frac);
+                    let cell = self.subcell.edge_cell(
+                        src,
+                        underlay,
+                        Direction::Up,
+                        1.0 - frac,
+                    );
                     cx.set(x, edge_y, cell);
                 }
             }
@@ -280,9 +292,12 @@ impl Shift {
                 if cx.includes(&self.mask, 0, y) {
                     let src = cx.source(0, y);
                     let underlay = cx.underlay(edge_x, y);
-                    let cell = self
-                        .subcell
-                        .edge_cell(src, underlay, Direction::Right, 1.0 - frac);
+                    let cell = self.subcell.edge_cell(
+                        src,
+                        underlay,
+                        Direction::Right,
+                        1.0 - frac,
+                    );
                     cx.set(edge_x, y, cell);
                 }
             }
@@ -320,16 +335,25 @@ impl Shift {
                 if cx.includes(&self.mask, src_col, y) {
                     let src = cx.source(src_col, y);
                     let underlay = cx.underlay(edge_x, y);
-                    let cell = self
-                        .subcell
-                        .edge_cell(src, underlay, Direction::Left, 1.0 - frac);
+                    let cell = self.subcell.edge_cell(
+                        src,
+                        underlay,
+                        Direction::Left,
+                        1.0 - frac,
+                    );
                     cx.set(edge_x, y, cell);
                 }
             }
         }
     }
 
-    fn apply_move(&self, cx: &mut EffectCx<'_>, t: f32, progress: f32, offset: Offset) {
+    fn apply_move(
+        &self,
+        cx: &mut EffectCx<'_>,
+        t: f32,
+        progress: f32,
+        offset: Offset,
+    ) {
         let finished = progress >= 1.0;
         let (px, py) = if finished {
             if self.inward {
@@ -391,7 +415,13 @@ impl Shift {
         }
     }
 
-    fn strip_x(&self, cx: &mut EffectCx, x: &ShiftData, y: &ShiftData, src_x: i32) {
+    fn strip_x(
+        &self,
+        cx: &mut EffectCx,
+        x: &ShiftData,
+        y: &ShiftData,
+        src_x: i32,
+    ) {
         let w = cx.layer.width() as i32;
         let h = cx.layer.height() as i32;
         let edge_x = src_x + x.body_offset();
@@ -425,7 +455,13 @@ impl Shift {
         }
     }
 
-    fn strip_y(&self, cx: &mut EffectCx, y: &ShiftData, x: &ShiftData, src_y: i32) {
+    fn strip_y(
+        &self,
+        cx: &mut EffectCx,
+        y: &ShiftData,
+        x: &ShiftData,
+        src_y: i32,
+    ) {
         let w = cx.layer.width() as i32;
         let h = cx.layer.height() as i32;
         let edge_y = src_y + y.body_offset();

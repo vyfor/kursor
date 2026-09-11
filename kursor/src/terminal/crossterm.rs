@@ -6,15 +6,17 @@ use std::{
 use crossterm::{
     cursor,
     event::{
-        self, Event as CtEvent, KeyCode as CtKeyCode, KeyEventKind, KeyModifiers,
-        MouseButton as CtMouseButton, MouseEventKind,
+        self, Event as CtEvent, KeyCode as CtKeyCode, KeyEventKind,
+        KeyModifiers, MouseButton as CtMouseButton, MouseEventKind,
     },
     execute,
     style::{
-        Attribute, Color as CtColor, Print, SetAttribute, SetAttributes, SetBackgroundColor,
-        SetForegroundColor,
+        Attribute, Color as CtColor, Print, SetAttribute, SetAttributes,
+        SetBackgroundColor, SetForegroundColor,
     },
-    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen,
+    },
 };
 use kursor_core::{
     component::blueprint::Blueprint,
@@ -153,11 +155,16 @@ impl Terminal for Crossterm {
 
         for change in changes {
             let need_move = match last_pos {
-                Some((lx, ly)) => ly != change.y || lx.saturating_add(1) != change.x,
+                Some((lx, ly)) => {
+                    ly != change.y || lx.saturating_add(1) != change.x
+                }
                 None => true,
             };
             if need_move {
-                crossterm::queue!(self.stdout, cursor::MoveTo(change.x, change.y))?;
+                crossterm::queue!(
+                    self.stdout,
+                    cursor::MoveTo(change.x, change.y)
+                )?;
             }
             last_pos = Some((change.x, change.y));
 
@@ -175,7 +182,11 @@ impl Terminal for Crossterm {
             self.stdout.write_all(&draw.data)?;
         }
         match cursor {
-            Some((x, y)) => crossterm::queue!(self.stdout, cursor::MoveTo(x, y), cursor::Show)?,
+            Some((x, y)) => crossterm::queue!(
+                self.stdout,
+                cursor::MoveTo(x, y),
+                cursor::Show
+            )?,
             None => crossterm::queue!(self.stdout, cursor::Hide)?,
         }
         self.stdout.flush()
@@ -190,16 +201,24 @@ impl Drop for Crossterm {
 
 pub fn translate(event: CtEvent) -> Option<Event> {
     match event {
-        CtEvent::Key(key) if key.kind != KeyEventKind::Release => Some(Event::Key(KeyEvent {
-            code: translate_code(key.code)?,
-            modifiers: translate_modifiers(key.modifiers),
-        })),
+        CtEvent::Key(key) if key.kind != KeyEventKind::Release => {
+            Some(Event::Key(KeyEvent {
+                code: translate_code(key.code)?,
+                modifiers: translate_modifiers(key.modifiers),
+            }))
+        }
         CtEvent::Key(_) => None,
         CtEvent::Mouse(mouse) => {
             let kind = match mouse.kind {
-                MouseEventKind::Down(button) => MouseKind::Down(translate_button(button)),
-                MouseEventKind::Up(button) => MouseKind::Up(translate_button(button)),
-                MouseEventKind::Drag(button) => MouseKind::Drag(translate_button(button)),
+                MouseEventKind::Down(button) => {
+                    MouseKind::Down(translate_button(button))
+                }
+                MouseEventKind::Up(button) => {
+                    MouseKind::Up(translate_button(button))
+                }
+                MouseEventKind::Drag(button) => {
+                    MouseKind::Drag(translate_button(button))
+                }
                 MouseEventKind::Moved => MouseKind::Move,
                 MouseEventKind::ScrollDown => MouseKind::ScrollDown,
                 MouseEventKind::ScrollUp => MouseKind::ScrollUp,

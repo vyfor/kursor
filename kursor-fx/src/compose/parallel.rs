@@ -2,12 +2,14 @@ use animate::Activity;
 
 use crate::{EffectCx, Fx};
 
+/// runs multiple effects concurrently.
 pub fn par() -> Parallel {
     Parallel {
         effects: Vec::new(),
     }
 }
 
+/// runs multiple effects concurrently.
 pub struct Parallel {
     effects: Vec<Box<dyn Fx>>,
 }

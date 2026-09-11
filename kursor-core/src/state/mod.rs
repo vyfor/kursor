@@ -1,3 +1,20 @@
+//! ## state and reactivity
+//!
+//! kursor is reactive, meaning components can subscribe to the reactive
+//! state they care about.
+//!
+//! currently, kursor provides three types of reactive state: [`Signal`]s,
+//! [`Atom`]s and [`Memo`]s.
+//!
+//! ## the how
+//!
+//! 1. before calling a component's `update()` method, the runtime starts
+//!    "recording" reactive state reads on the current thread.
+//! 2. then inside `update()`, when a component reads from e.g. a signal, that
+//!    signal's id is recorded.
+//! 3. finally, after `update()` finishes, the runtime maps and keeps track of
+//!    the signal ids that were read to the component that read them.
+
 pub mod arena;
 pub mod atom;
 pub mod deps;

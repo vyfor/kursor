@@ -27,7 +27,8 @@ pub(crate) struct Scope {
 }
 
 pub(crate) fn enter(context: FrameContext) -> Scope {
-    let previous = ACTIVE.with(|active| unsafe { (*active.get()).replace(context) });
+    let previous =
+        ACTIVE.with(|active| unsafe { (*active.get()).replace(context) });
     Scope { previous }
 }
 

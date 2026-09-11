@@ -3,6 +3,7 @@ use kursor_core::{
     render::cell::Cell,
 };
 
+/// selects which cells an effect applies to.
 #[derive(Clone)]
 pub enum Mask {
     All,
@@ -71,6 +72,7 @@ impl Default for Mask {
     }
 }
 
+/// how an effect progresses across the area over time.
 #[derive(Clone, Copy)]
 pub enum Spread {
     Uniform,

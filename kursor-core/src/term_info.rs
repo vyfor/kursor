@@ -82,7 +82,10 @@ impl TermInfo {
             return info;
         }
 
-        if term.contains("256color") || term.contains("kitty") || term.contains("foot") {
+        if term.contains("256color")
+            || term.contains("kitty")
+            || term.contains("foot")
+        {
             info.color_256 = true;
         }
 
@@ -135,7 +138,9 @@ impl TermInfo {
                     info.synchronized_output = true;
                     info.notifications.osc_777 = true;
                 }
-                _ if program == "wezterm" || std::env::var_os("WEZTERM_EXECUTABLE").is_some() => {
+                _ if program == "wezterm"
+                    || std::env::var_os("WEZTERM_EXECUTABLE").is_some() =>
+                {
                     info.color_256 = true;
                     info.true_color = true;
                     info.hyperlinks = true;
@@ -165,7 +170,10 @@ impl TermInfo {
                     info.bracketed_paste = true;
                     info.mouse = true;
                 }
-                _ if program == "foot" || term == "foot" || term.starts_with("foot-") => {
+                _ if program == "foot"
+                    || term == "foot"
+                    || term.starts_with("foot-") =>
+                {
                     info.color_256 = true;
                     info.true_color = true;
                     info.hyperlinks = true;

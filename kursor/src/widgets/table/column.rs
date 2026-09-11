@@ -1,4 +1,6 @@
-use kursor_core::{component::blueprint::Blueprint, layout::Alignment, state::IntoValue};
+use kursor_core::{
+    component::blueprint::Blueprint, layout::Alignment, state::IntoValue,
+};
 
 use crate::layout::Track;
 use crate::widgets::table::row::IntoTCell;

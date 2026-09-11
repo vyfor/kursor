@@ -87,17 +87,26 @@ impl Behavior for ButtonBehavior {
     type State = ButtonState;
     type Intent = ButtonIntent;
 
-    fn event(&self, cx: &BehaviorCx, event: &Event, _state: &ButtonState) -> Option<ButtonIntent> {
+    fn event(
+        &self,
+        cx: &BehaviorCx,
+        event: &Event,
+        _state: &ButtonState,
+    ) -> Option<ButtonIntent> {
         if cx.phase != Phase::Bubble {
             return None;
         }
 
         match event {
             Event::Mouse(mouse) => match mouse.kind {
-                MouseKind::Click(MouseButton::Left) => Some(ButtonIntent::Activate),
+                MouseKind::Click(MouseButton::Left) => {
+                    Some(ButtonIntent::Activate)
+                }
                 _ => None,
             },
-            Event::Key(key) if matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) => {
+            Event::Key(key)
+                if matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) =>
+            {
                 Some(ButtonIntent::Activate)
             }
             _ => None,
@@ -117,7 +126,10 @@ pub struct ButtonProps {
 }
 
 impl ButtonProps {
-    pub fn new(label: impl IntoValue<String>, on_press: impl Fn(&mut Cx) + 'static) -> Self {
+    pub fn new(
+        label: impl IntoValue<String>,
+        on_press: impl Fn(&mut Cx) + 'static,
+    ) -> Self {
         Self {
             label: label.into_value(),
             border: Value::plain(Border::Rounded),
@@ -130,6 +142,9 @@ impl ButtonProps {
     }
 }
 
+/// a clickable button.
+///
+/// under the hood, it renders a `Block` with a `Text` label inside.
 pub struct Button {
     state: ButtonState,
     styles: ButtonStyles,
@@ -145,7 +160,10 @@ impl Button {
         ButtonBuilder::new(label)
     }
 
-    pub fn new(label: impl IntoValue<String>, on_press: impl Fn(&mut Cx) + 'static) -> Blueprint {
+    pub fn new(
+        label: impl IntoValue<String>,
+        on_press: impl Fn(&mut Cx) + 'static,
+    ) -> Blueprint {
         Self::with(ButtonProps::new(label, on_press))
     }
 
@@ -315,7 +333,9 @@ impl Component for Button {
             phase,
             rect: cx.rect,
         };
-        if let Some(ButtonIntent::Activate) = props.behavior.event(&bcx, event, &self.state) {
+        if let Some(ButtonIntent::Activate) =
+            props.behavior.event(&bcx, event, &self.state)
+        {
             (props.on_press)(cx);
             return EventResult::Consumed;
         }

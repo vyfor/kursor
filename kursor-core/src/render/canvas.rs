@@ -12,6 +12,7 @@ use crate::{
     tree::id::NodeId,
 };
 
+/// the buffer components paint to.
 pub struct Canvas<'a> {
     buffer: &'a mut Buffer,
     clip: Rect,
@@ -25,7 +26,12 @@ impl<'a> Canvas<'a> {
         self.origin
     }
 
-    pub fn new(buffer: &'a mut Buffer, clip: Rect, origin: Offset, node: NodeId) -> Self {
+    pub fn new(
+        buffer: &'a mut Buffer,
+        clip: Rect,
+        origin: Offset,
+        node: NodeId,
+    ) -> Self {
         Self {
             buffer,
             clip,
@@ -62,7 +68,9 @@ impl<'a> Canvas<'a> {
                     cell.style.fg = existing.style.fg;
                 }
                 if self.merge_borders {
-                    if let Some(merged_ch) = border::merge_borders(existing.ch, cell.ch) {
+                    if let Some(merged_ch) =
+                        border::merge_borders(existing.ch, cell.ch)
+                    {
                         cell.ch = merged_ch;
                     }
                 }

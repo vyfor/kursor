@@ -51,7 +51,12 @@ impl Behavior for WheelScroll {
     type State = ScrollState;
     type Intent = ScrollIntent;
 
-    fn event(&self, cx: &BehaviorCx, event: &Event, _state: &ScrollState) -> Option<ScrollIntent> {
+    fn event(
+        &self,
+        cx: &BehaviorCx,
+        event: &Event,
+        _state: &ScrollState,
+    ) -> Option<ScrollIntent> {
         if cx.phase != Phase::Bubble {
             return None;
         }
@@ -87,6 +92,8 @@ pub struct ScrollProps {
     pub behavior: Arc<dyn Behavior<State = ScrollState, Intent = ScrollIntent>>,
 }
 
+/// makes an oversized child component scrollable within this widget's available
+/// area.
 pub struct Scroll {
     state: ScrollState,
     direction: ScrollDirection,
@@ -135,7 +142,12 @@ impl Scroll {
         Blueprint::new::<Self>(props).children(child)
     }
 
-    fn apply(&mut self, intent: ScrollIntent, direction: ScrollDirection, viewport: Size) -> bool {
+    fn apply(
+        &mut self,
+        intent: ScrollIntent,
+        direction: ScrollDirection,
+        viewport: Size,
+    ) -> bool {
         let ScrollIntent::By { x, y } = intent;
         let (dx, dy) = match direction {
             ScrollDirection::Vertical => (0, y),
@@ -186,7 +198,8 @@ impl Component for Scroll {
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
-        old.direction != new.direction || !Arc::ptr_eq(&old.behavior, &new.behavior)
+        old.direction != new.direction
+            || !Arc::ptr_eq(&old.behavior, &new.behavior)
     }
 
     fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
@@ -211,7 +224,9 @@ impl Component for Scroll {
         }
         let child_available = match self.direction {
             ScrollDirection::Vertical => Size::new(available.width, u16::MAX),
-            ScrollDirection::Horizontal => Size::new(u16::MAX, available.height),
+            ScrollDirection::Horizontal => {
+                Size::new(u16::MAX, available.height)
+            }
             ScrollDirection::Both => Size::new(u16::MAX, u16::MAX),
         };
         let child_size = children.measure(0, child_available);
@@ -220,7 +235,13 @@ impl Component for Scroll {
         available
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         if children.is_empty() {
             return;
         }
@@ -242,7 +263,12 @@ impl Component for Scroll {
         }
         children.set(
             0,
-            Rect::new(0, 0, self.state.content_width, self.state.content_height),
+            Rect::new(
+                0,
+                0,
+                self.state.content_width,
+                self.state.content_height,
+            ),
         );
         children.translate(
             0,
@@ -264,7 +290,8 @@ impl Component for Scroll {
             phase,
             rect: cx.rect,
         };
-        let Some(intent) = props.behavior.event(&bcx, event, &self.state) else {
+        let Some(intent) = props.behavior.event(&bcx, event, &self.state)
+        else {
             return EventResult::Ignored;
         };
         let viewport = Size::new(cx.rect.width, cx.rect.height);

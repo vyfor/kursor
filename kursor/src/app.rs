@@ -25,11 +25,13 @@ type DefaultTerminal = Crossterm;
 
 static QUIT: AtomicBool = AtomicBool::new(false);
 
+/// signals the [`App`] to exit the event loop.
 pub fn quit() {
     QUIT.store(true, Ordering::Relaxed);
 }
 
 #[cfg(any(feature = "termina", feature = "crossterm"))]
+/// builder for an [`App`].
 pub struct AppBuilder {
     root: Blueprint,
     query_timeout: Option<Duration>,
@@ -37,6 +39,11 @@ pub struct AppBuilder {
 
 #[cfg(any(feature = "termina", feature = "crossterm"))]
 impl AppBuilder {
+    /// probes the terminal for colors and capabilities and blocks up to
+    /// `timeout` awaiting terminal's response.
+    ///
+    /// it is highly encouraged to set this if your application does any image
+    /// rendering.
     pub fn query_terminal(mut self, timeout: Duration) -> Self {
         self.query_timeout = Some(timeout);
         self
@@ -68,6 +75,9 @@ fn default_terminal() -> Result<DefaultTerminal, std::io::Error> {
     Ok(Crossterm::new())
 }
 
+/// entry point of any Kursor application.
+///
+/// use [`App::builder`] to configure some of the options.
 pub struct App<T: Terminal> {
     runtime: Runtime,
     terminal: T,
@@ -103,9 +113,9 @@ impl<T: Terminal> App<T> {
     pub fn render(&mut self) -> Vec<CellDiff> {
         let changes = self.runtime.render();
         let graphics = self.runtime.take_graphics();
-        let _ = self
-            .terminal
-            .present(&changes, &graphics, self.runtime.cursor());
+        let _ =
+            self.terminal
+                .present(&changes, &graphics, self.runtime.cursor());
         self.runtime.commit(&changes);
         changes
     }
@@ -155,8 +165,11 @@ impl<T: Terminal> App<T> {
         loop {
             let changes = self.runtime.render();
             let graphics = self.runtime.take_graphics();
-            self.terminal
-                .present(&changes, &graphics, self.runtime.cursor())?;
+            self.terminal.present(
+                &changes,
+                &graphics,
+                self.runtime.cursor(),
+            )?;
             self.runtime.commit(&changes);
             if QUIT.load(Ordering::Relaxed) {
                 return Ok(());
@@ -167,7 +180,8 @@ impl<T: Terminal> App<T> {
                 .runtime
                 .next_deadline()
                 .map_or(Duration::from_millis(250), |deadline| {
-                    deadline.saturating_duration_since(std::time::Instant::now())
+                    deadline
+                        .saturating_duration_since(std::time::Instant::now())
                 })
                 .min(Duration::from_millis(250));
             #[cfg(not(feature = "animate"))]

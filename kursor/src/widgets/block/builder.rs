@@ -22,6 +22,22 @@ impl BlockBuilder {
         self
     }
 
+    pub fn plain(self) -> Self {
+        self.border(Border::Plain)
+    }
+
+    pub fn rounded(self) -> Self {
+        self.border(Border::Rounded)
+    }
+
+    pub fn double(self) -> Self {
+        self.border(Border::Double)
+    }
+
+    pub fn heavy(self) -> Self {
+        self.border(Border::Heavy)
+    }
+
     pub fn style(mut self, style: impl IntoValue<Option<Style>>) -> Self {
         self.props.style = style.into_value();
         self

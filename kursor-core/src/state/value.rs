@@ -1,5 +1,7 @@
 use crate::{
-    layout::{Alignment, Insets, Margin, Orientation, ScrollDirection, WrapMode},
+    layout::{
+        Alignment, Insets, Margin, Orientation, ScrollDirection, WrapMode,
+    },
     render::{color::Color, style::Style},
     theme::Theme,
 };
@@ -7,6 +9,12 @@ use crate::{
 use super::Transition;
 use super::{LocalState, atom::Atom, memo::Memo, signal::Signal};
 
+/// a polymorphic property primarily used in widgets as it allows them to
+/// take in both plain and reactive values. optionally holds a transition that
+/// animates value changes.
+///
+/// essentially, any widget taking in a [`Value`] type will get reactivity
+/// and animations with very little wiring.
 #[derive(Clone)]
 pub struct Value<T: LocalState> {
     pub(crate) source: ValueSource<T>,
@@ -61,6 +69,10 @@ impl<T: LocalState> Value<T> {
         }
     }
 
+    /// reads the current value.
+    ///
+    /// if this holds a signal/atom/memo and the caller is a component,
+    /// subscribes that component to the inner reactive value.
     pub fn get(&self) -> T {
         match &self.source {
             ValueSource::Plain(value) => value.clone(),

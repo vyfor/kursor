@@ -109,7 +109,10 @@ impl TRow {
         self
     }
 
-    pub fn cells(mut self, cells: impl IntoIterator<Item = impl IntoTCell>) -> Self {
+    pub fn cells(
+        mut self,
+        cells: impl IntoIterator<Item = impl IntoTCell>,
+    ) -> Self {
         self.cells
             .extend(cells.into_iter().map(IntoTCell::into_tcell));
         self
@@ -198,11 +201,15 @@ impl TData {
     }
 
     pub fn from_rows(rows: impl IntoIterator<Item = impl IntoTRow>) -> Self {
-        let rows_vec: Vec<TRow> = rows.into_iter().map(IntoTRow::into_trow).collect();
+        let rows_vec: Vec<TRow> =
+            rows.into_iter().map(IntoTRow::into_trow).collect();
         Self::Static(rows_vec.into())
     }
 
-    pub fn lazy(count: impl IntoValue<usize>, builder: impl Fn(usize) -> TRow + 'static) -> Self {
+    pub fn lazy(
+        count: impl IntoValue<usize>,
+        builder: impl Fn(usize) -> TRow + 'static,
+    ) -> Self {
         Self::Lazy {
             count: count.into_value(),
             builder: Rc::new(builder),

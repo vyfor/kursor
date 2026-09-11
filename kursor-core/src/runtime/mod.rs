@@ -29,11 +29,16 @@ use crate::{
         size::Size,
     },
     render::{
-        buffer::{Buffer, CellDiff, CommittedGraphics, GraphicsDiff, diff_graphics},
+        buffer::{
+            Buffer, CellDiff, CommittedGraphics, GraphicsDiff, diff_graphics,
+        },
         canvas::Canvas,
     },
     runtime::instance::Instance,
-    state::{LocalState, Signal, deps, id::AtomId, memo, queue::dirty_queue, scope, signal},
+    state::{
+        LocalState, Signal, deps, id::AtomId, memo, queue::dirty_queue, scope,
+        signal,
+    },
     tree::{Tree, id::NodeId},
 };
 
@@ -181,7 +186,8 @@ impl Runtime {
         let (origin, clip) = self.resolve(node)?;
         let x = origin.x.saturating_add(i32::from(x));
         let y = origin.y.saturating_add(i32::from(y));
-        (x >= 0 && y >= 0 && clip.contains(x as u16, y as u16)).then_some((x as u16, y as u16))
+        (x >= 0 && y >= 0 && clip.contains(x as u16, y as u16))
+            .then_some((x as u16, y as u16))
     }
 
     pub fn back_buffer(&self) -> &Buffer {
@@ -318,7 +324,9 @@ impl Runtime {
                     .focus
                     .filter(|&id| self.tree.contains(id))
                     .or_else(|| self.tree.root())
-                    .map_or(EventResult::Ignored, |id| self.dispatch(id, &event));
+                    .map_or(EventResult::Ignored, |id| {
+                        self.dispatch(id, &event)
+                    });
                 if result.is_handled() {
                     result
                 } else {
@@ -341,7 +349,9 @@ impl Runtime {
                         .filter(|&id| self.tree.contains(id))
                         .or_else(|| self.pick(mouse))
                 };
-                let res = target.map_or(EventResult::Ignored, |id| self.dispatch(id, &event));
+                let res = target.map_or(EventResult::Ignored, |id| {
+                    self.dispatch(id, &event)
+                });
                 match mouse.kind {
                     MouseKind::Down(button) => {
                         self.pressed = target.map(|id| (id, button));
@@ -352,17 +362,19 @@ impl Runtime {
                         if let Some((id, pressed_button)) = pressed
                             && pressed_button == button
                             && self.tree.contains(id)
-                            && self
-                                .resolve(id)
-                                .is_some_and(|(_, clip)| clip.contains(mouse.column, mouse.row))
+                            && self.resolve(id).is_some_and(|(_, clip)| {
+                                clip.contains(mouse.column, mouse.row)
+                            })
                         {
                             let now = Instant::now();
-                            let double =
-                                self.last_click.is_some_and(|(last_id, last_button, time)| {
+                            let double = self.last_click.is_some_and(
+                                |(last_id, last_button, time)| {
                                     last_id == id
                                         && last_button == button
-                                        && now.duration_since(time) <= Duration::from_millis(500)
-                                });
+                                        && now.duration_since(time)
+                                            <= Duration::from_millis(500)
+                                },
+                            );
                             let click = Event::Mouse(MouseEvent {
                                 kind: MouseKind::Click(button),
                                 column: mouse.column,
@@ -412,12 +424,14 @@ impl Runtime {
     fn normalize(&self, event: Event) -> Event {
         match event {
             Event::Mouse(mouse) => match self.pressed {
-                Some((_, button)) if mouse.kind == MouseKind::Move => Event::Mouse(MouseEvent {
-                    kind: MouseKind::Drag(button),
-                    column: mouse.column,
-                    row: mouse.row,
-                    modifiers: mouse.modifiers,
-                }),
+                Some((_, button)) if mouse.kind == MouseKind::Move => {
+                    Event::Mouse(MouseEvent {
+                        kind: MouseKind::Drag(button),
+                        column: mouse.column,
+                        row: mouse.row,
+                        modifiers: mouse.modifiers,
+                    })
+                }
                 _ => Event::Mouse(mouse),
             },
             event => event,
@@ -477,11 +491,9 @@ impl Runtime {
         };
         let mut focusables = Vec::new();
         self.tree.visit_subtree(root, |id| {
-            if self
-                .tree
-                .get(id)
-                .is_some_and(|node| node.component.focus_any(node.props.as_ref()).focusable)
-            {
+            if self.tree.get(id).is_some_and(|node| {
+                node.component.focus_any(node.props.as_ref()).focusable
+            }) {
                 focusables.push(id);
             }
         });
@@ -577,7 +589,8 @@ impl Runtime {
         self.scratch.sent_nodes.clear();
         let mut res = EventResult::Ignored;
         let path_len = self.scratch.path.len();
-        let dispatch_path: Vec<NodeId> = self.scratch.path.iter().copied().collect();
+        let dispatch_path: Vec<NodeId> =
+            self.scratch.path.iter().copied().collect();
 
         for i in (0..path_len).rev() {
             let node = dispatch_path[i];
@@ -638,7 +651,12 @@ impl Runtime {
         EventResult::Ignored
     }
 
-    fn send_event(&mut self, id: NodeId, event: &Event, phase: Phase) -> EventResult {
+    fn send_event(
+        &mut self,
+        id: NodeId,
+        event: &Event,
+        phase: Phase,
+    ) -> EventResult {
         if !self.tree.contains(id) {
             return EventResult::Ignored;
         }
@@ -746,7 +764,8 @@ impl Runtime {
                 .memo_sources
                 .extend_from_slice(&self.scratch.dirty_sources);
             while !self.scratch.memo_sources.is_empty() {
-                let changed = memo::refresh_dependents(&self.scratch.memo_sources);
+                let changed =
+                    memo::refresh_dependents(&self.scratch.memo_sources);
                 if changed.is_empty() {
                     break;
                 }
@@ -789,29 +808,33 @@ impl Runtime {
         let inherited = self
             .tree
             .parent(id)
-            .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
+            .and_then(|parent| {
+                self.tree.get(parent).map(|node| node.env.clone())
+            })
             .or_else(|| self.tree.get(id).map(|node| node.inherited.clone()))
             .unwrap_or_default();
-        let ((update, global_listener, env_changed), dep_reads) = deps::collect(|| {
-            let ins = self.tree.get_mut(id).unwrap();
-            let previous_env = ins.env.clone();
-            let mut global_key_listener = None;
-            let mut cx = Cx {
-                rect: Self::local_rect(ins.rect),
-                node: Some(id),
-                actions: None,
-                global_input: Some(&mut global_key_listener),
-                env: inherited.clone(),
-                #[cfg(feature = "animate")]
-                animations: Some(&mut ins.animations),
-            };
-            let update = ins.component.update_any(&mut cx, ins.props.as_ref());
-            ins.inherited = inherited.clone();
-            let env = cx.env.clone();
-            ins.env = env.clone();
-            drop(cx);
-            (update, global_key_listener, !previous_env.same(&env))
-        });
+        let ((update, global_listener, env_changed), dep_reads) =
+            deps::collect(|| {
+                let ins = self.tree.get_mut(id).unwrap();
+                let previous_env = ins.env.clone();
+                let mut global_key_listener = None;
+                let mut cx = Cx {
+                    rect: Self::local_rect(ins.rect),
+                    node: Some(id),
+                    actions: None,
+                    global_input: Some(&mut global_key_listener),
+                    env: inherited.clone(),
+                    #[cfg(feature = "animate")]
+                    animations: Some(&mut ins.animations),
+                };
+                let update =
+                    ins.component.update_any(&mut cx, ins.props.as_ref());
+                ins.inherited = inherited.clone();
+                let env = cx.env.clone();
+                ins.env = env.clone();
+                drop(cx);
+                (update, global_key_listener, !previous_env.same(&env))
+            });
 
         self.do_deps(id, dep_reads);
         if let Some(enabled) = global_listener {
@@ -930,16 +953,14 @@ impl Runtime {
         let parent_env = self.tree.get(parent).unwrap().env.clone();
 
         let ordered = old_children.len() == blueprints.len()
-            && self
-                .tree
-                .children(parent)
-                .iter()
-                .zip(blueprints)
-                .all(|(&child, blueprint)| {
+            && self.tree.children(parent).iter().zip(blueprints).all(
+                |(&child, blueprint)| {
                     self.tree.get(child).is_some_and(|instance| {
-                        instance.type_id == blueprint.type_id && instance.key == blueprint.key
+                        instance.type_id == blueprint.type_id
+                            && instance.key == blueprint.key
                     })
-                });
+                },
+            );
 
         if ordered {
             for (&child, blueprint) in old_children.iter().zip(blueprints) {
@@ -967,7 +988,8 @@ impl Runtime {
             let m = match &bp.key {
                 Some(key) => keyed.remove(key),
                 None => {
-                    let child = unkeyed.get_mut(unkeyed_index).and_then(Option::take);
+                    let child =
+                        unkeyed.get_mut(unkeyed_index).and_then(Option::take);
                     unkeyed_index += 1;
                     child
                 }
@@ -1005,14 +1027,26 @@ impl Runtime {
         self.tree.set_children(parent, new_children);
     }
 
-    fn sync_existing(&mut self, child: NodeId, blueprint: &Blueprint, parent_env: &Environment) {
-        let (should_update, env_changed, declared_changed, offset_changed, margin_changed) = {
+    fn sync_existing(
+        &mut self,
+        child: NodeId,
+        blueprint: &Blueprint,
+        parent_env: &Environment,
+    ) {
+        let (
+            should_update,
+            env_changed,
+            declared_changed,
+            offset_changed,
+            margin_changed,
+        ) = {
             let instance = self.tree.get_mut(child).unwrap();
             let should_update = instance
                 .component
                 .changed_any(instance.props.as_ref(), blueprint.props.as_ref());
             let env_changed = !instance.inherited.same(parent_env);
-            let declared_changed = !Rc::ptr_eq(&instance.declared_children, &blueprint.children);
+            let declared_changed =
+                !Rc::ptr_eq(&instance.declared_children, &blueprint.children);
             let offset_changed = instance.declared_offset != blueprint.offset;
             let margin_changed = instance.margin != blueprint.margin;
 
@@ -1040,7 +1074,12 @@ impl Runtime {
             )
         };
 
-        if should_update || env_changed || declared_changed || offset_changed || margin_changed {
+        if should_update
+            || env_changed
+            || declared_changed
+            || offset_changed
+            || margin_changed
+        {
             let instance = self.tree.get_mut(child).unwrap();
             instance.available = None;
             instance.is_measure_valid = false;
@@ -1146,7 +1185,9 @@ impl Runtime {
 
     fn do_create(&mut self, bp: Blueprint, parent: Option<NodeId>) -> NodeId {
         let inherited = parent
-            .and_then(|parent| self.tree.get(parent).map(|node| node.env.clone()))
+            .and_then(|parent| {
+                self.tree.get(parent).map(|node| node.env.clone())
+            })
             .unwrap_or_else(|| self.root_env.clone());
         let component = (bp.create)(
             &mut Cx {
@@ -1234,10 +1275,12 @@ impl Runtime {
                 !previous_env.same(&env),
             )
         };
-        if global_listener == Some(true) && !self.global_listeners.contains(&id) {
+        if global_listener == Some(true) && !self.global_listeners.contains(&id)
+        {
             self.global_listeners.push(id);
         }
-        let children: Rc<[Blueprint]> = replacement.map_or(declared_children, Into::into);
+        let children: Rc<[Blueprint]> =
+            replacement.map_or(declared_children, Into::into);
         {
             let ins = self.tree.get_mut(id).unwrap();
             ins.declared_children = children.clone();
@@ -1381,14 +1424,22 @@ impl Runtime {
                 #[cfg(feature = "animate")]
                 animations: None,
             };
-            let mut children = MeasureCx::new(&mut measure, child_count, inner_available);
-            component.measure_any(&mut cx, props.as_ref(), inner_available, &mut children)
+            let mut children =
+                MeasureCx::new(&mut measure, child_count, inner_available);
+            component.measure_any(
+                &mut cx,
+                props.as_ref(),
+                inner_available,
+                &mut children,
+            )
         };
 
-        let layout_w =
-            (i32::from(measured.width) + i32::from(margin.horizontal_total())).max(0) as u16;
-        let layout_h =
-            (i32::from(measured.height) + i32::from(margin.vertical_total())).max(0) as u16;
+        let layout_w = (i32::from(measured.width)
+            + i32::from(margin.horizontal_total()))
+        .max(0) as u16;
+        let layout_h = (i32::from(measured.height)
+            + i32::from(margin.vertical_total()))
+        .max(0) as u16;
         let layout_size = Size::new(layout_w, layout_h);
 
         let changed = {
@@ -1415,7 +1466,11 @@ impl Runtime {
         changed
     }
 
-    fn measure_node(tree: &mut Tree<Instance>, id: NodeId, available: Size) -> Size {
+    fn measure_node(
+        tree: &mut Tree<Instance>,
+        id: NodeId,
+        available: Size,
+    ) -> Size {
         if let Some(ins) = tree.get(id)
             && ins.is_measure_valid
             && ins.available == Some(available)
@@ -1483,14 +1538,22 @@ impl Runtime {
                 #[cfg(feature = "animate")]
                 animations: None,
             };
-            let mut children = MeasureCx::new(&mut measure, child_count, inner_available);
-            component.measure_any(&mut cx, props.as_ref(), inner_available, &mut children)
+            let mut children =
+                MeasureCx::new(&mut measure, child_count, inner_available);
+            component.measure_any(
+                &mut cx,
+                props.as_ref(),
+                inner_available,
+                &mut children,
+            )
         };
 
-        let layout_w =
-            (i32::from(measured.width) + i32::from(margin.horizontal_total())).max(0) as u16;
-        let layout_h =
-            (i32::from(measured.height) + i32::from(margin.vertical_total())).max(0) as u16;
+        let layout_w = (i32::from(measured.width)
+            + i32::from(margin.horizontal_total()))
+        .max(0) as u16;
+        let layout_h = (i32::from(measured.height)
+            + i32::from(margin.vertical_total()))
+        .max(0) as u16;
         let layout_size = Size::new(layout_w, layout_h);
 
         {
@@ -1526,19 +1589,29 @@ impl Runtime {
                     .get(id)
                     .map_or(Margin::default(), |ins| ins.margin)
             };
-            let actual_x = (i32::from(rect.x) + i32::from(margin.left)).max(0) as u16;
-            let actual_y = (i32::from(rect.y) + i32::from(margin.top)).max(0) as u16;
-            let actual_w =
-                (i32::from(rect.width) - i32::from(margin.horizontal_total())).max(0) as u16;
-            let actual_h =
-                (i32::from(rect.height) - i32::from(margin.vertical_total())).max(0) as u16;
+            let actual_x =
+                (i32::from(rect.x) + i32::from(margin.left)).max(0) as u16;
+            let actual_y =
+                (i32::from(rect.y) + i32::from(margin.top)).max(0) as u16;
+            let actual_w = (i32::from(rect.width)
+                - i32::from(margin.horizontal_total()))
+            .max(0) as u16;
+            let actual_h = (i32::from(rect.height)
+                - i32::from(margin.vertical_total()))
+            .max(0) as u16;
             let rect = Rect::new(actual_x, actual_y, actual_w, actual_h);
 
             let is_dirty = self.layout_dirty.remove(&id);
-            let (old_rect, old_offset, old_origin, old_clip) = self.tree.get(id).map_or(
-                (Rect::default(), Offset::ZERO, Offset::ZERO, Rect::default()),
-                |ins| (ins.rect, ins.offset, ins.origin, ins.clip),
-            );
+            let (old_rect, old_offset, old_origin, old_clip) =
+                self.tree.get(id).map_or(
+                    (
+                        Rect::default(),
+                        Offset::ZERO,
+                        Offset::ZERO,
+                        Rect::default(),
+                    ),
+                    |ins| (ins.rect, ins.offset, ins.origin, ins.clip),
+                );
             if old_rect != rect || old_offset != offset {
                 self.paint_all = true;
             }
@@ -1551,8 +1624,12 @@ impl Runtime {
                 None => (Offset::ZERO, self.rect),
             };
             let origin = Self::translate(parent_origin, rect, offset);
-            let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
-                .unwrap_or(Rect::new(0, 0, 0, 0));
+            let clip = Self::clip(
+                origin,
+                Size::new(rect.width, rect.height),
+                parent_clip,
+            )
+            .unwrap_or(Rect::new(0, 0, 0, 0));
 
             if old_origin != origin || old_clip != clip {
                 self.paint_all = true;
@@ -1564,7 +1641,8 @@ impl Runtime {
                 && old_origin == origin
                 && old_clip == clip
             {
-                let l_valid = self.tree.get(id).is_some_and(|ins| ins.is_layout_valid);
+                let l_valid =
+                    self.tree.get(id).is_some_and(|ins| ins.is_layout_valid);
                 if l_valid {
                     continue;
                 }
@@ -1608,8 +1686,12 @@ impl Runtime {
                     &mut self.scratch.rects,
                     &mut self.scratch.offsets,
                 );
-                ins.component
-                    .layout_any(&mut cx, ins.props.as_ref(), local, &mut children);
+                ins.component.layout_any(
+                    &mut cx,
+                    ins.props.as_ref(),
+                    local,
+                    &mut children,
+                );
             }
 
             let parent_origin = self
@@ -1623,8 +1705,12 @@ impl Runtime {
                 .and_then(|p| self.tree.get(p))
                 .map_or(self.rect, |p| p.clip);
             let origin = Self::translate(parent_origin, rect, offset);
-            let clip = Self::clip(origin, Size::new(rect.width, rect.height), parent_clip)
-                .unwrap_or(Rect::new(0, 0, 0, 0));
+            let clip = Self::clip(
+                origin,
+                Size::new(rect.width, rect.height),
+                parent_clip,
+            )
+            .unwrap_or(Rect::new(0, 0, 0, 0));
 
             {
                 let ins = self.tree.get_mut(id).unwrap();
@@ -1686,7 +1772,8 @@ impl Runtime {
             let dirty_count = self.scratch.paint_dirty.len();
             for i in 0..dirty_count {
                 let id = self.scratch.paint_dirty[i];
-                if !self.tree.contains(id) || self.scratch.painted.contains(&id) {
+                if !self.tree.contains(id) || self.scratch.painted.contains(&id)
+                {
                     continue;
                 }
 
@@ -1723,7 +1810,9 @@ impl Runtime {
             };
             let siblings_after: Vec<NodeId> = siblings[index + 1..].to_vec();
             for sibling in siblings_after {
-                if let Some((sibling_origin, sibling_clip)) = self.resolve(sibling) {
+                if let Some((sibling_origin, sibling_clip)) =
+                    self.resolve(sibling)
+                {
                     self.apply_paint(sibling, sibling_origin, sibling_clip);
                 }
             }
@@ -1748,8 +1837,11 @@ impl Runtime {
                 animations: Some(&mut ins.animations),
             };
             let mut canvas = Canvas::new(&mut self.back, clip, origin, id);
-            ins.component
-                .pre_paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
+            ins.component.pre_paint_any(
+                &mut cx,
+                ins.props.as_ref(),
+                &mut canvas,
+            );
             ins.component
                 .paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
         }
@@ -1770,8 +1862,10 @@ impl Runtime {
                     child_ins.rect.height,
                 )
             };
-            let child_origin = Self::translate(origin, child_rect, child_offset);
-            let Some(child_clip) = Self::clip(child_origin, Size::new(child_w, child_h), clip)
+            let child_origin =
+                Self::translate(origin, child_rect, child_offset);
+            let Some(child_clip) =
+                Self::clip(child_origin, Size::new(child_w, child_h), clip)
             else {
                 continue;
             };
@@ -1791,8 +1885,11 @@ impl Runtime {
                 animations: Some(&mut ins.animations),
             };
             let mut canvas = Canvas::new(&mut self.back, clip, origin, id);
-            ins.component
-                .post_paint_any(&mut cx, ins.props.as_ref(), &mut canvas)
+            ins.component.post_paint_any(
+                &mut cx,
+                ins.props.as_ref(),
+                &mut canvas,
+            )
         };
         let actions = mem::take(&mut self.scratch.actions);
         self.apply_actions(actions);

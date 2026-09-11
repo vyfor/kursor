@@ -28,6 +28,7 @@ impl PartialEq for ShowProps {
     }
 }
 
+/// conditionally mounts or unmounts its children.
 pub struct Show;
 
 impl Show {
@@ -35,7 +36,10 @@ impl Show {
         ShowBuilder::new(condition.into_value())
     }
 
-    pub fn when(condition: impl IntoValue<bool>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn when(
+        condition: impl IntoValue<bool>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         let condition = condition.into_value();
         let child = child.into_blueprint();
         Self::with(ShowProps {
@@ -97,7 +101,13 @@ impl Component for Show {
         }
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         if !children.is_empty() {
             children.set(0, area);
         }

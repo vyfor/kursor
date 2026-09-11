@@ -45,8 +45,9 @@ pub(crate) struct QueueScope {
 }
 
 pub(crate) fn enter(queue: &Rc<LocalQueue>) -> QueueScope {
-    let previous = ACTIVE_QUEUE
-        .with(|active| unsafe { mem::replace(&mut *active.get(), Some(queue.clone())) });
+    let previous = ACTIVE_QUEUE.with(|active| unsafe {
+        mem::replace(&mut *active.get(), Some(queue.clone()))
+    });
     QueueScope { previous }
 }
 
@@ -108,6 +109,9 @@ impl Drop for WriteGuard<'_> {
     }
 }
 
+/// reactive state tied to a [`Runtime`](crate::runtime::Runtime).
+///
+/// signals are *not* thread-safe.
 #[derive(Clone)]
 pub struct Signal<T: LocalState> {
     inner: Rc<SignalInner<T>>,
@@ -167,17 +171,23 @@ impl<T: LocalState> Signal<T> {
         f(unsafe { &*self.inner.value.get() })
     }
 
+    /// clones the value out.
+    ///
+    /// if accessed inside a component, subscribes that component to this
+    /// signal.
     #[inline(always)]
     pub fn read(&self) -> T {
         self.with(Clone::clone)
     }
 
+    /// clones the value out without subscribing.
     #[inline(always)]
     pub fn peek(&self) -> T {
         let _guard = self.read_guard();
         unsafe { (&*self.inner.value.get()).clone() }
     }
 
+    /// replaces the value.
     #[inline(always)]
     pub fn set(&self, value: T) {
         let guard = self.write_guard();
@@ -191,6 +201,7 @@ impl<T: LocalState> Signal<T> {
         drop(previous);
     }
 
+    /// mutates the value in place.
     #[inline(always)]
     pub fn update<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
         let guard = self.write_guard();

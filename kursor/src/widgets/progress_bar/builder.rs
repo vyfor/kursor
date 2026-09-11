@@ -5,7 +5,9 @@ use kursor_core::{
     state::{IntoValue, Transition, Value},
 };
 
-use super::{ProgressBar, ProgressBarProps, ProgressBarStyles, ProgressSegment};
+use super::{
+    ProgressBar, ProgressBarProps, ProgressBarStyles, ProgressSegment,
+};
 
 pub struct ProgressBarBuilder {
     props: ProgressBarProps,
@@ -21,7 +23,9 @@ impl ProgressBarBuilder {
         }
     }
 
-    pub(crate) fn segmented(segments: impl IntoIterator<Item = ProgressSegment>) -> Self {
+    pub(crate) fn segmented(
+        segments: impl IntoIterator<Item = ProgressSegment>,
+    ) -> Self {
         Self {
             props: ProgressBarProps {
                 segments: segments.into_iter().collect(),
@@ -39,7 +43,11 @@ impl ProgressBarBuilder {
         self
     }
 
-    pub fn range(mut self, start: impl IntoValue<f32>, end: impl IntoValue<f32>) -> Self {
+    pub fn range(
+        mut self,
+        start: impl IntoValue<f32>,
+        end: impl IntoValue<f32>,
+    ) -> Self {
         if let Some(first) = self.props.segments.first_mut() {
             first.start = start.into_value();
             first.end = end.into_value();
@@ -54,7 +62,10 @@ impl ProgressBarBuilder {
         self
     }
 
-    pub fn segments(mut self, segments: impl IntoIterator<Item = ProgressSegment>) -> Self {
+    pub fn segments(
+        mut self,
+        segments: impl IntoIterator<Item = ProgressSegment>,
+    ) -> Self {
         self.props.segments.extend(segments);
         self
     }

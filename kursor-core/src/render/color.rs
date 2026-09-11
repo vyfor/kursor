@@ -1,6 +1,10 @@
+/// terminal colors.
+///
+/// see https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     #[default]
+    /// inherit.
     Unset,
     Reset,
     Black,
@@ -136,12 +140,16 @@ impl animate::Integrate for Color {
         params: animate::SpringSpec,
         dt: f32,
     ) -> (Self, Self::Velocity) {
-        let (Some((cr, cg, cb)), Some((tr, tg, tb))) = (rgb(*self), rgb(*target)) else {
+        let (Some((cr, cg, cb)), Some((tr, tg, tb))) =
+            (rgb(*self), rgb(*target))
+        else {
             return (*target, [0.0; 3]);
         };
         let step = |pos: f32, tgt: f32, vel: f32| -> (f32, f32) {
             let displacement = pos - tgt;
-            let accel = (-params.stiffness * displacement - params.damping * vel) / params.mass;
+            let accel = (-params.stiffness * displacement
+                - params.damping * vel)
+                / params.mass;
             let nvel = vel + accel * dt;
             (pos + nvel * dt, nvel)
         };

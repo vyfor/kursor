@@ -56,7 +56,12 @@ pub(crate) fn enter() -> Scope {
             let epoch = DOMAIN.epoch.load(Ordering::Relaxed);
             for i in 0..MAX_PINS {
                 if DOMAIN.pinned[i]
-                    .compare_exchange(IDLE, epoch, Ordering::AcqRel, Ordering::Relaxed)
+                    .compare_exchange(
+                        IDLE,
+                        epoch,
+                        Ordering::AcqRel,
+                        Ordering::Relaxed,
+                    )
                     .is_ok()
                 {
                     p.set(i);

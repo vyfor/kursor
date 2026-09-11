@@ -119,7 +119,9 @@ impl TableState {
 
     pub fn is_cell_selected(&self, row: usize, col: usize) -> bool {
         match self.mode {
-            TMode::Cell => self.selected_row == Some(row) && self.selected_col == Some(col),
+            TMode::Cell => {
+                self.selected_row == Some(row) && self.selected_col == Some(col)
+            }
             TMode::Row => self.selected_row == Some(row),
             TMode::Column => self.selected_col == Some(col),
         }
@@ -220,7 +222,12 @@ impl Behavior for TableBehavior {
     type State = TableState;
     type Intent = TableIntent;
 
-    fn event(&self, cx: &BehaviorCx, event: &Event, state: &Self::State) -> Option<Self::Intent> {
+    fn event(
+        &self,
+        cx: &BehaviorCx,
+        event: &Event,
+        state: &Self::State,
+    ) -> Option<Self::Intent> {
         if cx.phase != Phase::Bubble {
             return None;
         }
@@ -234,14 +241,20 @@ impl Behavior for TableBehavior {
                 KeyCode::Home => Some(TableIntent::Home),
                 KeyCode::End => Some(TableIntent::End),
                 KeyCode::PageUp => Some(TableIntent::PageUp(self.page_step)),
-                KeyCode::PageDown => Some(TableIntent::PageDown(self.page_step)),
+                KeyCode::PageDown => {
+                    Some(TableIntent::PageDown(self.page_step))
+                }
                 KeyCode::Enter => Some(TableIntent::Activate),
                 KeyCode::Tab => Some(TableIntent::ToggleMode),
                 _ => None,
             },
             Event::Mouse(mouse) => match mouse.kind {
-                MouseKind::ScrollUp => Some(TableIntent::ScrollY(-i32::from(self.wheel_step))),
-                MouseKind::ScrollDown => Some(TableIntent::ScrollY(i32::from(self.wheel_step))),
+                MouseKind::ScrollUp => {
+                    Some(TableIntent::ScrollY(-i32::from(self.wheel_step)))
+                }
+                MouseKind::ScrollDown => {
+                    Some(TableIntent::ScrollY(i32::from(self.wheel_step)))
+                }
                 MouseKind::Down(MouseButton::Left) => {
                     let rel_y = mouse.row.saturating_sub(cx.rect.y);
                     let rel_x = mouse.column.saturating_sub(cx.rect.x);
@@ -253,11 +266,15 @@ impl Behavior for TableBehavior {
                     } else if let Some(row) = state.row_at(u32::from(rel_y)) {
                         match state.mode {
                             TMode::Cell => {
-                                let col = state.column_at(u32::from(rel_x)).unwrap_or(0);
+                                let col = state
+                                    .column_at(u32::from(rel_x))
+                                    .unwrap_or(0);
                                 Some(TableIntent::SelectCell(row, col))
                             }
                             TMode::Column => {
-                                let col = state.column_at(u32::from(rel_x)).unwrap_or(0);
+                                let col = state
+                                    .column_at(u32::from(rel_x))
+                                    .unwrap_or(0);
                                 Some(TableIntent::SelectColumn(col))
                             }
                             TMode::Row => Some(TableIntent::SelectRow(row)),

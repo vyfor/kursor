@@ -12,7 +12,12 @@ pub trait Behavior: Send + Sync + 'static {
     type State;
     type Intent;
 
-    fn event(&self, cx: &BehaviorCx, event: &Event, state: &Self::State) -> Option<Self::Intent>;
+    fn event(
+        &self,
+        cx: &BehaviorCx,
+        event: &Event,
+        state: &Self::State,
+    ) -> Option<Self::Intent>;
 }
 
 pub trait BehaviorBuilder: Sized {

@@ -17,6 +17,7 @@ pub fn colorize(ink: impl Ink + Clone) -> Colorize {
     }
 }
 
+/// recolors cells.
 #[derive(Clone)]
 pub struct Colorize {
     ink: Box<dyn Ink>,
@@ -102,14 +103,18 @@ impl Fx for Colorize {
                 if amount > 0.0 {
                     match self.target {
                         Target::Fg => {
-                            cell.style.fg = mix(cell.style.fg, inked, amount, Color::White);
+                            cell.style.fg =
+                                mix(cell.style.fg, inked, amount, Color::White);
                         }
                         Target::Bg => {
-                            cell.style.bg = mix(cell.style.bg, inked, amount, Color::Black);
+                            cell.style.bg =
+                                mix(cell.style.bg, inked, amount, Color::Black);
                         }
                         Target::Both => {
-                            cell.style.fg = mix(cell.style.fg, inked, amount, Color::White);
-                            cell.style.bg = mix(cell.style.bg, inked, amount, Color::Black);
+                            cell.style.fg =
+                                mix(cell.style.fg, inked, amount, Color::White);
+                            cell.style.bg =
+                                mix(cell.style.bg, inked, amount, Color::Black);
                         }
                     }
                 }

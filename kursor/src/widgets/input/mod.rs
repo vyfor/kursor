@@ -10,7 +10,10 @@ use kursor_core::{
         blueprint::Blueprint,
         context::Cx,
     },
-    event::{Event, EventResult, Phase, key::KeyCode, mouse::MouseButton, mouse::MouseKind},
+    event::{
+        Event, EventResult, Phase, key::KeyCode, mouse::MouseButton,
+        mouse::MouseKind,
+    },
     layout::{context::MeasureCx, size::Size},
     render::{canvas::Canvas, cell::Cell, style::Style},
     state::{IntoValue, Transition, Value},
@@ -107,28 +110,57 @@ impl Behavior for InputBehavior {
     type State = InputState;
     type Intent = InputIntent;
 
-    fn event(&self, _cx: &BehaviorCx, event: &Event, _state: &Self::State) -> Option<Self::Intent> {
+    fn event(
+        &self,
+        _cx: &BehaviorCx,
+        event: &Event,
+        _state: &Self::State,
+    ) -> Option<Self::Intent> {
         match event {
             Event::Key(key) => {
                 let ctrl = key.modifiers.ctrl;
                 let shift = key.modifiers.shift;
                 match (key.code, ctrl, shift) {
-                    (KeyCode::Char(c), false, _) if !c.is_control() => Some(InputIntent::Insert(c)),
-                    (KeyCode::Backspace, false, _) => Some(InputIntent::DeleteBack),
-                    (KeyCode::Delete, false, _) => Some(InputIntent::DeleteForward),
-                    (KeyCode::Left, false, false) => Some(InputIntent::CursorLeft),
-                    (KeyCode::Right, false, false) => Some(InputIntent::CursorRight),
-                    (KeyCode::Left, false, true) => Some(InputIntent::SelectLeft),
-                    (KeyCode::Right, false, true) => Some(InputIntent::SelectRight),
+                    (KeyCode::Char(c), false, _) if !c.is_control() => {
+                        Some(InputIntent::Insert(c))
+                    }
+                    (KeyCode::Backspace, false, _) => {
+                        Some(InputIntent::DeleteBack)
+                    }
+                    (KeyCode::Delete, false, _) => {
+                        Some(InputIntent::DeleteForward)
+                    }
+                    (KeyCode::Left, false, false) => {
+                        Some(InputIntent::CursorLeft)
+                    }
+                    (KeyCode::Right, false, false) => {
+                        Some(InputIntent::CursorRight)
+                    }
+                    (KeyCode::Left, false, true) => {
+                        Some(InputIntent::SelectLeft)
+                    }
+                    (KeyCode::Right, false, true) => {
+                        Some(InputIntent::SelectRight)
+                    }
                     (KeyCode::Home, false, false) => Some(InputIntent::Home),
                     (KeyCode::End, false, false) => Some(InputIntent::End),
-                    (KeyCode::Home, false, true) => Some(InputIntent::SelectToStart),
-                    (KeyCode::End, false, true) => Some(InputIntent::SelectToEnd),
+                    (KeyCode::Home, false, true) => {
+                        Some(InputIntent::SelectToStart)
+                    }
+                    (KeyCode::End, false, true) => {
+                        Some(InputIntent::SelectToEnd)
+                    }
                     (KeyCode::Left, true, _) => Some(InputIntent::WordLeft),
                     (KeyCode::Right, true, _) => Some(InputIntent::WordRight),
-                    (KeyCode::Backspace, true, _) => Some(InputIntent::DeleteWordBack),
-                    (KeyCode::Delete, true, _) => Some(InputIntent::DeleteWordForward),
-                    (KeyCode::Char('a'), true, _) => Some(InputIntent::SelectAll),
+                    (KeyCode::Backspace, true, _) => {
+                        Some(InputIntent::DeleteWordBack)
+                    }
+                    (KeyCode::Delete, true, _) => {
+                        Some(InputIntent::DeleteWordForward)
+                    }
+                    (KeyCode::Char('a'), true, _) => {
+                        Some(InputIntent::SelectAll)
+                    }
                     (KeyCode::Char('c'), true, _) => Some(InputIntent::Copy),
                     (KeyCode::Char('x'), true, _) => Some(InputIntent::Cut),
                     (KeyCode::Enter, _, _) => Some(InputIntent::Submit),
@@ -137,7 +169,8 @@ impl Behavior for InputBehavior {
                 }
             }
             Event::Paste(text) => {
-                let filtered: String = text.chars().filter(|c| !c.is_control()).collect();
+                let filtered: String =
+                    text.chars().filter(|c| !c.is_control()).collect();
                 Some(InputIntent::Paste(filtered))
             }
             _ => None,
@@ -159,7 +192,10 @@ pub struct InputProps {
 }
 
 impl InputProps {
-    pub fn new(value: impl IntoValue<String>, on_change: impl Fn(&mut Cx, &str) + 'static) -> Self {
+    pub fn new(
+        value: impl IntoValue<String>,
+        on_change: impl Fn(&mut Cx, &str) + 'static,
+    ) -> Self {
         Self {
             value: value.into_value(),
             placeholder: Value::plain(String::new()),
@@ -174,6 +210,15 @@ impl InputProps {
     }
 }
 
+/// single-line text input.
+///
+/// provides:
+/// - cursor movement
+/// - cursor jumps
+/// - text selection
+/// - text masking (e.g. displaying `*` instead of actual characters which can
+///   be useful for sensitive input)
+/// - virtual/pseudo clipboard ops
 pub struct Input {
     state: InputState,
     styles: InputStyles,
@@ -813,7 +858,8 @@ impl Component for Input {
             let ch = self.display_char(raw_ch, idx, total);
             let w = UnicodeWidthChar::width(ch).unwrap_or(0);
             if display_pos + w > self.scroll {
-                let render_x = x + (display_pos.saturating_sub(self.scroll)) as u16;
+                let render_x =
+                    x + (display_pos.saturating_sub(self.scroll)) as u16;
                 let cell_style = if self.in_selection(idx) {
                     self.styles
                         .selection

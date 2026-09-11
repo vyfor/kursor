@@ -28,6 +28,7 @@ impl Default for ColumnProps {
     }
 }
 
+/// places children in a vertical column.
 pub struct Column {
     gap: u16,
 }
@@ -41,7 +42,10 @@ impl Column {
         Self::spaced(0, children)
     }
 
-    pub fn spaced(gap: impl IntoValue<u16>, children: impl IntoBlueprint) -> Blueprint {
+    pub fn spaced(
+        gap: impl IntoValue<u16>,
+        children: impl IntoBlueprint,
+    ) -> Blueprint {
         Blueprint::new::<Self>(ColumnProps {
             gap: gap.into_value(),
         })
@@ -82,8 +86,10 @@ impl Component for Column {
             return Size::default();
         }
 
-        let gaps = usize::from(self.gap).saturating_mul(count.saturating_sub(1));
-        let sizes: Vec<Size> = (0..count).map(|index| children.size(index)).collect();
+        let gaps =
+            usize::from(self.gap).saturating_mul(count.saturating_sub(1));
+        let sizes: Vec<Size> =
+            (0..count).map(|index| children.size(index)).collect();
         let height = sizes
             .iter()
             .map(|size| usize::from(size.height))
@@ -100,16 +106,22 @@ impl Component for Column {
         Size::new(width, height)
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         let mut y = area.y;
         for index in 0..children.len() {
             let size = children.size(index);
             let height = size.height.min(area.bottom().saturating_sub(y));
             children.set(index, Rect::new(area.x, y, area.width, height));
-            y = y.saturating_add(height).saturating_add(
-                self.gap
-                    .min(area.bottom().saturating_sub(y.saturating_add(height))),
-            );
+            y =
+                y.saturating_add(height).saturating_add(self.gap.min(
+                    area.bottom().saturating_sub(y.saturating_add(height)),
+                ));
         }
     }
 }

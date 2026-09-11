@@ -8,6 +8,7 @@ use crate::{
     layout::{Margin, offset::Offset},
 };
 
+/// a description of a component that hasn't been mounted yet.
 pub struct Blueprint {
     pub key: Option<Key>,
     pub type_id: TypeId,
@@ -20,7 +21,10 @@ pub struct Blueprint {
 
 impl Blueprint {
     pub fn new<C: Component>(props: C::Props) -> Self {
-        fn create<C: Component>(cx: &mut Cx, props: &dyn Any) -> Box<dyn AnyComponent> {
+        fn create<C: Component>(
+            cx: &mut Cx,
+            props: &dyn Any,
+        ) -> Box<dyn AnyComponent> {
             let props = props.downcast_ref::<C::Props>().unwrap();
             Box::new(C::create(cx, props))
         }
@@ -41,16 +45,22 @@ impl Blueprint {
         }
     }
 
+    /// attaches a key/id to the blueprint so that it can retain its identity
+    /// when reconciled/rebuilt.
     pub fn key(mut self, key: impl Into<Key>) -> Self {
         self.key = Some(key.into());
         self
     }
 
+    /// moves the component visually without affecting the layout.
     pub fn offset(mut self, offset: impl Into<Offset>) -> Self {
         self.offset = offset.into();
         self
     }
 
+    /// applies given margin around the component that affects the layout.
+    ///
+    /// often used for merging borders.
     pub fn margin(mut self, margin: impl Into<Margin>) -> Self {
         self.margin = margin.into();
         self

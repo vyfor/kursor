@@ -9,6 +9,7 @@ use kursor_core::{
 use super::color::mix;
 use crate::{EffectCx, Feather, Fx, Mask, Spread};
 
+/// reveals or hides its content across the area.
 #[derive(Clone)]
 pub struct Reveal {
     duration: Duration,
@@ -143,9 +144,9 @@ impl Reveal {
                         underlay
                     } else if amount >= 1.0 {
                         source
-                    } else if let Some(cell) =
-                        self.subcell_blend(cx, x, y, progress, source, underlay, true)
-                    {
+                    } else if let Some(cell) = self.subcell_blend(
+                        cx, x, y, progress, source, underlay, true,
+                    ) {
                         cell
                     } else {
                         self.blend_cell(source, underlay, amount, true)
@@ -155,9 +156,9 @@ impl Reveal {
                         source
                     } else if amount >= 1.0 {
                         underlay
-                    } else if let Some(cell) =
-                        self.subcell_blend(cx, x, y, progress, source, underlay, false)
-                    {
+                    } else if let Some(cell) = self.subcell_blend(
+                        cx, x, y, progress, source, underlay, false,
+                    ) {
                         cell
                     } else {
                         self.blend_cell(source, underlay, amount, false)
@@ -169,7 +170,13 @@ impl Reveal {
         }
     }
 
-    fn blend_cell(&self, source: Cell, underlay: Cell, amount: f32, entering: bool) -> Cell {
+    fn blend_cell(
+        &self,
+        source: Cell,
+        underlay: Cell,
+        amount: f32,
+        entering: bool,
+    ) -> Cell {
         let (fg_from, fg_to, bg_from, bg_to) = if entering {
             let fg_from = match underlay.style.bg {
                 Color::Reset => Color::Black,
@@ -202,7 +209,10 @@ impl Reveal {
         underlay: Cell,
         entering: bool,
     ) -> Option<Cell> {
-        if self.subcell == Subcell::None || source.ch != ' ' || source.style.bg == Color::Reset {
+        if self.subcell == Subcell::None
+            || source.ch != ' '
+            || source.style.bg == Color::Reset
+        {
             return None;
         }
 
@@ -226,7 +236,8 @@ impl Reveal {
                 if x > 0 {
                     spread(x - 1, y)
                 } else {
-                    let step = spread((x + 1).min(cx.layer.width() - 1), y) - a_here;
+                    let step =
+                        spread((x + 1).min(cx.layer.width() - 1), y) - a_here;
                     (a_here - step).max(0.0)
                 }
             }
@@ -242,7 +253,8 @@ impl Reveal {
                 if y > 0 {
                     spread(x, y - 1)
                 } else {
-                    let step = spread(x, (y + 1).min(cx.layer.height() - 1)) - a_here;
+                    let step =
+                        spread(x, (y + 1).min(cx.layer.height() - 1)) - a_here;
                     (a_here - step).max(0.0)
                 }
             }
@@ -277,7 +289,12 @@ impl Reveal {
         Some(Cell::new(ch, Style::new().fg(fg).bg(bg)))
     }
 
-    fn apply_hard_wipe(&self, cx: &mut EffectCx<'_>, amount: f32, direction: Direction) {
+    fn apply_hard_wipe(
+        &self,
+        cx: &mut EffectCx<'_>,
+        amount: f32,
+        direction: Direction,
+    ) {
         let total = match direction {
             Direction::Left | Direction::Right => cx.layer.width() as f32,
             Direction::Up | Direction::Down => cx.layer.height() as f32,
@@ -301,7 +318,12 @@ impl Reveal {
         }
     }
 
-    fn apply_soft_wipe(&self, cx: &mut EffectCx<'_>, amount: f32, direction: Direction) {
+    fn apply_soft_wipe(
+        &self,
+        cx: &mut EffectCx<'_>,
+        amount: f32,
+        direction: Direction,
+    ) {
         let length = match direction {
             Direction::Left | Direction::Right => cx.layer.width() as f32,
             Direction::Up | Direction::Down => cx.layer.height() as f32,
@@ -369,7 +391,8 @@ impl Reveal {
                     } else {
                         Direction::Up
                     };
-                    let edge = self.subcell.edge_cell(source, underlay, dir, distance);
+                    let edge =
+                        self.subcell.edge_cell(source, underlay, dir, distance);
                     self.feather.soften(edge, underlay, distance)
                 } else {
                     self.feather.soften(source, underlay, distance)
@@ -380,7 +403,13 @@ impl Reveal {
         }
     }
 
-    fn edge(&self, src: Cell, underlay: Cell, direction: Direction, frac: f32) -> Cell {
+    fn edge(
+        &self,
+        src: Cell,
+        underlay: Cell,
+        direction: Direction,
+        frac: f32,
+    ) -> Cell {
         let cell = self.subcell.edge_cell(src, underlay, direction, frac);
         self.feather.soften(cell, underlay, frac)
     }

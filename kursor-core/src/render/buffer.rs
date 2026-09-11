@@ -106,8 +106,10 @@ pub fn diff_graphics(
 
     for (node, new) in current {
         let old = committed.get(node);
-        let unchanged = old.is_some_and(|o| o.area == new.area && o.key == new.op.key);
-        let overlaps_clear = cleared.iter().any(|area| area.intersects(&new.area));
+        let unchanged =
+            old.is_some_and(|o| o.area == new.area && o.key == new.op.key);
+        let overlaps_clear =
+            cleared.iter().any(|area| area.intersects(&new.area));
         if unchanged && !overlaps_clear {
             committed.insert(
                 *node,
@@ -156,13 +158,24 @@ impl Buffer {
         Self {
             width: size.width,
             height: size.height,
-            cells: vec![Cell::default(); size.width as usize * size.height as usize],
+            cells: vec![
+                Cell::default();
+                size.width as usize * size.height as usize
+            ],
             graphics: BTreeMap::new(),
             dirty_rect: None,
         }
     }
 
-    pub fn push_graphics(&mut self, node: NodeId, x: u16, y: u16, w: u16, h: u16, op: GraphicsOp) {
+    pub fn push_graphics(
+        &mut self,
+        node: NodeId,
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        op: GraphicsOp,
+    ) {
         self.graphics.insert(
             node,
             GraphicsEntry {
@@ -235,10 +248,12 @@ impl Buffer {
     pub fn diff_into(&mut self, old: &Buffer, out: &mut Vec<CellDiff>) {
         if self.size() != old.size() {
             out.clear();
-            out.extend(self.cells.iter().enumerate().map(|(i, &cell)| CellDiff {
-                x: (i as u32 % self.width as u32) as u16,
-                y: (i as u32 / self.width as u32) as u16,
-                cell,
+            out.extend(self.cells.iter().enumerate().map(|(i, &cell)| {
+                CellDiff {
+                    x: (i as u32 % self.width as u32) as u16,
+                    y: (i as u32 / self.width as u32) as u16,
+                    cell,
+                }
             }));
             self.dirty_rect = None;
             return;

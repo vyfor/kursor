@@ -43,7 +43,11 @@ pub struct LayoutCx<'a> {
 }
 
 impl<'a> LayoutCx<'a> {
-    pub(crate) fn new(sizes: &'a [Size], rects: &'a mut [Rect], offsets: &'a mut [Offset]) -> Self {
+    pub(crate) fn new(
+        sizes: &'a [Size],
+        rects: &'a mut [Rect],
+        offsets: &'a mut [Offset],
+    ) -> Self {
         assert_eq!(sizes.len(), rects.len());
         assert_eq!(rects.len(), offsets.len());
         Self {

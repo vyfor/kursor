@@ -1,9 +1,11 @@
 use kursor_core::util::base64;
 
 use crate::{
-    Error, GraphicsProtocol, ImageData, ImageEncoder, ImageFormat, ImageSource, ImageTarget, Result,
+    Error, GraphicsProtocol, ImageData, ImageEncoder, ImageFormat, ImageSource,
+    ImageTarget, Result,
 };
 
+/// https://iterm2.com/documentation-images.html
 pub struct Iterm2;
 
 impl ImageEncoder for Iterm2 {
@@ -13,7 +15,11 @@ impl ImageEncoder for Iterm2 {
         GraphicsProtocol::Iterm2
     }
 
-    fn encode(&self, source: &ImageSource, target: &ImageTarget) -> Result<Self::Output> {
+    fn encode(
+        &self,
+        source: &ImageSource,
+        target: &ImageTarget,
+    ) -> Result<Self::Output> {
         let png = png_bytes(source)?;
         let b64 = base64::encode(&png);
         let mut hdr = format!("1337;File=inline=1;size={}", png.len());
@@ -55,9 +61,12 @@ fn encode_png(image: &ImageData) -> Result<Vec<u8>> {
     #[cfg(feature = "image")]
     {
         let mut buf = Vec::new();
-        let rgba =
-            image::RgbaImage::from_raw(image.width(), image.height(), image.rgba_bytes().to_vec())
-                .ok_or(Error::InvalidDimensions)?;
+        let rgba = image::RgbaImage::from_raw(
+            image.width(),
+            image.height(),
+            image.rgba_bytes().to_vec(),
+        )
+        .ok_or(Error::InvalidDimensions)?;
         let enc = image::codecs::png::PngEncoder::new(&mut buf);
         image::ImageEncoder::write_image(
             enc,

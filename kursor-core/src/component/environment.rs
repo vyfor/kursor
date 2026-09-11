@@ -13,9 +13,9 @@ pub struct Environment {
 impl Environment {
     pub fn get<T: 'static>(&self) -> Option<&T> {
         let id = TypeId::of::<T>();
-        self.values
-            .iter()
-            .find_map(|(tid, val)| (*tid == id).then(|| val.downcast_ref::<T>().unwrap()))
+        self.values.iter().find_map(|(tid, val)| {
+            (*tid == id).then(|| val.downcast_ref::<T>().unwrap())
+        })
     }
 
     pub fn set<T: 'static>(&mut self, value: T) {

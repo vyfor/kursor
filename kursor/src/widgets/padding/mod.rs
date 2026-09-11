@@ -21,6 +21,7 @@ pub struct PaddingProps {
     pub insets: Value<Insets>,
 }
 
+/// shrinks the child's rect by given `insets` on each side.
 pub struct Padding {
     insets: Insets,
 }
@@ -34,7 +35,11 @@ impl Padding {
         Self::new(Insets::all(value), child)
     }
 
-    pub fn symmetric(horizontal: u16, vertical: u16, child: impl IntoBlueprint) -> Blueprint {
+    pub fn symmetric(
+        horizontal: u16,
+        vertical: u16,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Self::new(Insets::symmetric(horizontal, vertical), child)
     }
 
@@ -62,7 +67,10 @@ impl Padding {
         Self::new(Insets::right(value), child)
     }
 
-    pub fn new(insets: impl IntoValue<Insets>, child: impl IntoBlueprint) -> Blueprint {
+    pub fn new(
+        insets: impl IntoValue<Insets>,
+        child: impl IntoBlueprint,
+    ) -> Blueprint {
         Blueprint::new::<Self>(PaddingProps {
             insets: insets.into_value(),
         })
@@ -125,7 +133,13 @@ impl Component for Padding {
         )
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         if children.is_empty() {
             return;
         }

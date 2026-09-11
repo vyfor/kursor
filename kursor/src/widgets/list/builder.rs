@@ -10,7 +10,10 @@ use kursor_core::{
     state::IntoValue,
 };
 
-use super::{IntoListSelection, List, ListData, ListFit, ListIntent, ListProps, ListState};
+use super::{
+    IntoListSelection, List, ListData, ListFit, ListIntent, ListProps,
+    ListState,
+};
 
 #[derive(Default)]
 pub struct ListBuilder {
@@ -44,7 +47,10 @@ impl ListBuilder {
         self
     }
 
-    pub fn orientation(mut self, orientation: impl IntoValue<Orientation>) -> Self {
+    pub fn orientation(
+        mut self,
+        orientation: impl IntoValue<Orientation>,
+    ) -> Self {
         self.props.orientation = orientation.into_value();
         self
     }
@@ -94,22 +100,34 @@ impl ListBuilder {
         self
     }
 
-    pub fn on_select(mut self, on_select: impl Fn(&mut Cx, usize) + 'static) -> Self {
+    pub fn on_select(
+        mut self,
+        on_select: impl Fn(&mut Cx, usize) + 'static,
+    ) -> Self {
         self.props.on_select = Some(Rc::new(on_select));
         self
     }
 
-    pub fn on_activate(mut self, on_activate: impl Fn(&mut Cx, usize) + 'static) -> Self {
+    pub fn on_activate(
+        mut self,
+        on_activate: impl Fn(&mut Cx, usize) + 'static,
+    ) -> Self {
         self.props.on_activate = Some(Rc::new(on_activate));
         self
     }
 
-    pub fn on_visible_range(mut self, callback: impl Fn(Range<usize>) + 'static) -> Self {
+    pub fn on_visible_range(
+        mut self,
+        callback: impl Fn(Range<usize>) + 'static,
+    ) -> Self {
         self.props.on_visible_range = Some(Rc::new(callback));
         self
     }
 
-    pub fn on_request_range(mut self, callback: impl Fn(Range<usize>) + 'static) -> Self {
+    pub fn on_request_range(
+        mut self,
+        callback: impl Fn(Range<usize>) + 'static,
+    ) -> Self {
         self.props.on_request_range = Some(Rc::new(callback));
         self
     }

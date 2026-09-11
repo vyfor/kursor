@@ -4,6 +4,9 @@ use animate::{Activity, Time};
 
 use crate::{EffectCx, Fx};
 
+/// repeats an effect indefinitely.
+///
+/// to infinity and beyond!
 pub fn infinite(effect: impl Fx) -> Infinite {
     Infinite {
         effect: Box::new(effect),
@@ -12,6 +15,9 @@ pub fn infinite(effect: impl Fx) -> Infinite {
     }
 }
 
+/// repeats an effect indefinitely.
+///
+/// to infinity and beyond!
 pub struct Infinite {
     effect: Box<dyn Fx>,
     delay: Duration,
@@ -38,7 +44,9 @@ impl Clone for Infinite {
 impl Fx for Infinite {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity {
         if let Some(waiting_since) = self.waiting_since {
-            if cx.time.elapsed.saturating_sub(waiting_since.elapsed) < self.delay {
+            if cx.time.elapsed.saturating_sub(waiting_since.elapsed)
+                < self.delay
+            {
                 self.effect.apply(cx);
                 return Activity::RUNNING;
             }

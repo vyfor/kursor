@@ -133,7 +133,8 @@ impl animate::Integrate for Style {
                 },
             },
             [
-                fg_nvel[0], fg_nvel[1], fg_nvel[2], bg_nvel[0], bg_nvel[1], bg_nvel[2],
+                fg_nvel[0], fg_nvel[1], fg_nvel[2], bg_nvel[0], bg_nvel[1],
+                bg_nvel[2],
             ],
         )
     }

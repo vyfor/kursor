@@ -14,6 +14,7 @@ pub mod termina;
 
 pub(crate) mod probe;
 
+/// backend abstraction for a terminal.
 pub trait Terminal {
     type Error: Error + Send + Sync + 'static;
 

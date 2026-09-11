@@ -13,7 +13,11 @@ pub struct ImageData {
 }
 
 impl ImageData {
-    pub fn rgba(width: u32, height: u32, rgba: impl Into<Rc<[u8]>>) -> Result<Self> {
+    pub fn rgba(
+        width: u32,
+        height: u32,
+        rgba: impl Into<Rc<[u8]>>,
+    ) -> Result<Self> {
         if width == 0 || height == 0 {
             return Err(Error::InvalidDimensions);
         }

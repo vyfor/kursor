@@ -10,7 +10,14 @@ use crate::color::{hsv, scale};
 use crate::fx::color;
 
 pub trait Ink: InkClone + 'static {
-    fn color(&self, x: u16, y: u16, cell: Cell, size: Size, time: Time) -> Color;
+    fn color(
+        &self,
+        x: u16,
+        y: u16,
+        cell: Cell,
+        size: Size,
+        time: Time,
+    ) -> Color;
 }
 
 pub trait InkClone {
@@ -34,7 +41,14 @@ impl Clone for Box<dyn Ink> {
 
 impl Ink for Box<dyn Ink> {
     // todo: consider InkCx?
-    fn color(&self, x: u16, y: u16, cell: Cell, size: Size, time: Time) -> Color {
+    fn color(
+        &self,
+        x: u16,
+        y: u16,
+        cell: Cell,
+        size: Size,
+        time: Time,
+    ) -> Color {
         self.as_ref().color(x, y, cell, size, time)
     }
 }
@@ -130,22 +144,34 @@ impl Source {
                 base + phase
             }
             Motion::Oscillate { freq, speed } => {
-                0.5 + 0.5 * ((base * freq - t * speed) * std::f32::consts::TAU).sin()
+                0.5 + 0.5
+                    * ((base * freq - t * speed) * std::f32::consts::TAU).sin()
             }
         };
         match &self.shaping {
-            Some((width, Shaping::Falloff)) => (-(v / width.max(1e-3)) * 7.0).exp(),
+            Some((width, Shaping::Falloff)) => {
+                (-(v / width.max(1e-3)) * 7.0).exp()
+            }
             None => v,
         }
     }
 }
 
 impl Ink for Source {
-    fn color(&self, x: u16, y: u16, _cell: Cell, size: Size, time: Time) -> Color {
+    fn color(
+        &self,
+        x: u16,
+        y: u16,
+        _cell: Cell,
+        size: Size,
+        time: Time,
+    ) -> Color {
         let v = self.scalar(x, y, size, time);
         match &self.colormap {
             Some(ColorMap::Hue { sat, val }) => hsv(v, *sat, *val),
-            Some(ColorMap::Shade { color }) => scale(*color, 0.25 + 0.75 * v.clamp(0.0, 1.0)),
+            Some(ColorMap::Shade { color }) => {
+                scale(*color, 0.25 + 0.75 * v.clamp(0.0, 1.0))
+            }
             Some(ColorMap::Gradient { from, to }) => {
                 color::mix(*from, *to, v.clamp(0.0, 1.0), Color::Black)
             }
@@ -153,7 +179,8 @@ impl Ink for Source {
                 if colors.is_empty() {
                     return Color::Reset;
                 }
-                let idx = v.rem_euclid(colors.len() as f32) as usize % colors.len();
+                let idx =
+                    v.rem_euclid(colors.len() as f32) as usize % colors.len();
                 colors[idx]
             }
             None => hsv(v, 0.85, 1.0),
@@ -257,7 +284,14 @@ pub struct Solid {
 }
 
 impl Ink for Solid {
-    fn color(&self, _x: u16, _y: u16, _cell: Cell, _size: Size, _time: Time) -> Color {
+    fn color(
+        &self,
+        _x: u16,
+        _y: u16,
+        _cell: Cell,
+        _size: Size,
+        _time: Time,
+    ) -> Color {
         self.color
     }
 }
@@ -272,7 +306,14 @@ pub struct CharColor {
 }
 
 impl Ink for CharColor {
-    fn color(&self, _x: u16, _y: u16, cell: Cell, _size: Size, _time: Time) -> Color {
+    fn color(
+        &self,
+        _x: u16,
+        _y: u16,
+        cell: Cell,
+        _size: Size,
+        _time: Time,
+    ) -> Color {
         (self.f)(cell.ch)
     }
 }
@@ -309,7 +350,14 @@ pub struct Lerp {
 }
 
 impl Ink for Lerp {
-    fn color(&self, x: u16, y: u16, cell: Cell, size: Size, time: Time) -> Color {
+    fn color(
+        &self,
+        x: u16,
+        y: u16,
+        cell: Cell,
+        size: Size,
+        time: Time,
+    ) -> Color {
         let ca = self.a.color(x, y, cell, size, time);
         let cb = self.b.color(x, y, cell, size, time);
         color::mix(ca, cb, self.amount, Color::Black)

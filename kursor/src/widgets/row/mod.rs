@@ -28,6 +28,7 @@ impl Default for RowProps {
     }
 }
 
+/// places children in a horizontal row.
 pub struct Row {
     gap: u16,
 }
@@ -41,7 +42,10 @@ impl Row {
         Self::spaced(0, children)
     }
 
-    pub fn spaced(gap: impl IntoValue<u16>, children: impl IntoBlueprint) -> Blueprint {
+    pub fn spaced(
+        gap: impl IntoValue<u16>,
+        children: impl IntoBlueprint,
+    ) -> Blueprint {
         Blueprint::new::<Self>(RowProps {
             gap: gap.into_value(),
         })
@@ -82,8 +86,10 @@ impl Component for Row {
             return Size::default();
         }
 
-        let gaps = usize::from(self.gap).saturating_mul(count.saturating_sub(1));
-        let sizes: Vec<Size> = (0..count).map(|index| children.size(index)).collect();
+        let gaps =
+            usize::from(self.gap).saturating_mul(count.saturating_sub(1));
+        let sizes: Vec<Size> =
+            (0..count).map(|index| children.size(index)).collect();
         let width = sizes
             .iter()
             .map(|size| usize::from(size.width))
@@ -100,7 +106,13 @@ impl Component for Row {
         Size::new(width, height)
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         let mut x = area.x;
         for index in 0..children.len() {
             let size = children.size(index);

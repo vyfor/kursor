@@ -1,5 +1,6 @@
 use std::any::TypeId;
 
+/// identifier for an animation/transition on a widget.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Channel {
     Name(&'static str),

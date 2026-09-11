@@ -20,6 +20,7 @@ pub struct EffectProps {
     pub(crate) fx: Box<dyn Fx>,
 }
 
+/// post-processing wrapper for widgets.
 pub struct Effect {
     fx: Box<dyn Fx>,
     layer: EffectLayer,
@@ -53,7 +54,12 @@ impl Component for Effect {
         Update::NONE
     }
 
-    fn pre_paint(&mut self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) {
+    fn pre_paint(
+        &mut self,
+        cx: &mut Cx,
+        _props: &Self::Props,
+        canvas: &mut Canvas,
+    ) {
         if !self.underlay_captured || self.underlay_origin != canvas.origin() {
             self.layer.capture_underlay(canvas, cx.rect);
             self.underlay_captured = true;
@@ -76,7 +82,13 @@ impl Component for Effect {
         }
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         if self.layer.area() != area {
             self.underlay_captured = false;
         }
@@ -85,7 +97,12 @@ impl Component for Effect {
         }
     }
 
-    fn post_paint(&mut self, cx: &mut Cx, _props: &Self::Props, canvas: &mut Canvas) -> bool {
+    fn post_paint(
+        &mut self,
+        cx: &mut Cx,
+        _props: &Self::Props,
+        canvas: &mut Canvas,
+    ) -> bool {
         self.layer.capture(canvas, cx.rect);
 
         let mut effect_cx = EffectCx {

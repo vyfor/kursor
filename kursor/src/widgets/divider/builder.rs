@@ -18,7 +18,10 @@ impl DividerBuilder {
         }
     }
 
-    pub fn orientation(mut self, orientation: impl IntoValue<Orientation>) -> Self {
+    pub fn orientation(
+        mut self,
+        orientation: impl IntoValue<Orientation>,
+    ) -> Self {
         self.props.orientation = orientation.into_value();
         self
     }

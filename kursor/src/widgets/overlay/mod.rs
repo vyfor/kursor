@@ -92,7 +92,8 @@ impl Overlays {
         self.command(cx, Command::Open(layer));
     }
 
-    // todo: possibly add means to close by id (whenever component ids are added)
+    // todo: possibly add means to close by id (whenever component ids are
+    // added)
     pub fn close_top(&self, cx: &mut Cx) {
         self.command(cx, Command::CloseTop);
     }
@@ -159,6 +160,15 @@ struct ActiveLayer {
     max_size: Size,
 }
 
+/// draws floating layers above the underlying content.
+///
+/// manages a stack of [`Layer`]s, which can be opened and
+/// closed through [`Overlays`]. layers can be positioned relative to the
+/// viewport, a point, or a rect.
+///
+/// an `Overlay` is typically mounted near the root of the application.
+/// if your application uses overlays, it is recommended to have a single
+/// `Overlay` near the root and refer to [`Overlays`] to manage its layers.
 pub struct Overlay {
     overlays: Overlays,
     base: Rc<Blueprint>,
@@ -196,16 +206,16 @@ impl Overlay {
             Anchor::Viewport(alignment) => {
                 let x = match alignment.horizontal {
                     HAlign::Left => viewport.x,
-                    HAlign::Center => viewport
-                        .x
-                        .saturating_add(viewport.width.saturating_sub(width) / 2),
+                    HAlign::Center => viewport.x.saturating_add(
+                        viewport.width.saturating_sub(width) / 2,
+                    ),
                     HAlign::Right => max_x,
                 };
                 let y = match alignment.vertical {
                     VAlign::Top => viewport.y,
-                    VAlign::Center => viewport
-                        .y
-                        .saturating_add(viewport.height.saturating_sub(height) / 2),
+                    VAlign::Center => viewport.y.saturating_add(
+                        viewport.height.saturating_sub(height) / 2,
+                    ),
                     VAlign::Bottom => max_y,
                 };
                 (x, y)
@@ -218,7 +228,9 @@ impl Overlay {
     fn blueprints(&self) -> Vec<Blueprint> {
         let mut children = Vec::with_capacity(self.layers.len() + 1);
         children.push((*self.base).clone());
-        children.extend(self.layers.iter().map(|layer| layer.layer.content.clone()));
+        children.extend(
+            self.layers.iter().map(|layer| layer.layer.content.clone()),
+        );
         children
     }
 }
@@ -318,14 +330,23 @@ impl Component for Overlay {
         available
     }
 
-    fn layout(&mut self, _cx: &mut Cx, _props: &Self::Props, area: Rect, children: &mut LayoutCx) {
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
         if !children.is_empty() {
             children.set(0, area);
         }
         for (index, layer) in self.layers.iter().enumerate() {
             let child = index + 1;
             if child < children.len() {
-                children.set(child, Self::pos(layer.layer.anchor, layer.max_size, area));
+                children.set(
+                    child,
+                    Self::pos(layer.layer.anchor, layer.max_size, area),
+                );
             }
         }
     }
