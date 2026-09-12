@@ -27,7 +27,6 @@ the project is split into several crates:
 - atoms: reactive state that can be shared between different parts of an application.
 - signals: reactive state local to the ui.
 - memo: derived state from a signal.
-- animated: values that gradually interpolate over time.
 
 ### widgets
 
