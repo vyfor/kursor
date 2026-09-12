@@ -4,6 +4,7 @@ pub mod bounds;
 pub mod button;
 pub mod column;
 pub mod divider;
+pub mod ext;
 pub mod flex;
 pub mod grid;
 #[cfg(feature = "image")]
@@ -32,6 +33,7 @@ pub use button::{
 };
 pub use column::{Column, ColumnProps};
 pub use divider::{Divider, DividerProps};
+pub use ext::IntoBlueprintExt;
 pub use flex::{Flex, FlexBuilder, FlexItem, FlexProps, IntoFlexItems};
 pub use grid::{Grid, GridBuilder, GridItem, GridProps, IntoGridItems};
 #[cfg(feature = "image")]

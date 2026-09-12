@@ -5,9 +5,10 @@ pub mod layout;
 pub mod terminal;
 pub mod widgets;
 
-pub use bindings::{Bind, Bindings};
+pub use bindings::{BehaviorBuilderExt, Bind, Bindings, Bound};
 #[doc(inline)]
 pub use kursor_core as core;
+pub use widgets::IntoBlueprintExt;
 
 #[cfg(feature = "crossterm")]
 pub use crossterm;

@@ -170,6 +170,22 @@ impl<S, I> Bindings<S, I> {
     }
 }
 
+pub trait BehaviorBuilderExt: BehaviorBuilder + Sized {
+    fn bind(
+        self,
+        bind: Bind,
+        intent: Self::Intent,
+    ) -> Bound<Self, Self::State, Self::Intent>
+    where
+        Self::State: 'static,
+        Self::Intent: Clone + Send + Sync + 'static,
+    {
+        Bindings::with(self).bind(bind, intent)
+    }
+}
+
+impl<T> BehaviorBuilderExt for T where T: BehaviorBuilder {}
+
 impl<B, S, I> Bound<B, S, I> {
     pub fn bind(mut self, bind: Bind, intent: I) -> Self {
         self.bindings = self.bindings.bind(bind, intent);
