@@ -1,13 +1,14 @@
 pub mod builder;
 pub use builder::ButtonBuilder;
 
+use std::rc::Rc;
 use std::sync::Arc;
 
 use kursor_core::{
     component::{
         Component, Focus, Update,
         behavior::{Behavior, BehaviorCx},
-        blueprint::Blueprint,
+        blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
     event::{
@@ -15,7 +16,7 @@ use kursor_core::{
         key::KeyCode,
         mouse::{MouseButton, MouseKind},
     },
-    layout::{WrapMode, context::MeasureCx, size::Size},
+    layout::{context::MeasureCx, size::Size},
     render::style::Style,
     state::{IntoValue, Signal, Transition, Value},
     theme::Theme,
@@ -116,7 +117,7 @@ impl Behavior for ButtonBehavior {
 
 #[derive(Clone)]
 pub struct ButtonProps {
-    pub label: Value<String>,
+    pub children: Rc<[Blueprint]>,
     pub border: Value<Border>,
     pub styles: Value<ButtonStyles>,
     pub disabled: Value<bool>,
@@ -127,11 +128,11 @@ pub struct ButtonProps {
 
 impl ButtonProps {
     pub fn new(
-        label: impl IntoValue<String>,
+        child: impl IntoBlueprint,
         on_press: impl Fn(&mut Cx) + 'static,
     ) -> Self {
         Self {
-            label: label.into_value(),
+            children: child.into_blueprint().into(),
             border: Value::plain(Border::Rounded),
             styles: Value::plain(ButtonStyles::default()),
             disabled: Value::plain(false),
@@ -149,22 +150,29 @@ pub struct Button {
     state: ButtonState,
     styles: ButtonStyles,
     disabled: bool,
-    label: Signal<String>,
+
     border: Signal<Border>,
     style: Signal<Option<Style>>,
     transition: Option<Transition>,
 }
 
 impl Button {
-    pub fn builder(label: impl IntoValue<String>) -> ButtonBuilder {
+    pub fn builder(label: impl IntoText) -> ButtonBuilder {
         ButtonBuilder::new(label)
     }
 
     pub fn new(
-        label: impl IntoValue<String>,
+        child: impl IntoBlueprint,
         on_press: impl Fn(&mut Cx) + 'static,
     ) -> Blueprint {
-        Self::with(ButtonProps::new(label, on_press))
+        Self::with(ButtonProps::new(child, on_press))
+    }
+
+    pub fn label(
+        label: impl IntoText,
+        on_press: impl Fn(&mut Cx) + 'static,
+    ) -> Blueprint {
+        Self::new(Text::new(label), on_press)
     }
 
     pub fn with(props: ButtonProps) -> Blueprint {
@@ -196,7 +204,7 @@ impl Component for Button {
             state: ButtonState::default(),
             styles: ButtonStyles::default(),
             disabled: false,
-            label: cx.signal(String::new()),
+
             border: cx.signal(Border::Rounded),
             style: cx.signal(None),
             transition: None,
@@ -204,7 +212,7 @@ impl Component for Button {
     }
 
     fn changed(&self, old: &Self::Props, new: &Self::Props) -> bool {
-        old.label != new.label
+        !Rc::ptr_eq(&old.children, &new.children)
             || old.border != new.border
             || old.styles != new.styles
             || old.disabled != new.disabled
@@ -240,7 +248,7 @@ impl Component for Button {
     fn mount(
         &mut self,
         _cx: &mut Cx,
-        _props: &Self::Props,
+        props: &Self::Props,
         children: &mut kursor_core::component::MountChildren,
     ) {
         children.replace(Block::with(
@@ -249,17 +257,11 @@ impl Component for Button {
                 style: self.style.clone().into_value(),
                 transition: None,
             },
-            Text::with(super::TextProps {
-                text: self.label.clone().into_text(),
-                style: self.style.clone().into_value(),
-                wrap: Value::plain(WrapMode::None),
-                transition: None,
-            }),
+            props.children.to_vec(),
         ));
     }
 
     fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
-        let label = props.label.get();
         let border = props.border.get();
         let styles = props.styles.get();
         let disabled = props.disabled.get();
@@ -267,7 +269,7 @@ impl Component for Button {
         self.styles = styles;
         self.disabled = disabled;
         self.transition = props.transition.clone();
-        self.label.set(label);
+
         self.border.set(border);
         let theme = *cx.theme();
         let style = self.style(cx, theme);

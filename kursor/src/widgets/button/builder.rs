@@ -6,26 +6,42 @@ use kursor_core::{
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
-    state::{IntoValue, Transition},
+    layout::WrapMode,
+    state::{IntoValue, Transition, Value},
 };
 
 use super::{
-    Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles,
+    Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles, Text,
 };
+use crate::widgets::{TextProps, text::IntoText};
 
 pub struct ButtonBuilder {
     props: ButtonProps,
 }
 
 impl ButtonBuilder {
-    pub(crate) fn new(label: impl IntoValue<String>) -> Self {
+    pub(crate) fn new(label: impl IntoText) -> Self {
         Self {
-            props: ButtonProps::new(label, |_| {}),
+            props: ButtonProps::new(
+                Text::with(TextProps {
+                    text: label.into_text(),
+                    style: Value::plain(None),
+                    wrap: Value::plain(WrapMode::None),
+                    transition: None,
+                }),
+                |_| {},
+            ),
         }
     }
 
-    pub fn label(mut self, label: impl IntoValue<String>) -> Self {
-        self.props.label = label.into_value();
+    pub fn label(mut self, label: impl IntoText) -> Self {
+        self.props.children = vec![Text::with(TextProps {
+            text: label.into_text(),
+            style: Value::plain(None),
+            wrap: Value::plain(WrapMode::None),
+            transition: None,
+        })]
+        .into();
         self
     }
 
@@ -60,6 +76,10 @@ impl ButtonBuilder {
     pub fn transition(mut self, transition: impl Into<Transition>) -> Self {
         self.props.transition = Some(transition.into());
         self
+    }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Button>(self.props)
     }
 }
 

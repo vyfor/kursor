@@ -60,6 +60,6 @@ pub use table::{
     TData, TMode, TRow, TSelection, Table, TableBehavior, TableBuilder,
     TableIntent, TableProps, TableState, TableTarget,
 };
-pub use text::{Line, Span, Text, TextProps};
+pub use text::{IntoText, Line, Span, Text, TextProps};
 pub use themed::Themed;
 pub use wrap::{Wrap, WrapProps};
