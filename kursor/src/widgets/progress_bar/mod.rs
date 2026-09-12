@@ -141,7 +141,7 @@ pub struct ProgressBar {
 }
 
 impl ProgressBar {
-    pub fn builder(value: impl IntoValue<f32>) -> ProgressBarBuilder {
+    pub fn new(value: impl IntoValue<f32>) -> ProgressBarBuilder {
         ProgressBarBuilder::new(value)
     }
 
@@ -151,12 +151,8 @@ impl ProgressBar {
         ProgressBarBuilder::segmented(segments)
     }
 
-    pub fn new(value: impl IntoValue<f32>) -> Blueprint {
-        Self::builder(value).build()
-    }
-
-    pub fn vertical(value: impl IntoValue<f32>) -> Blueprint {
-        Self::builder(value).direction(Direction::Up).build()
+    pub fn vertical(value: impl IntoValue<f32>) -> ProgressBarBuilder {
+        Self::new(value).direction(Direction::Up)
     }
 
     pub fn with(props: ProgressBarProps) -> Blueprint {

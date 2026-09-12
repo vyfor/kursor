@@ -27,10 +27,14 @@ impl WrapBuilder {
         self.props.line_gap = gap.into_value();
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Wrap>(self.props).children(self.children)
+    }
 }
 
 impl IntoBlueprint for WrapBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Wrap>(self.props).children(self.children)]
+        vec![self.build()]
     }
 }

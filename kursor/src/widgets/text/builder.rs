@@ -40,6 +40,10 @@ impl TextBuilder {
         self.props.transition = Some(transition.into());
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Text>(self.props)
+    }
 }
 
 impl IntoBlueprint for TextBuilder {

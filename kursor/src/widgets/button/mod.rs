@@ -22,8 +22,7 @@ use kursor_core::{
     theme::Theme,
 };
 
-use super::text::IntoText;
-use super::{Block, BlockProps, Border, Text};
+use super::{Block, BlockProps, Border};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ButtonState {
@@ -157,22 +156,8 @@ pub struct Button {
 }
 
 impl Button {
-    pub fn builder(label: impl IntoText) -> ButtonBuilder {
-        ButtonBuilder::new(label)
-    }
-
-    pub fn new(
-        child: impl IntoBlueprint,
-        on_press: impl Fn(&mut Cx) + 'static,
-    ) -> Blueprint {
-        Self::with(ButtonProps::new(child, on_press))
-    }
-
-    pub fn label(
-        label: impl IntoText,
-        on_press: impl Fn(&mut Cx) + 'static,
-    ) -> Blueprint {
-        Self::new(Text::new(label), on_press)
+    pub fn new(child: impl IntoBlueprint) -> ButtonBuilder {
+        ButtonBuilder::new(child)
     }
 
     pub fn with(props: ButtonProps) -> Blueprint {

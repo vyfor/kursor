@@ -32,8 +32,8 @@ pub struct Bounds {
 }
 
 impl Bounds {
-    pub fn builder() -> BoundsBuilder {
-        BoundsBuilder::new()
+    pub fn new(child: impl IntoBlueprint) -> BoundsBuilder {
+        BoundsBuilder::new().children(child)
     }
 
     pub fn exact(

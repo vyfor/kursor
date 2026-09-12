@@ -6,43 +6,22 @@ use kursor_core::{
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
     },
-    layout::WrapMode,
-    state::{IntoValue, Transition, Value},
+    state::{IntoValue, Transition},
 };
 
 use super::{
-    Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles, Text,
+    Border, Button, ButtonIntent, ButtonProps, ButtonState, ButtonStyles,
 };
-use crate::widgets::{TextProps, text::IntoText};
 
 pub struct ButtonBuilder {
     props: ButtonProps,
 }
 
 impl ButtonBuilder {
-    pub(crate) fn new(label: impl IntoText) -> Self {
+    pub(crate) fn new(child: impl IntoBlueprint) -> Self {
         Self {
-            props: ButtonProps::new(
-                Text::with(TextProps {
-                    text: label.into_text(),
-                    style: Value::plain(None),
-                    wrap: Value::plain(WrapMode::None),
-                    transition: None,
-                }),
-                |_| {},
-            ),
+            props: ButtonProps::new(child, |_| {}),
         }
-    }
-
-    pub fn label(mut self, label: impl IntoText) -> Self {
-        self.props.children = vec![Text::with(TextProps {
-            text: label.into_text(),
-            style: Value::plain(None),
-            wrap: Value::plain(WrapMode::None),
-            transition: None,
-        })]
-        .into();
-        self
     }
 
     pub fn border(mut self, border: impl IntoValue<Border>) -> Self {

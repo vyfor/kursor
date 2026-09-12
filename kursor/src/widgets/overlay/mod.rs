@@ -176,12 +176,8 @@ pub struct Overlay {
 }
 
 impl Overlay {
-    pub fn builder(content: impl IntoBlueprint) -> OverlayBuilder {
+    pub fn new(content: impl IntoBlueprint) -> OverlayBuilder {
         OverlayBuilder::new(content)
-    }
-
-    pub fn new(content: impl IntoBlueprint) -> Blueprint {
-        Self::with(Overlays::new(), content)
     }
 
     pub fn with(overlays: Overlays, content: impl IntoBlueprint) -> Blueprint {

@@ -13,7 +13,7 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
-    state::{IntoValue, Value},
+    state::Value,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -27,12 +27,12 @@ pub struct Padding {
 }
 
 impl Padding {
-    pub fn builder() -> PaddingBuilder {
-        PaddingBuilder::new()
+    pub fn new(child: impl IntoBlueprint) -> PaddingBuilder {
+        PaddingBuilder::new().children(child)
     }
 
     pub fn all(value: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Insets::all(value), child)
+        Self::new(child).all(value).build()
     }
 
     pub fn symmetric(
@@ -40,41 +40,37 @@ impl Padding {
         vertical: u16,
         child: impl IntoBlueprint,
     ) -> Blueprint {
-        Self::new(Insets::symmetric(horizontal, vertical), child)
+        Self::new(child)
+            .insets(Insets::symmetric(horizontal, vertical))
+            .build()
     }
 
     pub fn horizontal(value: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Insets::horizontal(value), child)
+        Self::new(child).horizontal(value).build()
     }
 
     pub fn vertical(value: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Insets::vertical(value), child)
+        Self::new(child).vertical(value).build()
     }
 
     pub fn top(value: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Insets::top(value), child)
+        Self::new(child).insets(Insets::top(value)).build()
     }
 
     pub fn bottom(value: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Insets::bottom(value), child)
+        Self::new(child).insets(Insets::bottom(value)).build()
     }
 
     pub fn left(value: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Insets::left(value), child)
+        Self::new(child).insets(Insets::left(value)).build()
     }
 
     pub fn right(value: u16, child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Insets::right(value), child)
+        Self::new(child).insets(Insets::right(value)).build()
     }
 
-    pub fn new(
-        insets: impl IntoValue<Insets>,
-        child: impl IntoBlueprint,
-    ) -> Blueprint {
-        Blueprint::new::<Self>(PaddingProps {
-            insets: insets.into_value(),
-        })
-        .children(child)
+    pub fn with(props: PaddingProps, child: impl IntoBlueprint) -> Blueprint {
+        Blueprint::new::<Self>(props).children(child)
     }
 }
 

@@ -133,17 +133,8 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn builder(text: impl IntoText) -> TextBuilder {
+    pub fn new(text: impl IntoText) -> TextBuilder {
         TextBuilder::new(text)
-    }
-
-    pub fn new(text: impl IntoText) -> Blueprint {
-        Self::with(TextProps {
-            text: text.into_text(),
-            style: Value::plain(None),
-            wrap: Value::plain(WrapMode::None),
-            transition: None,
-        })
     }
 
     pub fn styled(
@@ -159,11 +150,11 @@ impl Text {
     }
 
     pub fn line(line: impl Into<Line>) -> Blueprint {
-        Self::new(line.into())
+        Self::new(line.into()).build()
     }
 
     pub fn lines(lines: impl IntoIterator<Item = Line>) -> Blueprint {
-        Self::new(lines.into_iter().collect::<Vec<_>>())
+        Self::new(lines.into_iter().collect::<Vec<_>>()).build()
     }
 
     pub fn with(props: TextProps) -> Blueprint {

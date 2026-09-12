@@ -157,12 +157,8 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn builder() -> BlockBuilder {
-        BlockBuilder::new()
-    }
-
-    pub fn new(child: impl IntoBlueprint) -> Blueprint {
-        Self::with(BlockProps::default(), child)
+    pub fn new(child: impl IntoBlueprint) -> BlockBuilder {
+        BlockBuilder::new().children(child)
     }
 
     pub fn plain(child: impl IntoBlueprint) -> Blueprint {

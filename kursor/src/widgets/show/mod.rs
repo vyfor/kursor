@@ -32,7 +32,7 @@ impl PartialEq for ShowProps {
 pub struct Show;
 
 impl Show {
-    pub fn builder(condition: impl IntoValue<bool>) -> ShowBuilder {
+    pub fn new(condition: impl IntoValue<bool>) -> ShowBuilder {
         ShowBuilder::new(condition.into_value())
     }
 

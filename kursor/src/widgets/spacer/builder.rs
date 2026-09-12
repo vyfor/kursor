@@ -20,10 +20,14 @@ impl SpacerBuilder {
         self.size = size.into_value();
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Spacer>(SpacerProps { size: self.size })
+    }
 }
 
 impl IntoBlueprint for SpacerBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Spacer>(SpacerProps { size: self.size })]
+        vec![self.build()]
     }
 }

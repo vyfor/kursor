@@ -106,19 +106,8 @@ pub struct Grid {
 }
 
 impl Grid {
-    pub fn builder(
-        columns: impl IntoTracks,
-        rows: impl IntoTracks,
-    ) -> GridBuilder {
+    pub fn new(columns: impl IntoTracks, rows: impl IntoTracks) -> GridBuilder {
         GridBuilder::new(columns, rows)
-    }
-
-    pub fn new(
-        columns: impl IntoTracks,
-        rows: impl IntoTracks,
-        items: impl IntoGridItems,
-    ) -> Blueprint {
-        Self::with(columns, rows, 0, 0, items)
     }
 
     pub fn with(

@@ -13,7 +13,7 @@ use kursor_core::{
         rect::Rect,
         size::Size,
     },
-    state::{IntoValue, Value},
+    state::Value,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -27,18 +27,8 @@ pub struct Align {
 }
 
 impl Align {
-    pub fn builder() -> AlignBuilder {
-        AlignBuilder::new()
-    }
-
-    pub fn new(
-        alignment: impl IntoValue<Alignment>,
-        child: impl IntoBlueprint,
-    ) -> Blueprint {
-        Blueprint::new::<Self>(AlignProps {
-            alignment: alignment.into_value(),
-        })
-        .children(child)
+    pub fn new(child: impl IntoBlueprint) -> AlignBuilder {
+        AlignBuilder::new().children(child)
     }
 
     pub fn left(child: impl IntoBlueprint) -> Blueprint {
@@ -58,39 +48,39 @@ impl Align {
     }
 
     pub fn top_left(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::TOP_LEFT, child)
+        Self::new(child).top_left().build()
     }
 
     pub fn top_center(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::TOP_CENTER, child)
+        Self::new(child).top_center().build()
     }
 
     pub fn top_right(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::TOP_RIGHT, child)
+        Self::new(child).top_right().build()
     }
 
     pub fn center_left(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::CENTER_LEFT, child)
+        Self::new(child).center_left().build()
     }
 
     pub fn center(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::CENTER, child)
+        Self::new(child).center().build()
     }
 
     pub fn center_right(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::CENTER_RIGHT, child)
+        Self::new(child).center_right().build()
     }
 
     pub fn bottom_left(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::BOTTOM_LEFT, child)
+        Self::new(child).bottom_left().build()
     }
 
     pub fn bottom_center(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::BOTTOM_CENTER, child)
+        Self::new(child).bottom_center().build()
     }
 
     pub fn bottom_right(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Alignment::BOTTOM_RIGHT, child)
+        Self::new(child).bottom_right().build()
     }
 }
 

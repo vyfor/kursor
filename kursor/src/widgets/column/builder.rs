@@ -22,10 +22,14 @@ impl ColumnBuilder {
         self.props.gap = gap.into_value();
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Column>(self.props).children(self.children)
+    }
 }
 
 impl IntoBlueprint for ColumnBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Column>(self.props).children(self.children)]
+        vec![self.build()]
     }
 }

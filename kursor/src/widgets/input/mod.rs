@@ -230,15 +230,8 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn builder(value: impl IntoValue<String>) -> InputBuilder {
+    pub fn new(value: impl IntoValue<String>) -> InputBuilder {
         InputBuilder::new(value)
-    }
-
-    pub fn new(
-        value: impl IntoValue<String>,
-        on_change: impl Fn(&mut Cx, &str) + 'static,
-    ) -> Blueprint {
-        Self::with(InputProps::new(value, on_change))
     }
 
     pub fn with(props: InputProps) -> Blueprint {

@@ -24,13 +24,17 @@ impl OverlayBuilder {
         self.overlays = overlays;
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Overlay>(OverlayProps {
+            overlays: self.overlays,
+            base: self.base,
+        })
+    }
 }
 
 impl IntoBlueprint for OverlayBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Overlay>(OverlayProps {
-            overlays: self.overlays,
-            base: self.base,
-        })]
+        vec![self.build()]
     }
 }

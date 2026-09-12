@@ -23,10 +23,14 @@ impl ThemedBuilder {
         self.theme = theme.into_value();
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Themed>(self.theme).children(self.children)
+    }
 }
 
 impl IntoBlueprint for ThemedBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Themed>(self.theme).children(self.children)]
+        vec![self.build()]
     }
 }

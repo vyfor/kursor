@@ -40,12 +40,8 @@ pub struct Wrap {
 }
 
 impl Wrap {
-    pub fn builder(children: impl IntoBlueprint) -> WrapBuilder {
+    pub fn new(children: impl IntoBlueprint) -> WrapBuilder {
         WrapBuilder::new(children)
-    }
-
-    pub fn new(children: impl IntoBlueprint) -> Blueprint {
-        Self::uniform(0, children)
     }
 
     pub fn uniform(
@@ -53,7 +49,7 @@ impl Wrap {
         children: impl IntoBlueprint,
     ) -> Blueprint {
         let gap = gap.into_value();
-        Self::spaced(gap.clone(), gap, children)
+        Self::new(children).gap(gap.clone()).line_gap(gap).build()
     }
 
     pub fn spaced(
@@ -61,13 +57,7 @@ impl Wrap {
         line_gap: impl IntoValue<u16>,
         children: impl IntoBlueprint,
     ) -> Blueprint {
-        Self::with(
-            WrapProps {
-                gap: gap.into_value(),
-                line_gap: line_gap.into_value(),
-            },
-            children,
-        )
+        Self::new(children).gap(gap).line_gap(line_gap).build()
     }
 
     pub fn with(props: WrapProps, children: impl IntoBlueprint) -> Blueprint {

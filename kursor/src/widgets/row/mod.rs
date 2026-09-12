@@ -34,22 +34,15 @@ pub struct Row {
 }
 
 impl Row {
-    pub fn builder(children: impl IntoBlueprint) -> RowBuilder {
+    pub fn new(children: impl IntoBlueprint) -> RowBuilder {
         RowBuilder::new(children)
-    }
-
-    pub fn new(children: impl IntoBlueprint) -> Blueprint {
-        Self::spaced(0, children)
     }
 
     pub fn spaced(
         gap: impl IntoValue<u16>,
         children: impl IntoBlueprint,
     ) -> Blueprint {
-        Blueprint::new::<Self>(RowProps {
-            gap: gap.into_value(),
-        })
-        .children(children)
+        Self::new(children).gap(gap).build()
     }
 }
 

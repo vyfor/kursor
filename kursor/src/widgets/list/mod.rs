@@ -308,28 +308,20 @@ pub struct List {
 }
 
 impl List {
-    pub fn builder() -> ListBuilder {
-        ListBuilder::new()
-    }
-
-    pub fn new(children: impl IntoBlueprint) -> Blueprint {
-        Self::vertical(children)
+    pub fn new(children: impl IntoBlueprint) -> ListBuilder {
+        ListBuilder::new().children(children)
     }
 
     pub fn vertical(children: impl IntoBlueprint) -> Blueprint {
-        Self::with(ListProps {
-            orientation: Value::plain(Orientation::Vertical),
-            data: ListData::Static(children.into_blueprint().into()),
-            ..Default::default()
-        })
+        Self::new(children)
+            .orientation(Orientation::Vertical)
+            .build()
     }
 
     pub fn horizontal(children: impl IntoBlueprint) -> Blueprint {
-        Self::with(ListProps {
-            orientation: Value::plain(Orientation::Horizontal),
-            data: ListData::Static(children.into_blueprint().into()),
-            ..Default::default()
-        })
+        Self::new(children)
+            .orientation(Orientation::Horizontal)
+            .build()
     }
 
     pub fn lazy(

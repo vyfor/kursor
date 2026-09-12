@@ -119,15 +119,11 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn builder() -> TableBuilder {
-        TableBuilder::new()
-    }
-
     pub fn new(
         columns: impl IntoTColumns,
         rows: impl IntoIterator<Item = impl IntoTRow>,
-    ) -> Blueprint {
-        TableBuilder::new().columns(columns).rows(rows).build()
+    ) -> TableBuilder {
+        TableBuilder::new().columns(columns).rows(rows)
     }
 
     pub fn with(props: TableProps) -> Blueprint {
@@ -179,11 +175,12 @@ impl Table {
                 let bp = if let Some(header_bp) = &col.header {
                     let mut cell_bp = header_bp.clone().key(c_idx as u64);
                     if col.align != Alignment::TOP_LEFT {
-                        cell_bp = Align::new(col.align, cell_bp);
+                        cell_bp =
+                            Align::new(cell_bp).alignment(col.align).build();
                     }
                     cell_bp
                 } else {
-                    Spacer::new(0).key(c_idx as u64)
+                    Spacer::new(0).build().key(c_idx as u64)
                 };
                 blueprints.push(bp);
             }
@@ -232,11 +229,11 @@ impl Table {
                     let mut cell_bp = cell.clone().key(key);
                     let align = self.columns[c_idx].align;
                     if align != Alignment::TOP_LEFT {
-                        cell_bp = Align::new(align, cell_bp);
+                        cell_bp = Align::new(cell_bp).alignment(align).build();
                     }
                     cell_bp
                 } else {
-                    Spacer::new(0).key(key)
+                    Spacer::new(0).build().key(key)
                 };
                 blueprints.push(bp);
             }

@@ -116,7 +116,7 @@ pub struct Flex {
 }
 
 impl Flex {
-    pub fn builder(direction: impl IntoValue<Orientation>) -> FlexBuilder {
+    pub fn new(direction: impl IntoValue<Orientation>) -> FlexBuilder {
         FlexBuilder::new(direction)
     }
 
@@ -129,25 +129,31 @@ impl Flex {
     }
 
     pub fn row(items: impl IntoFlexItems) -> Blueprint {
-        Self::with(Orientation::Horizontal, 0, items)
+        Self::new(Orientation::Horizontal).items(items).build()
     }
 
     pub fn column(items: impl IntoFlexItems) -> Blueprint {
-        Self::with(Orientation::Vertical, 0, items)
+        Self::new(Orientation::Vertical).items(items).build()
     }
 
     pub fn row_spaced(
         gap: impl IntoValue<u16>,
         items: impl IntoFlexItems,
     ) -> Blueprint {
-        Self::with(Orientation::Horizontal, gap, items)
+        Self::new(Orientation::Horizontal)
+            .gap(gap)
+            .items(items)
+            .build()
     }
 
     pub fn column_spaced(
         gap: impl IntoValue<u16>,
         items: impl IntoFlexItems,
     ) -> Blueprint {
-        Self::with(Orientation::Vertical, gap, items)
+        Self::new(Orientation::Vertical)
+            .gap(gap)
+            .items(items)
+            .build()
     }
 
     pub fn with(

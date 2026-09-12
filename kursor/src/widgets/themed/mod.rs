@@ -2,12 +2,8 @@ pub mod builder;
 pub use builder::ThemedBuilder;
 
 use kursor_core::{
-    component::{
-        Component, Update,
-        blueprint::{Blueprint, IntoBlueprint},
-        context::Cx,
-    },
-    state::{IntoValue, Value},
+    component::{Component, Update, blueprint::IntoBlueprint, context::Cx},
+    state::Value,
     theme::Theme,
 };
 
@@ -18,19 +14,12 @@ use kursor_core::{
 pub struct Themed;
 
 impl Themed {
-    pub fn builder(child: impl IntoBlueprint) -> ThemedBuilder {
+    pub fn new(child: impl IntoBlueprint) -> ThemedBuilder {
         ThemedBuilder::new(child)
     }
 
-    pub fn new(
-        theme: impl IntoValue<Theme>,
-        child: impl IntoBlueprint,
-    ) -> Blueprint {
-        Blueprint::new::<Self>(theme.into_value()).children(child)
-    }
-
-    pub fn default(child: impl IntoBlueprint) -> Blueprint {
-        Self::new(Theme::default(), child)
+    pub fn default(child: impl IntoBlueprint) -> ThemedBuilder {
+        Self::new(child)
     }
 }
 

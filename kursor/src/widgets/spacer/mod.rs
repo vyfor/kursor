@@ -18,14 +18,12 @@ pub struct Spacer {
 }
 
 impl Spacer {
-    pub fn builder() -> SpacerBuilder {
-        SpacerBuilder::new()
+    pub fn new(size: impl IntoValue<u16>) -> SpacerBuilder {
+        SpacerBuilder::new().size(size)
     }
 
-    pub fn new(size: impl IntoValue<u16>) -> Blueprint {
-        Blueprint::new::<Self>(SpacerProps {
-            size: size.into_value(),
-        })
+    pub fn with(props: SpacerProps) -> Blueprint {
+        Blueprint::new::<Self>(props)
     }
 }
 

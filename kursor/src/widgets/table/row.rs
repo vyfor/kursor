@@ -22,49 +22,49 @@ impl IntoTCell for Blueprint {
 
 impl IntoTCell for &str {
     fn into_tcell(self) -> Blueprint {
-        Text::new(self)
+        Text::new(self).build()
     }
 }
 
 impl IntoTCell for String {
     fn into_tcell(self) -> Blueprint {
-        Text::new(self)
+        Text::new(self).build()
     }
 }
 
 impl IntoTCell for &String {
     fn into_tcell(self) -> Blueprint {
-        Text::new(self.as_str())
+        Text::new(self.as_str()).build()
     }
 }
 
 impl IntoTCell for Span {
     fn into_tcell(self) -> Blueprint {
-        Text::new(self)
+        Text::new(self).build()
     }
 }
 
 impl IntoTCell for Line {
     fn into_tcell(self) -> Blueprint {
-        Text::new(self)
+        Text::new(self).build()
     }
 }
 
 impl IntoTCell for Vec<Line> {
     fn into_tcell(self) -> Blueprint {
-        Text::new(self)
+        Text::new(self).build()
     }
 }
 
 impl<const N: usize> IntoTCell for [Line; N] {
     fn into_tcell(self) -> Blueprint {
-        Text::new(self)
+        Text::new(self).build()
     }
 }
 
 impl IntoTCell for () {
     fn into_tcell(self) -> Blueprint {
-        Spacer::new(0)
+        Spacer::new(0).build()
     }
 }
 
@@ -73,7 +73,7 @@ macro_rules! into_tcell_text {
         $(
             impl IntoTCell for $ty {
                 fn into_tcell(self) -> Blueprint {
-                    Text::new(self.to_string())
+                    Text::new(self.to_string()).build()
                 }
             }
         )+

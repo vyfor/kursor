@@ -40,14 +40,18 @@ impl FlexBuilder {
         self.items.extend(items.into_flex_items());
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Flex>(FlexProps {
+            direction: self.direction,
+            gap: self.gap,
+            items: self.items.into(),
+        })
+    }
 }
 
 impl IntoBlueprint for FlexBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Flex>(FlexProps {
-            direction: self.direction,
-            gap: self.gap,
-            items: self.items.into(),
-        })]
+        vec![self.build()]
     }
 }

@@ -100,42 +100,20 @@ pub struct Scroll {
 }
 
 impl Scroll {
-    pub fn builder() -> ScrollBuilder {
-        ScrollBuilder::new()
-    }
-
-    pub fn new(child: impl IntoBlueprint) -> Blueprint {
-        Self::vertical(child)
+    pub fn new(child: impl IntoBlueprint) -> ScrollBuilder {
+        ScrollBuilder::new().children(child)
     }
 
     pub fn vertical(child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ScrollProps {
-                direction: Value::plain(ScrollDirection::Vertical),
-                behavior: Arc::new(WheelScroll::default()),
-            },
-            child,
-        )
+        Self::new(child).vertical().build()
     }
 
     pub fn horizontal(child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ScrollProps {
-                direction: Value::plain(ScrollDirection::Horizontal),
-                behavior: Arc::new(WheelScroll::default()),
-            },
-            child,
-        )
+        Self::new(child).horizontal().build()
     }
 
     pub fn both(child: impl IntoBlueprint) -> Blueprint {
-        Self::with(
-            ScrollProps {
-                direction: Value::plain(ScrollDirection::Both),
-                behavior: Arc::new(WheelScroll::default()),
-            },
-            child,
-        )
+        Self::new(child).both().build()
     }
 
     pub fn with(props: ScrollProps, child: impl IntoBlueprint) -> Blueprint {

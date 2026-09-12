@@ -35,29 +35,20 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new(source: impl Into<ImageSource>) -> Blueprint {
-        Self::with(ImageProps {
-            source: Value::plain(source.into()),
-            fit: Value::plain(ImageFit::Contain),
-            prefer: Value::plain(None),
-            transmission: Value::plain(Transmission::Direct),
-        })
+    pub fn new(source: impl Into<ImageSource>) -> ImageBuilder {
+        ImageBuilder::new(source)
     }
 
     pub fn file(path: impl Into<PathBuf>) -> Blueprint {
-        Self::new(ImageSource::file(path))
+        Self::new(ImageSource::file(path)).build()
     }
 
     pub fn data(image: ImageData) -> Blueprint {
-        Self::new(ImageSource::Data(image))
+        Self::new(ImageSource::Data(image)).build()
     }
 
     pub fn with(props: ImageProps) -> Blueprint {
         Blueprint::new::<Self>(props)
-    }
-
-    pub fn builder(source: impl Into<ImageSource>) -> ImageBuilder {
-        ImageBuilder::new(source)
     }
 }
 

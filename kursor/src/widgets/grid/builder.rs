@@ -62,16 +62,20 @@ impl GridBuilder {
         self.items.extend(items.into_grid_items());
         self
     }
-}
 
-impl IntoBlueprint for GridBuilder {
-    fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Grid>(GridProps {
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Grid>(GridProps {
             columns: self.columns.into(),
             rows: self.rows.into(),
             column_gap: self.column_gap,
             row_gap: self.row_gap,
             items: self.items.into(),
-        })]
+        })
+    }
+}
+
+impl IntoBlueprint for GridBuilder {
+    fn into_blueprint(self) -> Vec<Blueprint> {
+        vec![self.build()]
     }
 }

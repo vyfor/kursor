@@ -37,24 +37,19 @@ pub struct Divider {
 }
 
 impl Divider {
-    pub fn builder() -> DividerBuilder {
+    pub fn new() -> DividerBuilder {
         DividerBuilder::new()
     }
 
-    pub fn new() -> Blueprint {
-        Self::horizontal()
-    }
-
     pub fn horizontal() -> Blueprint {
-        Self::with(DividerProps::default())
+        Self::new().build()
     }
 
     pub fn vertical() -> Blueprint {
-        Self::with(DividerProps {
-            orientation: Value::plain(Orientation::Vertical),
-            glyph: Value::plain('│'),
-            ..DividerProps::default()
-        })
+        Self::new()
+            .orientation(Orientation::Vertical)
+            .glyph('│')
+            .build()
     }
 
     pub fn with(props: DividerProps) -> Blueprint {

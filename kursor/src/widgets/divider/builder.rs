@@ -40,10 +40,14 @@ impl DividerBuilder {
         self.props.transition = Some(transition.into());
         self
     }
+
+    pub fn build(self) -> Blueprint {
+        Blueprint::new::<Divider>(self.props)
+    }
 }
 
 impl IntoBlueprint for DividerBuilder {
     fn into_blueprint(self) -> Vec<Blueprint> {
-        vec![Blueprint::new::<Divider>(self.props)]
+        vec![self.build()]
     }
 }
