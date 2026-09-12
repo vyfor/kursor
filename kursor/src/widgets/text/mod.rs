@@ -1,9 +1,13 @@
 pub mod builder;
+
 pub mod line;
 pub mod span;
+pub mod span_ext;
 pub use builder::TextBuilder;
+
 pub use line::Line;
 pub use span::Span;
+pub use span_ext::{IntoSpan, IntoSpanExt};
 
 use kursor_core::{
     component::{Component, Update, blueprint::Blueprint, context::Cx},

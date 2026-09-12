@@ -8,7 +8,7 @@ pub mod widgets;
 pub use bindings::{BehaviorBuilderExt, Bind, Bindings, Bound};
 #[doc(inline)]
 pub use kursor_core as core;
-pub use widgets::IntoBlueprintExt;
+pub use widgets::{IntoBlueprintExt, IntoSpan, IntoSpanExt};
 
 #[cfg(feature = "crossterm")]
 pub use crossterm;
