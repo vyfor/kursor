@@ -177,7 +177,7 @@ impl Runtime {
         &self.front
     }
 
-    pub fn provide<T: 'static>(&mut self, value: T) {
+    pub fn provide<T: PartialEq + 'static>(&mut self, value: T) {
         self.root_env.set(value);
     }
 

@@ -27,10 +27,13 @@ use kursor_core::{
     },
     render::{canvas::Canvas, color::Color, style::Style},
     state::{Signal, Value},
+    theme::Theme,
 };
 
 use crate::layout::{ResolvedTrack, Virtualizer, allocate_tracks};
-use crate::widgets::{align::Align, block::Border, spacer::Spacer};
+use crate::widgets::{
+    align::Align, block::Border, spacer::Spacer, styled::Styled,
+};
 
 #[derive(Clone)]
 pub struct TableProps {
@@ -158,7 +161,12 @@ impl Table {
             .range_at(self.state.scroll_y, viewport_height, self.overscan)
     }
 
-    fn children(&mut self, rendered_range: &Range<usize>) -> Vec<Blueprint> {
+    fn children(
+        &mut self,
+        rendered_range: &Range<usize>,
+        props: &TableProps,
+        theme: &Theme,
+    ) -> Vec<Blueprint> {
         let num_cols = self.columns.len();
         if num_cols == 0 {
             return Vec::new();
@@ -223,18 +231,34 @@ impl Table {
                     )
                 };
 
-                let bp = if let Some(row) = &row_opt
+                let mut bp = if let Some(row) = &row_opt
                     && let Some(cell) = row.cells.get(c_idx)
                 {
-                    let mut cell_bp = cell.clone().key(key);
+                    let mut cell_bp = cell.clone().key(key.clone());
                     let align = self.columns[c_idx].align;
                     if align != Alignment::TOP_LEFT {
                         cell_bp = Align::new(cell_bp).alignment(align).build();
                     }
                     cell_bp
                 } else {
-                    Spacer::new(0).build().key(key)
+                    Spacer::new(0).build().key(key.clone())
                 };
+
+                let is_selected = self.state.is_cell_selected(row_idx, c_idx);
+                if is_selected {
+                    let fg = props
+                        .selected_style
+                        .as_ref()
+                        .map(|s| s.get().fg)
+                        .filter(|&fg| fg != Color::Unset)
+                        .unwrap_or(theme.active.fg);
+                    let sel_style = Style {
+                        fg,
+                        bg: Color::Unset,
+                        ..Style::DEFAULT
+                    };
+                    bp = Styled::with(sel_style, bp).key(key);
+                }
                 blueprints.push(bp);
             }
         }
@@ -799,7 +823,7 @@ impl Component for Table {
 
     fn mount(
         &mut self,
-        _cx: &mut Cx,
+        cx: &mut Cx,
         props: &Self::Props,
         children: &mut MountChildren,
     ) {
@@ -838,10 +862,10 @@ impl Component for Table {
         self.state.visible_rows = visible_range;
         self.state.rendered_rows = rendered_range.clone();
 
-        children.replace(self.children(&rendered_range));
+        children.replace(self.children(&rendered_range, props, cx.theme()));
     }
 
-    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
         self.rev.read();
         let declared_mode = props.mode.get();
         let border = props.border.get();
@@ -964,7 +988,7 @@ impl Component for Table {
         self.state.rendered_rows = rendered_range.clone();
 
         if needs_children {
-            Update::children(self.children(&rendered_range))
+            Update::children(self.children(&rendered_range, props, cx.theme()))
         } else if measure_needed {
             Update::MEASURE
         } else if paint_needed {
@@ -1223,7 +1247,7 @@ impl Component for Table {
         let inner_w = area.width.saturating_sub(inset * 2);
         let inner_h = area.height.saturating_sub(inset * 2);
 
-        let theme_focus = cx.theme().focus;
+        let theme_active = cx.theme().active;
         let theme_muted = cx.theme().palette.muted;
         let header_style = cx.resolve_or(
             "header_style",
@@ -1234,7 +1258,7 @@ impl Component for Table {
         let selected_style = cx.resolve_or(
             "selected_style",
             &props.selected_style,
-            theme_focus,
+            theme_active,
             None,
         );
         let divider_style = cx.resolve_or(

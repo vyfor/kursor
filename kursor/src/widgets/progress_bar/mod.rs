@@ -180,7 +180,8 @@ impl Component for ProgressBar {
         old != new
     }
 
-    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        let _ = cx.inherited_style();
         let ranges: Vec<(f32, f32)> = props
             .segments
             .iter()
@@ -247,7 +248,7 @@ impl Component for ProgressBar {
         let theme = *cx.theme();
         let fb = Style {
             bg: Color::Unset,
-            ..theme.surface
+            ..theme.surface.patch(cx.inherited_style())
         };
         let def_track = cx.resolve_or(
             "track_style",

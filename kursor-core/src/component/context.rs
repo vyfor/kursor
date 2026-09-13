@@ -1,10 +1,36 @@
 use crate::{
     component::{action::Action, environment::Environment},
     layout::rect::Rect,
+    render::style::Style,
     state::{IntoChannel, LocalState, Signal, Transition, Value},
     theme::Theme,
     tree::id::NodeId,
 };
+
+/// inherited style provided for descendant components.
+///
+/// a [`Theme`] defines styles for multiple semantic states each with their own
+/// styles: one style for when a component is hovered, another style for when
+/// it's focused, and so on. and each of those styles defines both `fg` and `bg`
+/// colors.
+///
+/// widgets make use of this theme when it's available. when a button is
+/// hovered, it uses the hovered state's background color (`theme.hover.bg`) to
+/// fill its internal block. but since the button is just a container around
+/// arbitrary children, it has no use for the foreground color itself, so it
+/// gets discarded.
+///
+/// meanwhile, the underlying child, often a `Text` widget, should be using that
+/// `theme.hover.fg` style. but because the child has no idea what state its
+/// parent is in, it draws with default text style instead. and this sometimes
+/// leads to readability issues due to bad contrast between fg and bg colors.
+///
+/// therefore, [`InheritedStyle`] is used to represent the style that is
+/// active for whatever lives inside a container right now. in practice, it is
+/// provided by interactive containers like buttons and consumed by leaf widgets
+/// like text.
+#[derive(Clone, PartialEq, Eq)]
+pub struct InheritedStyle(pub Value<Option<Style>>);
 
 #[cfg(feature = "animate")]
 use crate::state::Channel;
@@ -81,7 +107,7 @@ impl<'a> Cx<'a> {
         self.env.get()
     }
 
-    pub fn provide<T: 'static>(&mut self, value: T) {
+    pub fn provide<T: PartialEq + 'static>(&mut self, value: T) {
         self.env.set(value);
     }
 
@@ -196,6 +222,16 @@ impl<'a> Cx<'a> {
             Some(theme) => theme,
             None => Theme::default_ref(),
         }
+    }
+
+    /// returns the [`InheritedStyle`] provided by the nearest ancestor,
+    /// or falls back to [`Theme::text`].
+    ///
+    /// subscribes the current component when called during the `update` pass
+    pub fn inherited_style(&self) -> Style {
+        self.get::<InheritedStyle>()
+            .and_then(|cs| cs.0.get())
+            .unwrap_or_else(|| self.theme().text)
     }
 
     /// requests or discards keyboard focus.

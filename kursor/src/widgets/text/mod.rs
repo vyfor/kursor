@@ -220,22 +220,29 @@ impl Component for Text {
         old != new
     }
 
-    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        let inherited = cx.inherited_style();
         let lines = match &props.text {
             TextContent::Plain(text) => {
                 text.get().split('\n').map(Line::from).collect()
             }
             TextContent::Lines(lines) => lines.get(),
         };
-        let style = props.style.get();
+        let explicit = props.style.get();
         let wrap = props.wrap.get();
         let transition = props.transition.clone();
+
+        let effective = match explicit {
+            Some(style) => inherited.patch(style),
+            None => inherited,
+        };
+
         let text_changed = self.lines != lines;
         let style_changed =
-            self.style != style || self.transition != transition;
+            self.style != Some(effective) || self.transition != transition;
         let wrap_changed = self.wrap != wrap;
         self.lines = lines;
-        self.style = style;
+        self.style = Some(effective);
         self.wrap = wrap;
         self.transition = transition;
         if text_changed || wrap_changed {
@@ -263,13 +270,20 @@ impl Component for Text {
     }
 
     fn paint(&self, cx: &mut Cx, props: &Self::Props, canvas: &mut Canvas) {
-        let fallback = cx.theme().text;
-        let default_style = cx.resolve_or(
-            "style",
-            &props.style,
-            fallback,
-            self.transition.clone(),
-        );
+        let inherited = cx.inherited_style();
+        let default_style = match props.style.get() {
+            Some(explicit) => {
+                let resolved = cx.resolve_or(
+                    "style",
+                    Some(explicit),
+                    inherited,
+                    self.transition.clone(),
+                );
+                inherited.patch(resolved)
+            }
+            None => inherited,
+        };
+
         let lines = wrap_lines(&self.lines, self.wrap, cx.rect.width);
         for (row, line) in lines.iter().enumerate() {
             let y = cx.rect.y.saturating_add(row as u16);
@@ -278,7 +292,10 @@ impl Component for Text {
             }
             let mut x = cx.rect.x;
             for span in &line.spans {
-                let style = span.style.unwrap_or(default_style);
+                let style = match span.style {
+                    Some(s) => default_style.patch(s),
+                    None => default_style,
+                };
                 canvas.set_str(x, y, &span.text, style);
                 x = x.saturating_add(
                     UnicodeWidthStr::width(span.text.as_str()) as u16,

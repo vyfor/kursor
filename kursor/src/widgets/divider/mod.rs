@@ -73,7 +73,8 @@ impl Component for Divider {
         old != new
     }
 
-    fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        let _ = cx.inherited_style();
         let orientation = props.orientation.get();
         let style = props.style.get();
         let glyph = props.glyph.get();
@@ -118,7 +119,7 @@ impl Component for Divider {
             return;
         }
 
-        let fallback = cx.theme().surface;
+        let fallback = cx.theme().surface.patch(cx.inherited_style());
         let style = cx.resolve_or(
             "style",
             &props.style,

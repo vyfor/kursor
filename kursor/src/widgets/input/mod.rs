@@ -239,12 +239,13 @@ impl Input {
     }
 
     fn style(&self, cx: &mut Cx, theme: Theme) -> Style {
+        let inherited = cx.inherited_style();
         let (val, fallback) = if self.disabled {
             (&self.styles.disabled, theme.disabled)
         } else if self.state.focused {
-            (&self.styles.focused, theme.text)
+            (&self.styles.focused, inherited)
         } else {
-            (&self.styles.normal, theme.text)
+            (&self.styles.normal, inherited)
         };
 
         cx.resolve_or("style", val, fallback, self.transition.clone())
@@ -710,6 +711,7 @@ impl Component for Input {
 
     fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
         let value = props.value.get();
+        let _ = cx.inherited_style();
         let placeholder = props.placeholder.get();
         let styles = props.styles.get();
         let disabled = props.disabled.get();

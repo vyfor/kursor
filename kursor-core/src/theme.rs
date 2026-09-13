@@ -37,7 +37,9 @@ pub struct Theme {
     pub text: Style,
     pub surface: Style,
     pub primary: Style,
+    pub accent: Style,
     pub focus: Style,
+    pub active: Style,
     pub disabled: Style,
 }
 
@@ -65,8 +67,18 @@ impl Theme {
             bg: Color::Unset,
             attrs: Attrs::DEFAULT,
         },
+        accent: Style {
+            fg: Color::LightCyan,
+            bg: Color::Unset,
+            attrs: Attrs::DEFAULT,
+        },
         focus: Style {
-            fg: Color::Unset,
+            fg: Color::LightBlue,
+            bg: Color::Unset,
+            attrs: Attrs::DEFAULT,
+        },
+        active: Style {
+            fg: Color::Black,
             bg: Color::LightBlue,
             attrs: Attrs::DEFAULT,
         },
@@ -99,7 +111,17 @@ impl Theme {
                 bg: Color::Unset,
                 attrs: Default::default(),
             },
+            accent: Style {
+                fg: palette.accent,
+                bg: Color::Unset,
+                attrs: Default::default(),
+            },
             focus: Style {
+                fg: palette.primary,
+                bg: Color::Unset,
+                attrs: Default::default(),
+            },
+            active: Style {
                 fg: palette.bg,
                 bg: palette.primary,
                 attrs: Default::default(),

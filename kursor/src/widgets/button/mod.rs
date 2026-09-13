@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use kursor_core::{
     component::{
-        Component, Focus, Update,
+        Component, Focus, InheritedStyle, Update,
         behavior::{Behavior, BehaviorCx},
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
@@ -17,7 +17,7 @@ use kursor_core::{
         mouse::{MouseButton, MouseKind},
     },
     layout::{context::MeasureCx, size::Size},
-    render::style::Style,
+    render::{color::Color, style::Style},
     state::{IntoValue, Signal, Transition, Value},
     theme::Theme,
 };
@@ -165,14 +165,24 @@ impl Button {
     }
 
     fn style(&self, cx: &mut Cx, theme: Theme) -> Style {
+        let mut focus_style = theme.focus;
+        if focus_style.bg == Color::Unset {
+            focus_style.bg = theme.surface.bg;
+        }
+
+        let mut accent_style = theme.accent;
+        if accent_style.bg == Color::Unset {
+            accent_style.bg = theme.surface.bg;
+        }
+
         let (val, fallback) = if self.disabled {
             (&self.styles.disabled, theme.disabled)
         } else if self.state.pressed {
-            (&self.styles.pressed, theme.focus)
+            (&self.styles.pressed, theme.active)
         } else if self.state.focused {
-            (&self.styles.focused, theme.focus)
+            (&self.styles.focused, focus_style)
         } else if self.state.hovered {
-            (&self.styles.hovered, theme.primary)
+            (&self.styles.hovered, accent_style)
         } else {
             (&self.styles.normal, theme.surface)
         };
@@ -232,10 +242,12 @@ impl Component for Button {
 
     fn mount(
         &mut self,
-        _cx: &mut Cx,
+        cx: &mut Cx,
         props: &Self::Props,
         children: &mut kursor_core::component::MountChildren,
     ) {
+        cx.provide(InheritedStyle(Value::signal(self.style.clone())));
+
         children.replace(Block::with(
             BlockProps {
                 border: self.border.clone().into_value(),
@@ -247,6 +259,8 @@ impl Component for Button {
     }
 
     fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        cx.provide(InheritedStyle(Value::signal(self.style.clone())));
+
         let border = props.border.get();
         let styles = props.styles.get();
         let disabled = props.disabled.get();
@@ -258,6 +272,7 @@ impl Component for Button {
         self.border.set(border);
         let theme = *cx.theme();
         let style = self.style(cx, theme);
+
         if old_style != Some(style) {
             self.style.set(Some(style));
         }
@@ -323,12 +338,21 @@ impl Component for Button {
         if let Some(ButtonIntent::Activate) =
             props.behavior.event(&bcx, event, &self.state)
         {
+            if state_changed {
+                let theme = *cx.theme();
+                let style = self.style(cx, theme);
+                self.style.set(Some(style));
+                cx.repaint_self();
+            }
             (props.on_press)(cx);
             return EventResult::Consumed;
         }
 
         if state_changed {
-            cx.relayout_self();
+            let theme = *cx.theme();
+            let style = self.style(cx, theme);
+            self.style.set(Some(style));
+            cx.repaint_self();
             EventResult::Consumed
         } else {
             EventResult::Ignored

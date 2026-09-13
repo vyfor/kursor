@@ -19,6 +19,7 @@ pub mod scroll;
 pub mod show;
 pub mod spacer;
 pub mod stack;
+pub mod styled;
 pub mod table;
 pub mod text;
 pub mod themed;
@@ -57,6 +58,7 @@ pub use scroll::{Scroll, ScrollIntent, ScrollProps, ScrollState, WheelScroll};
 pub use show::{Show, ShowBuilder, ShowProps};
 pub use spacer::{Spacer, SpacerProps};
 pub use stack::{Stack, StackProps};
+pub use styled::{Styled, StyledBuilder};
 pub use table::{
     IntoTCell, IntoTColumn, IntoTColumns, IntoTRow, IntoTSelection, TColumn,
     TData, TMode, TRow, TSelection, Table, TableBehavior, TableBuilder,

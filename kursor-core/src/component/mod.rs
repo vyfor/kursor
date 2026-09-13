@@ -12,6 +12,7 @@ use crate::{
     },
     render::canvas::Canvas,
 };
+pub use context::InheritedStyle;
 pub mod action;
 pub mod behavior;
 pub mod blueprint;
