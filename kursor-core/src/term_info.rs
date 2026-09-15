@@ -14,7 +14,7 @@ pub struct Graphics {
     pub iterm2: bool,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct TermInfo {
     pub foreground: Option<Color>,
     pub background: Option<Color>,
@@ -31,28 +31,6 @@ pub struct TermInfo {
     pub notifications: Notifications,
     pub cell_size: Option<(u16, u16)>,
     pub window_pixels: Option<(u16, u16)>,
-}
-
-impl Default for TermInfo {
-    fn default() -> Self {
-        Self {
-            foreground: None,
-            background: None,
-            palette: [None; 16],
-            color_256: false,
-            true_color: false,
-            hyperlinks: false,
-            clipboard: false,
-            kitty_keyboard: false,
-            graphics: Graphics::default(),
-            bracketed_paste: false,
-            mouse: false,
-            synchronized_output: false,
-            notifications: Notifications::default(),
-            cell_size: None,
-            window_pixels: None,
-        }
-    }
 }
 
 impl TermInfo {

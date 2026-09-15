@@ -589,8 +589,7 @@ impl Runtime {
         self.scratch.sent_nodes.clear();
         let mut res = EventResult::Ignored;
         let path_len = self.scratch.path.len();
-        let dispatch_path: Vec<NodeId> =
-            self.scratch.path.iter().copied().collect();
+        let dispatch_path: Vec<NodeId> = self.scratch.path.to_vec();
 
         for i in (0..path_len).rev() {
             let node = dispatch_path[i];
@@ -1173,11 +1172,11 @@ impl Runtime {
             }
         }
 
-        for atom in self.scratch.dep_atoms.iter().copied() {
-            if let Some(nodes) = self.deps.get_mut(&atom) {
+        for atom in self.scratch.dep_atoms.iter() {
+            if let Some(nodes) = self.deps.get_mut(atom) {
                 nodes.retain(|node| !subtree.contains(node));
                 if nodes.is_empty() {
-                    self.deps.remove(&atom);
+                    self.deps.remove(atom);
                 }
             }
         }
@@ -1566,10 +1565,10 @@ impl Runtime {
             ins.is_measure_valid = true;
             if changed {
                 ins.is_layout_valid = false;
-                if let Some(parent) = tree.parent(id) {
-                    if let Some(p) = tree.get_mut(parent) {
-                        p.is_layout_valid = false;
-                    }
+                if let Some(parent) = tree.parent(id)
+                    && let Some(p) = tree.get_mut(parent)
+                {
+                    p.is_layout_valid = false;
                 }
             }
         }
@@ -1813,7 +1812,12 @@ impl Runtime {
                 if let Some((sibling_origin, sibling_clip)) =
                     self.resolve(sibling)
                 {
-                    self.apply_paint(sibling, sibling_origin, sibling_clip);
+                    if sibling_clip.intersects(&clip) {
+                        self.tree.visit_subtree(sibling, |node| {
+                            self.scratch.painted.insert(node);
+                        });
+                        self.apply_paint(sibling, sibling_origin, sibling_clip);
+                    }
                 }
             }
             current = parent;

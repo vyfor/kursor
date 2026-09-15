@@ -132,7 +132,7 @@ impl Kitty {
                     self.transmit_data(image, action, &id_part)
                 }
                 Transmission::TempFile => {
-                    let path = write_temp_file(&image.rgba_bytes().to_vec())?;
+                    let path = write_temp_file(image.rgba_bytes())?;
                     let control = format!(
                         "a={action},t=t,f=32,s={},v={}{id_part},q=2",
                         image.width(),
@@ -162,8 +162,7 @@ impl Kitty {
                         self.transmit_data(&image, action, &id_part)
                     }
                     Transmission::TempFile => {
-                        let path =
-                            write_temp_file(&image.rgba_bytes().to_vec())?;
+                        let path = write_temp_file(image.rgba_bytes())?;
                         let control = format!(
                             "a={action},t=t,f=32,s={},v={}{id_part},q=2",
                             image.width(),

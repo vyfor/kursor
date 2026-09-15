@@ -65,7 +65,9 @@ impl Component for Effect {
             self.underlay_captured = true;
             self.underlay_origin = canvas.origin();
         }
+        canvas.merge_borders(false);
         self.layer.write_underlay(canvas);
+        canvas.merge_borders(true);
     }
 
     fn measure(
@@ -112,7 +114,9 @@ impl Component for Effect {
         };
         let activity = self.fx.apply(&mut effect_cx);
 
+        canvas.merge_borders(false);
         self.layer.write(canvas);
+        canvas.merge_borders(true);
         activity.running
     }
 }

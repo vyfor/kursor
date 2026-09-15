@@ -145,12 +145,9 @@ impl Subcell {
             Direction::Down => self.fill_top(amount),
         };
         let fg = match src.style.bg {
-            Color::Reset => match underlay.style.bg {
-                Color::Reset => match src.style.fg {
-                    Color::Reset => underlay.style.fg,
-                    fg => fg,
-                },
-                bg => bg,
+            Color::Reset | Color::Unset => match src.style.fg {
+                Color::Reset | Color::Unset => underlay.style.fg,
+                fg => fg,
             },
             bg => bg,
         };

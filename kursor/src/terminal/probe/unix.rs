@@ -46,7 +46,7 @@ fn exchange(
     session: &mut ProbeSession<'_>,
     route: UnixRoute,
 ) -> io::Result<()> {
-    let mut raw = unsafe {
+    let raw = unsafe {
         let mut t = std::mem::zeroed::<libc::termios>();
         if libc::tcgetattr(fd, &mut t) != 0 {
             return Err(io::Error::last_os_error());
@@ -54,7 +54,7 @@ fn exchange(
         libc::cfmakeraw(&mut t);
         t
     };
-    if unsafe { libc::tcsetattr(fd, libc::TCSANOW, &mut raw) } != 0 {
+    if unsafe { libc::tcsetattr(fd, libc::TCSANOW, &raw) } != 0 {
         return Err(io::Error::last_os_error());
     }
 

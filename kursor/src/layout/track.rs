@@ -30,6 +30,18 @@ impl Track {
     }
 }
 
+pub fn fill(weight: impl IntoValue<u16>) -> Track {
+    Track::fill(weight)
+}
+
+pub fn fixed(size: impl IntoValue<u16>) -> Track {
+    Track::fixed(size)
+}
+
+pub const fn content() -> Track {
+    Track::content()
+}
+
 pub trait IntoTracks {
     fn into_tracks(self) -> Vec<Track>;
 }

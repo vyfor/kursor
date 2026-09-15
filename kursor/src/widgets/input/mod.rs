@@ -248,7 +248,7 @@ impl Input {
             (&self.styles.normal, inherited)
         };
 
-        cx.resolve_or("style", val, fallback, self.transition.clone())
+        cx.resolve_or("style", val, fallback, self.transition)
     }
 
     fn char_count(&self) -> usize {
@@ -726,7 +726,7 @@ impl Component for Input {
         self.styles = styles;
         self.disabled = disabled;
         self.display = props.display.clone();
-        self.transition = props.transition.clone();
+        self.transition = props.transition;
         self.update_scroll(cx.rect.width as usize);
 
         if text_changed {

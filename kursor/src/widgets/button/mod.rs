@@ -187,7 +187,7 @@ impl Button {
             (&self.styles.normal, theme.surface)
         };
 
-        cx.resolve_or("style", val, fallback, self.transition.clone())
+        cx.resolve_or("style", val, fallback, self.transition)
     }
 }
 
@@ -267,7 +267,7 @@ impl Component for Button {
         let old_style = self.style.peek();
         self.styles = styles;
         self.disabled = disabled;
-        self.transition = props.transition.clone();
+        self.transition = props.transition;
 
         self.border.set(border);
         let theme = *cx.theme();

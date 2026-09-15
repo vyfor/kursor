@@ -242,7 +242,7 @@ impl Component for Block {
     fn update(&mut self, _cx: &mut Cx, props: &Self::Props) -> Update {
         let border = props.border.get();
         let style = props.style.get();
-        let transition = props.transition.clone();
+        let transition = props.transition;
         let border_changed = self.border != border;
         let style_changed =
             self.style != style || self.transition != transition;
@@ -307,12 +307,8 @@ impl Component for Block {
         }
 
         let fallback = cx.theme().surface;
-        let style = cx.resolve_or(
-            "style",
-            &props.style,
-            fallback,
-            self.transition.clone(),
-        );
+        let style =
+            cx.resolve_or("style", &props.style, fallback, self.transition);
 
         let has_border = !matches!(self.border, Border::None);
         let fill_rect = if has_border {

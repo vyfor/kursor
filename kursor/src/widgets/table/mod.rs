@@ -1013,10 +1013,8 @@ impl Component for Table {
         let inset = self.inset();
         let avail_w = available.width.saturating_sub(inset * 2);
 
-        let has_content_track = self
-            .column_tracks
-            .iter()
-            .any(|t| *t == ResolvedTrack::Content);
+        let has_content_track =
+            self.column_tracks.contains(&ResolvedTrack::Content);
         let mut content_widths = vec![0; num_cols];
 
         if has_content_track && !children.is_empty() {
@@ -1318,25 +1316,23 @@ impl Component for Table {
 
             if self.mode == TMode::Column
                 && let Some(col_idx) = self.state.selected_col
+                && col_idx < self.state.column_positions.len()
+                && col_idx < self.state.column_widths.len()
             {
-                if col_idx < self.state.column_positions.len()
-                    && col_idx < self.state.column_widths.len()
-                {
-                    let rel_x = self.state.column_positions[col_idx];
-                    let cell_w = self.state.column_widths[col_idx];
-                    let cell_x = i32::from(area.x) + rel_x;
-                    let clipped_x = cell_x.max(i32::from(inner_x));
-                    let clipped_end = (cell_x + i32::from(cell_w))
-                        .min(i32::from(inner_x + inner_w));
-                    if clipped_end > clipped_x {
-                        let rect = Rect::new(
-                            clipped_x as u16,
-                            inner_y,
-                            (clipped_end - clipped_x) as u16,
-                            self.header_height,
-                        );
-                        canvas.fill(rect, ' ', selected_style);
-                    }
+                let rel_x = self.state.column_positions[col_idx];
+                let cell_w = self.state.column_widths[col_idx];
+                let cell_x = i32::from(area.x) + rel_x;
+                let clipped_x = cell_x.max(i32::from(inner_x));
+                let clipped_end = (cell_x + i32::from(cell_w))
+                    .min(i32::from(inner_x + inner_w));
+                if clipped_end > clipped_x {
+                    let rect = Rect::new(
+                        clipped_x as u16,
+                        inner_y,
+                        (clipped_end - clipped_x) as u16,
+                        self.header_height,
+                    );
+                    canvas.fill(rect, ' ', selected_style);
                 }
             }
         }
@@ -1376,26 +1372,25 @@ impl Component for Table {
                 && self.state.selected_row == Some(row_idx))
                 || self.mode == TMode::Column;
 
-            if is_col_highlighted && let Some(col_idx) = self.state.selected_col
+            if is_col_highlighted
+                && let Some(col_idx) = self.state.selected_col
+                && col_idx < self.state.column_positions.len()
+                && col_idx < self.state.column_widths.len()
             {
-                if col_idx < self.state.column_positions.len()
-                    && col_idx < self.state.column_widths.len()
-                {
-                    let rel_x = self.state.column_positions[col_idx];
-                    let cell_w = self.state.column_widths[col_idx];
-                    let cell_x = i32::from(area.x) + rel_x;
-                    let clipped_x = cell_x.max(i32::from(inner_x));
-                    let clipped_end = (cell_x + i32::from(cell_w))
-                        .min(i32::from(inner_x + inner_w));
-                    if clipped_end > clipped_x {
-                        let rect = Rect::new(
-                            clipped_x as u16,
-                            row_y,
-                            (clipped_end - clipped_x) as u16,
-                            row_h,
-                        );
-                        canvas.fill(rect, ' ', selected_style);
-                    }
+                let rel_x = self.state.column_positions[col_idx];
+                let cell_w = self.state.column_widths[col_idx];
+                let cell_x = i32::from(area.x) + rel_x;
+                let clipped_x = cell_x.max(i32::from(inner_x));
+                let clipped_end = (cell_x + i32::from(cell_w))
+                    .min(i32::from(inner_x + inner_w));
+                if clipped_end > clipped_x {
+                    let rect = Rect::new(
+                        clipped_x as u16,
+                        row_y,
+                        (clipped_end - clipped_x) as u16,
+                        row_h,
+                    );
+                    canvas.fill(rect, ' ', selected_style);
                 }
             }
 
