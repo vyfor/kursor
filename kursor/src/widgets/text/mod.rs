@@ -10,7 +10,11 @@ pub use span::Span;
 pub use span_ext::{IntoSpan, IntoSpanExt};
 
 use kursor_core::{
-    component::{Component, Update, blueprint::Blueprint, context::Cx},
+    component::{
+        Component, Update,
+        blueprint::{Blueprint, IntoBlueprint},
+        context::Cx,
+    },
     layout::{WrapMode, context::MeasureCx, size::Size},
     render::{canvas::Canvas, style::Style},
     state::{IntoValue, Signal, Transition, Value, atom::Atom, memo::Memo},
@@ -49,6 +53,18 @@ impl IntoText for Span {
 impl IntoText for Line {
     fn into_text(self) -> TextContent {
         TextContent::Lines(Value::plain(vec![self]))
+    }
+}
+
+impl IntoBlueprint for Span {
+    fn into_blueprint(self) -> Vec<Blueprint> {
+        Text::new(self).into_blueprint()
+    }
+}
+
+impl IntoBlueprint for Line {
+    fn into_blueprint(self) -> Vec<Blueprint> {
+        Text::new(self).into_blueprint()
     }
 }
 
@@ -230,7 +246,7 @@ impl Component for Text {
         };
         let explicit = props.style.get();
         let wrap = props.wrap.get();
-        let transition = props.transition.clone();
+        let transition = props.transition;
 
         let effective = match explicit {
             Some(style) => inherited.patch(style),
@@ -277,7 +293,7 @@ impl Component for Text {
                     "style",
                     Some(explicit),
                     inherited,
-                    self.transition.clone(),
+                    self.transition,
                 );
                 inherited.patch(resolved)
             }

@@ -19,6 +19,7 @@ pub struct Reveal {
     subcell: Subcell,
     feather: Feather,
     spread: Spread,
+    apply_feather: bool,
 }
 
 pub fn reveal(duration: Duration) -> Reveal {
@@ -30,6 +31,7 @@ pub fn reveal(duration: Duration) -> Reveal {
         subcell: Subcell::None,
         feather: Feather::full(),
         spread: Spread::uniform(),
+        apply_feather: false,
     }
 }
 
@@ -41,6 +43,7 @@ impl Reveal {
 
     pub fn feather(mut self, feather: Feather) -> Self {
         self.feather = feather;
+        self.apply_feather = true;
         self
     }
 
@@ -51,6 +54,9 @@ impl Reveal {
 
     pub fn spread(mut self, spread: Spread) -> Self {
         self.spread = spread;
+        if !self.apply_feather && !matches!(spread, Spread::Uniform) {
+            self.feather = Feather::hard();
+        }
         self
     }
 
@@ -65,45 +71,48 @@ impl Fx for Reveal {
         let start = *self.start.get_or_insert(cx.time);
         let progress = cx.progress(start, self.duration);
 
-        if self.feather.is_full() {
-            self.apply_blend(cx, progress);
-        } else {
-            match self.spread {
-                Spread::Towards(dir) => {
-                    if progress >= 1.0 {
-                        self.finished(cx);
-                        return Activity::FINISHED;
-                    }
-                    let amount = if self.inward {
-                        progress
-                    } else {
-                        1.0 - progress
-                    };
-                    if self.feather.is_hard() {
-                        self.apply_hard_wipe(cx, amount, dir);
-                    } else {
-                        self.apply_soft_wipe(cx, amount, dir);
-                    }
+        match self.spread {
+            Spread::Uniform => {
+                self.apply_blend(cx, progress);
+            }
+            Spread::Towards(dir) => {
+                if progress >= 1.0 {
+                    self.finished(cx);
+                    return Activity::FINISHED;
                 }
-                Spread::Radial => {
-                    if progress >= 1.0 {
-                        self.finished(cx);
-                        return Activity::FINISHED;
+                let amount = if self.inward {
+                    progress
+                } else {
+                    1.0 - progress
+                };
+                let wipe_dir = if self.inward {
+                    dir
+                } else {
+                    match dir {
+                        Direction::Right => Direction::Left,
+                        Direction::Left => Direction::Right,
+                        Direction::Up => Direction::Down,
+                        Direction::Down => Direction::Up,
                     }
-                    let amount = if self.inward {
-                        progress
-                    } else {
-                        1.0 - progress
-                    };
-                    self.apply_radial_edge(cx, amount);
+                };
+                self.apply_soft_wipe(cx, amount, wipe_dir);
+            }
+            Spread::Radial => {
+                if progress >= 1.0 {
+                    self.finished(cx);
+                    return Activity::FINISHED;
                 }
-                Spread::Uniform => {
-                    self.apply_blend(cx, progress);
-                }
+                let amount = if self.inward {
+                    progress
+                } else {
+                    1.0 - progress
+                };
+                self.apply_radial_edge(cx, amount);
             }
         }
 
         if progress >= 1.0 {
+            self.finished(cx);
             Activity::FINISHED
         } else {
             Activity::RUNNING
@@ -177,24 +186,30 @@ impl Reveal {
         amount: f32,
         entering: bool,
     ) -> Cell {
+        let base_bg = match underlay.style.bg {
+            Color::Reset | Color::Unset => Color::Black,
+            bg => bg,
+        };
+
         let (fg_from, fg_to, bg_from, bg_to) = if entering {
-            let fg_from = match underlay.style.bg {
-                Color::Reset => Color::Black,
-                other => other,
+            let fg_target = match source.style.fg {
+                Color::Reset | Color::Unset => Color::White,
+                fg => fg,
             };
-            (fg_from, source.style.fg, underlay.style.bg, source.style.bg)
+            (base_bg, fg_target, base_bg, source.style.bg)
         } else {
-            let fg_to = match underlay.style.bg {
-                Color::Reset => Color::Black,
-                other => other,
+            let fg_current = match source.style.fg {
+                Color::Reset | Color::Unset => Color::White,
+                fg => fg,
             };
-            (source.style.fg, fg_to, source.style.bg, underlay.style.bg)
+            (fg_current, base_bg, source.style.bg, base_bg)
         };
 
         let mut cell = source;
-        cell.style.fg = mix(fg_from, fg_to, amount, Color::White);
-        if bg_from != bg_to {
-            cell.style.bg = mix(bg_from, bg_to, amount, Color::Black);
+        cell.style.fg = mix(fg_from, fg_to, amount, base_bg);
+        if bg_from != bg_to && bg_from != Color::Unset && bg_to != Color::Unset
+        {
+            cell.style.bg = mix(bg_from, bg_to, amount, base_bg);
         }
         cell
     }
@@ -262,15 +277,14 @@ impl Reveal {
 
         let gamma = 0.6;
         let ag_here = a_here.powf(gamma);
-        let ag_next = a_next.powf(gamma);
 
         let (from, to) = if entering {
             (underlay.style.bg, source.style.bg)
         } else {
             (source.style.bg, underlay.style.bg)
         };
-        let c_here = mix(from, to, ag_here, Color::Black);
-        let c_next = mix(from, to, ag_next, Color::Black);
+        let c_here = mix(from, to, a_here, Color::Black);
+        let c_next = mix(from, to, a_next, Color::Black);
 
         let ch = match direction {
             Direction::Right => self.subcell.fill_left(ag_here.clamp(0.0, 1.0)),
@@ -287,35 +301,6 @@ impl Reveal {
         };
 
         Some(Cell::new(ch, Style::new().fg(fg).bg(bg)))
-    }
-
-    fn apply_hard_wipe(
-        &self,
-        cx: &mut EffectCx<'_>,
-        amount: f32,
-        direction: Direction,
-    ) {
-        let total = match direction {
-            Direction::Left | Direction::Right => cx.layer.width() as f32,
-            Direction::Up | Direction::Down => cx.layer.height() as f32,
-        };
-
-        let pos = total * amount;
-
-        let (whole, frac) = if self.subcell == Subcell::None {
-            (pos.round() as usize, 0.0)
-        } else {
-            (pos.floor() as usize, pos.fract())
-        };
-
-        cx.layer.clear();
-
-        match direction {
-            Direction::Down => self.wipe_down(cx, whole, frac),
-            Direction::Up => self.wipe_up(cx, whole, frac),
-            Direction::Right => self.wipe_right(cx, whole, frac),
-            Direction::Left => self.wipe_left(cx, whole, frac),
-        }
     }
 
     fn apply_soft_wipe(
@@ -338,21 +323,26 @@ impl Reveal {
                 }
 
                 let distance = match direction {
-                    Direction::Left => pos - x as f32,
-                    Direction::Right => pos - (length - 1.0 - x as f32),
+                    Direction::Left => pos - (length - 1.0 - x as f32),
+                    Direction::Right => pos - x as f32,
                     Direction::Up => pos - (length - 1.0 - y as f32),
                     Direction::Down => pos - y as f32,
                 };
                 let source = cx.source(x, y);
                 let underlay = cx.underlay(x, y);
-                let boundary = distance > 0.0 && distance < 1.0;
-                let cell = if self.subcell != Subcell::None && boundary {
-                    let edge = self
-                        .subcell
-                        .edge_cell(source, underlay, direction, distance);
-                    self.feather.soften(edge, underlay, distance)
-                } else {
+
+                let cell = if feather_width > 0.0 {
                     self.feather.soften(source, underlay, distance)
+                } else if self.subcell != Subcell::None
+                    && distance > 0.0
+                    && distance < 1.0
+                {
+                    self.subcell
+                        .edge_cell(source, underlay, direction, distance)
+                } else if distance >= 1.0 {
+                    source
+                } else {
+                    underlay
                 };
 
                 cx.set(x, y, cell);
@@ -363,8 +353,12 @@ impl Reveal {
     fn apply_radial_edge(&self, cx: &mut EffectCx<'_>, amount: f32) {
         let w = cx.layer.width() as f32;
         let h = cx.layer.height() as f32;
-        let max_dist = (0.25f32 + 0.25).sqrt();
-        let pos = max_dist * amount;
+        let cx_mid = (w - 1.0).max(0.0) / 2.0;
+        let cy_mid = (h - 1.0).max(0.0) / 2.0;
+        let max_dist =
+            (cx_mid * cx_mid + (cy_mid * 2.0) * (cy_mid * 2.0)).sqrt();
+        let feather_width = self.feather.width_val();
+        let pos = (max_dist + feather_width) * amount;
 
         for y in 0..cx.layer.height() {
             for x in 0..cx.layer.width() {
@@ -372,176 +366,38 @@ impl Reveal {
                     continue;
                 }
 
-                let nx = (x as f32 + 0.5) / w.max(1.0) - 0.5;
-                let ny = (y as f32 + 0.5) / h.max(1.0) - 0.5;
-                let cell_dist = (nx * nx + ny * ny).sqrt();
+                let dx = x as f32 - cx_mid;
+                let dy = (y as f32 - cy_mid) * 2.0;
+                let cell_dist = (dx * dx + dy * dy).sqrt();
                 let distance = pos - cell_dist;
                 let source = cx.source(x, y);
                 let underlay = cx.underlay(x, y);
-                let boundary = distance > 0.0 && distance < 1.0;
-                let cell = if self.subcell != Subcell::None && boundary {
-                    let dir = if nx.abs() > ny.abs() {
-                        if nx > 0.0 {
+
+                let cell = if feather_width > 0.0 {
+                    self.feather.soften(source, underlay, distance)
+                } else if self.subcell != Subcell::None
+                    && distance > 0.0
+                    && distance < 1.0
+                {
+                    let dir = if dx.abs() > dy.abs() {
+                        if dx > 0.0 {
                             Direction::Right
                         } else {
                             Direction::Left
                         }
-                    } else if ny > 0.0 {
+                    } else if dy > 0.0 {
                         Direction::Down
                     } else {
                         Direction::Up
                     };
-                    let edge =
-                        self.subcell.edge_cell(source, underlay, dir, distance);
-                    self.feather.soften(edge, underlay, distance)
+                    self.subcell.edge_cell(source, underlay, dir, distance)
+                } else if distance >= 1.0 {
+                    source
                 } else {
-                    self.feather.soften(source, underlay, distance)
+                    underlay
                 };
 
                 cx.set(x, y, cell);
-            }
-        }
-    }
-
-    fn edge(
-        &self,
-        src: Cell,
-        underlay: Cell,
-        direction: Direction,
-        frac: f32,
-    ) -> Cell {
-        let cell = self.subcell.edge_cell(src, underlay, direction, frac);
-        self.feather.soften(cell, underlay, frac)
-    }
-
-    fn wipe_down(&self, cx: &mut EffectCx, whole: usize, frac: f32) {
-        let w = cx.layer.width();
-        let h = cx.layer.height() as usize;
-
-        if frac == 0.0 {
-            for y in 0..whole.min(h) {
-                for x in 0..w {
-                    cx.set(x, y as u16, cx.source(x, y as u16));
-                }
-            }
-            return;
-        }
-
-        for y in 0..whole.min(h) {
-            for x in 0..w {
-                cx.set(x, y as u16, cx.source(x, y as u16));
-            }
-        }
-
-        if whole < h {
-            let edge_y = whole as u16;
-            for x in 0..w {
-                if cx.includes(&self.mask, x, edge_y) {
-                    let src = cx.source(x, edge_y);
-                    let underlay = cx.underlay(x, edge_y);
-                    let cell = self.edge(src, underlay, Direction::Down, frac);
-                    cx.set(x, edge_y, cell);
-                }
-            }
-        }
-    }
-
-    fn wipe_up(&self, cx: &mut EffectCx, whole: usize, frac: f32) {
-        let w = cx.layer.width();
-        let h = cx.layer.height() as usize;
-
-        if frac == 0.0 {
-            let start = h.saturating_sub(whole);
-            for y in start..h {
-                for x in 0..w {
-                    cx.set(x, y as u16, cx.source(x, y as u16));
-                }
-            }
-            return;
-        }
-
-        let start = h.saturating_sub(whole);
-        for y in start..h {
-            for x in 0..w {
-                cx.set(x, y as u16, cx.source(x, y as u16));
-            }
-        }
-
-        if start > 0 {
-            let edge_y = (start - 1) as u16;
-            for x in 0..w {
-                if cx.includes(&self.mask, x, edge_y) {
-                    let src = cx.source(x, edge_y);
-                    let underlay = cx.underlay(x, edge_y);
-                    let cell = self.edge(src, underlay, Direction::Up, frac);
-                    cx.set(x, edge_y, cell);
-                }
-            }
-        }
-    }
-
-    fn wipe_right(&self, cx: &mut EffectCx, whole: usize, frac: f32) {
-        let w = cx.layer.width() as usize;
-        let h = cx.layer.height();
-
-        if frac == 0.0 {
-            for x in 0..whole.min(w) {
-                for y in 0..h {
-                    cx.set(x as u16, y, cx.source(x as u16, y));
-                }
-            }
-            return;
-        }
-
-        for x in 0..whole.min(w) {
-            for y in 0..h {
-                cx.set(x as u16, y, cx.source(x as u16, y));
-            }
-        }
-
-        if whole < w {
-            let edge_x = whole as u16;
-            for y in 0..h {
-                if cx.includes(&self.mask, edge_x, y) {
-                    let src = cx.source(edge_x, y);
-                    let underlay = cx.underlay(edge_x, y);
-                    let cell = self.edge(src, underlay, Direction::Right, frac);
-                    cx.set(edge_x, y, cell);
-                }
-            }
-        }
-    }
-
-    fn wipe_left(&self, cx: &mut EffectCx, whole: usize, frac: f32) {
-        let w = cx.layer.width() as usize;
-        let h = cx.layer.height();
-
-        if frac == 0.0 {
-            let start = w.saturating_sub(whole);
-            for x in start..w {
-                for y in 0..h {
-                    cx.set(x as u16, y, cx.source(x as u16, y));
-                }
-            }
-            return;
-        }
-
-        let start = w.saturating_sub(whole);
-        for x in start..w {
-            for y in 0..h {
-                cx.set(x as u16, y, cx.source(x as u16, y));
-            }
-        }
-
-        if start > 0 {
-            let edge_x = (start - 1) as u16;
-            for y in 0..h {
-                if cx.includes(&self.mask, edge_x, y) {
-                    let src = cx.source(edge_x, y);
-                    let underlay = cx.underlay(edge_x, y);
-                    let cell = self.edge(src, underlay, Direction::Left, frac);
-                    cx.set(edge_x, y, cell);
-                }
             }
         }
     }

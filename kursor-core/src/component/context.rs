@@ -49,19 +49,12 @@ struct ChannelKey {
 }
 
 #[cfg(feature = "animate")]
+#[derive(Default)]
 pub(crate) struct Animations {
     values: HashMap<ChannelKey, Box<dyn Any>>,
 }
 
 #[cfg(feature = "animate")]
-impl Default for Animations {
-    fn default() -> Self {
-        Self {
-            values: HashMap::new(),
-        }
-    }
-}
-
 #[cfg(feature = "animate")]
 pub trait Transitionable:
     LocalState
@@ -326,7 +319,7 @@ pub trait ResolveValue<T: Transitionable> {
     ) -> T;
 }
 
-impl<'a, T: Transitionable> ResolveValue<T> for Option<&'a Value<T>> {
+impl<T: Transitionable> ResolveValue<T> for Option<&Value<T>> {
     fn resolve_or<K: IntoChannel>(
         self,
         cx: &mut Cx,
@@ -345,7 +338,7 @@ impl<'a, T: Transitionable> ResolveValue<T> for Option<&'a Value<T>> {
     }
 }
 
-impl<'a, T: Transitionable> ResolveValue<T> for &'a Option<Value<T>> {
+impl<T: Transitionable> ResolveValue<T> for &Option<Value<T>> {
     fn resolve_or<K: IntoChannel>(
         self,
         cx: &mut Cx,
@@ -358,7 +351,7 @@ impl<'a, T: Transitionable> ResolveValue<T> for &'a Option<Value<T>> {
     }
 }
 
-impl<'a, T: Transitionable> ResolveValue<T> for &'a Value<T> {
+impl<T: Transitionable> ResolveValue<T> for &Value<T> {
     fn resolve_or<K: IntoChannel>(
         self,
         cx: &mut Cx,
@@ -384,7 +377,7 @@ impl<T: Transitionable> ResolveValue<T> for Option<T> {
     }
 }
 
-impl<'a, T: Transitionable> ResolveValue<T> for &'a Value<Option<T>> {
+impl<T: Transitionable> ResolveValue<T> for &Value<Option<T>> {
     fn resolve_or<K: IntoChannel>(
         self,
         cx: &mut Cx,

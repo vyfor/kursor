@@ -21,3 +21,6 @@ pub use animate;
 
 #[cfg(feature = "fx")]
 pub use kursor_fx as fx;
+
+#[cfg(feature = "image")]
+pub use kursor_image as image;

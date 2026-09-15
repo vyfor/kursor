@@ -67,12 +67,11 @@ impl<'a> Canvas<'a> {
                 if cell.style.fg == Color::Unset {
                     cell.style.fg = existing.style.fg;
                 }
-                if self.merge_borders {
-                    if let Some(merged_ch) =
+                if self.merge_borders
+                    && let Some(merged_ch) =
                         border::merge_borders(existing.ch, cell.ch)
-                    {
-                        cell.ch = merged_ch;
-                    }
+                {
+                    cell.ch = merged_ch;
                 }
             }
             self.buffer.set(x, y, cell);

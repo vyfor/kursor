@@ -1,11 +1,12 @@
 use kursor_core::{
     layout::{Direction, rect::Rect},
-    render::cell::Cell,
+    render::{border::char_to_junction, cell::Cell},
 };
 
 /// selects which cells an effect applies to.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum Mask {
+    #[default]
     All,
     Text,
     NonEmpty,
@@ -47,7 +48,8 @@ impl Mask {
     pub fn includes(&self, cell: Cell, x: u16, y: u16, area: Rect) -> bool {
         match self {
             Self::All => true,
-            Self::Text | Self::NonEmpty => cell.ch != ' ',
+            Self::NonEmpty => cell.ch != ' ',
+            Self::Text => cell.ch != ' ' && char_to_junction(cell.ch).is_none(),
             Self::Inner(margin) => {
                 x >= *margin
                     && y >= *margin
@@ -55,7 +57,8 @@ impl Mask {
                     && y.saturating_add(*margin) < area.height
             }
             Self::Border => {
-                x == 0
+                char_to_junction(cell.ch).is_some()
+                    || x == 0
                     || y == 0
                     || x == area.width.saturating_sub(1)
                     || y == area.height.saturating_sub(1)
@@ -63,12 +66,6 @@ impl Mask {
             Self::Chars(chars) => chars.contains(&cell.ch),
             Self::Not(mask) => !mask.includes(cell, x, y, area),
         }
-    }
-}
-
-impl Default for Mask {
-    fn default() -> Self {
-        Self::All
     }
 }
 

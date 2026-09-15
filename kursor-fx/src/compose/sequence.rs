@@ -17,13 +17,9 @@ pub struct Sequence {
 }
 
 impl Sequence {
-    pub fn with(mut self, effect: impl Fx) -> Self {
+    pub fn then(mut self, effect: impl Fx) -> Self {
         self.effects.push(Box::new(effect));
         self
-    }
-
-    pub fn then(self, effect: impl Fx) -> Self {
-        self.with(effect)
     }
 }
 
@@ -39,19 +35,22 @@ impl Clone for Sequence {
 impl Fx for Sequence {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity {
         let len = self.effects.len();
-        for (index, effect) in self.effects.iter_mut().enumerate() {
-            let activity = effect.apply(cx);
+        while self.index < len {
+            let activity = self.effects[self.index].apply(cx);
             if !activity.finished {
-                self.index = index;
                 return activity;
             }
 
-            if index + 1 < len {
+            self.index += 1;
+            if self.index < len {
                 cx.layer.advance();
             }
         }
 
-        self.index = len;
+        if len > 0 {
+            self.effects[len - 1].apply(cx);
+        }
+
         Activity::FINISHED
     }
 

@@ -78,7 +78,7 @@ impl Component for Divider {
         let orientation = props.orientation.get();
         let style = props.style.get();
         let glyph = props.glyph.get();
-        let transition = props.transition.clone();
+        let transition = props.transition;
         let orientation_changed = self.orientation != orientation;
         let style_changed =
             self.style != style || self.transition != transition;
@@ -120,12 +120,8 @@ impl Component for Divider {
         }
 
         let fallback = cx.theme().surface.patch(cx.inherited_style());
-        let style = cx.resolve_or(
-            "style",
-            &props.style,
-            fallback,
-            self.transition.clone(),
-        );
+        let style =
+            cx.resolve_or("style", &props.style, fallback, self.transition);
         match self.orientation {
             Orientation::Horizontal => {
                 for x in rect.left()..rect.right() {

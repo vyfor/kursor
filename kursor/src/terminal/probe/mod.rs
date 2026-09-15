@@ -277,12 +277,11 @@ impl ProbeParser {
                     if kind == Sequence::Osc {
                         replies
                             .extend(parse_osc(&self.buffer[body_start..end]));
-                    } else if kind == Sequence::Apc {
-                        if let Some(reply) =
+                    } else if kind == Sequence::Apc
+                        && let Some(reply) =
                             parse_apc(&self.buffer[body_start..end])
-                        {
-                            replies.push(reply);
-                        }
+                    {
+                        replies.push(reply);
                     }
                     self.buffer.drain(..end + terminator_length);
                 }

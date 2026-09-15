@@ -37,6 +37,14 @@ termina = { version = "0.4", optional = true }
 unicode-width = "0.2"
 animate = { version = "0.7", optional = true }
 
+[[example]]
+name = "fx"
+required-features = ["fx"]
+
+[[example]]
+name = "graphics"
+required-features = ["image"]
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 

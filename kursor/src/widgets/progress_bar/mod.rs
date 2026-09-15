@@ -193,7 +193,7 @@ impl Component for ProgressBar {
         let fill_char = props.fill_char.as_ref().map(Value::get);
         let head_char = props.head_char.as_ref().map(Value::get);
         let track_char = props.track_char.get();
-        let transition = props.transition.clone();
+        let transition = props.transition;
 
         let direction_changed = self.direction != direction;
         let visual_changed = self.ranges != ranges
@@ -254,13 +254,13 @@ impl Component for ProgressBar {
             "track_style",
             &props.styles.get().track,
             fb,
-            self.transition.clone(),
+            self.transition,
         );
         let def_fill = cx.resolve_or(
             "fill_style",
             &props.styles.get().fill,
             theme.primary,
-            self.transition.clone(),
+            self.transition,
         );
 
         let (length, breadth, is_horizontal, is_reversed) = match self.direction
@@ -300,14 +300,9 @@ impl Component for ProgressBar {
                     },
                 );
 
-            let transition =
-                seg.transition.clone().or_else(|| self.transition.clone());
+            let transition = seg.transition.or(self.transition);
             let cur_start: f32 = cx
-                .transition(
-                    seg_idx as u64 * 2 + 1,
-                    target_start,
-                    transition.clone(),
-                )
+                .transition(seg_idx as u64 * 2 + 1, target_start, transition)
                 .clamp(0.0, 1.0);
             let cur_end: f32 = cx
                 .transition(seg_idx as u64 * 2, target_end, transition)

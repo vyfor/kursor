@@ -72,6 +72,9 @@ impl Feather {
     }
 
     fn factor(&self, distance: f32) -> f32 {
+        if distance <= 0.0 {
+            return 0.0;
+        }
         if self.is_full() {
             return distance.clamp(0.0, 1.0);
         }
@@ -96,16 +99,23 @@ impl Feather {
             return underlay;
         }
 
-        let fg_from = match underlay.style.bg {
-            Color::Reset => underlay.style.fg,
+        let base_bg = match underlay.style.bg {
+            Color::Reset | Color::Unset => Color::Black,
             bg => bg,
+        };
+        let target_fg = match cell.style.fg {
+            Color::Reset | Color::Unset => Color::White,
+            fg => fg,
         };
 
         let mut cell = cell;
-        cell.style.fg = mix(fg_from, cell.style.fg, factor, Color::White);
-        if cell.style.bg != underlay.style.bg {
+        cell.style.fg = mix(base_bg, target_fg, factor, base_bg);
+        if cell.style.bg != underlay.style.bg
+            && cell.style.bg != Color::Unset
+            && underlay.style.bg != Color::Unset
+        {
             cell.style.bg =
-                mix(underlay.style.bg, cell.style.bg, factor, Color::Black);
+                mix(underlay.style.bg, cell.style.bg, factor, base_bg);
         }
         cell
     }

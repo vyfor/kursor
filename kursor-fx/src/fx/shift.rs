@@ -209,14 +209,17 @@ impl Shift {
             for x in 0..w {
                 if cx.includes(&self.mask, x, 0) {
                     let src = cx.source(x, 0);
-                    let underlay = cx.underlay(x, edge_y);
-                    let cell = self.subcell.edge_cell(
-                        src,
-                        underlay,
-                        Direction::Down,
-                        1.0 - frac,
-                    );
-                    cx.set(x, edge_y, cell);
+                    cx.set(x, edge_y, src);
+                    if edge_y > 0 {
+                        let underlay = cx.underlay(x, edge_y - 1);
+                        let cell = self.subcell.edge_cell(
+                            src,
+                            underlay,
+                            Direction::Up,
+                            1.0 - frac,
+                        );
+                        cx.set(x, edge_y - 1, cell);
+                    }
                 }
             }
         }
@@ -252,14 +255,17 @@ impl Shift {
             for x in 0..w {
                 if cx.includes(&self.mask, x, src_row) {
                     let src = cx.source(x, src_row);
-                    let underlay = cx.underlay(x, edge_y);
-                    let cell = self.subcell.edge_cell(
-                        src,
-                        underlay,
-                        Direction::Up,
-                        1.0 - frac,
-                    );
-                    cx.set(x, edge_y, cell);
+                    cx.set(x, edge_y, src);
+                    if edge_row + 1 < h {
+                        let underlay = cx.underlay(x, edge_y + 1);
+                        let cell = self.subcell.edge_cell(
+                            src,
+                            underlay,
+                            Direction::Down,
+                            1.0 - frac,
+                        );
+                        cx.set(x, edge_y + 1, cell);
+                    }
                 }
             }
         }
@@ -291,14 +297,17 @@ impl Shift {
             for y in 0..h {
                 if cx.includes(&self.mask, 0, y) {
                     let src = cx.source(0, y);
-                    let underlay = cx.underlay(edge_x, y);
-                    let cell = self.subcell.edge_cell(
-                        src,
-                        underlay,
-                        Direction::Right,
-                        1.0 - frac,
-                    );
-                    cx.set(edge_x, y, cell);
+                    cx.set(edge_x, y, src);
+                    if edge_x > 0 {
+                        let underlay = cx.underlay(edge_x - 1, y);
+                        let cell = self.subcell.edge_cell(
+                            src,
+                            underlay,
+                            Direction::Left,
+                            1.0 - frac,
+                        );
+                        cx.set(edge_x - 1, y, cell);
+                    }
                 }
             }
         }
@@ -334,14 +343,17 @@ impl Shift {
             for y in 0..h {
                 if cx.includes(&self.mask, src_col, y) {
                     let src = cx.source(src_col, y);
-                    let underlay = cx.underlay(edge_x, y);
-                    let cell = self.subcell.edge_cell(
-                        src,
-                        underlay,
-                        Direction::Left,
-                        1.0 - frac,
-                    );
-                    cx.set(edge_x, y, cell);
+                    cx.set(edge_x, y, src);
+                    if edge_col + 1 < w {
+                        let underlay = cx.underlay(edge_x + 1, y);
+                        let cell = self.subcell.edge_cell(
+                            src,
+                            underlay,
+                            Direction::Right,
+                            1.0 - frac,
+                        );
+                        cx.set(edge_x + 1, y, cell);
+                    }
                 }
             }
         }

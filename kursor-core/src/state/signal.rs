@@ -45,9 +45,8 @@ pub(crate) struct QueueScope {
 }
 
 pub(crate) fn enter(queue: &Rc<LocalQueue>) -> QueueScope {
-    let previous = ACTIVE_QUEUE.with(|active| unsafe {
-        mem::replace(&mut *active.get(), Some(queue.clone()))
-    });
+    let previous = ACTIVE_QUEUE
+        .with(|active| unsafe { (*active.get()).replace(queue.clone()) });
     QueueScope { previous }
 }
 

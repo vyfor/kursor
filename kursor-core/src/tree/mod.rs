@@ -13,6 +13,12 @@ pub struct Tree<T> {
     root: Option<NodeId>,
 }
 
+impl<T> Default for Tree<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Tree<T> {
     pub fn new() -> Self {
         Self {

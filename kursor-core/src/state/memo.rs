@@ -226,13 +226,11 @@ impl<T: LocalState> Inner<T> {
         });
         *old_deps = dependencies;
 
-        let changed = unsafe {
+        unsafe {
             let val_ptr = &mut *self.value.get();
             let changed = val_ptr.as_ref() != Some(&new_val);
             *val_ptr = Some(new_val);
             changed
-        };
-
-        changed
+        }
     }
 }

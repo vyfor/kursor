@@ -6,7 +6,8 @@ use kursor_core::{
 };
 
 use super::{
-    Align, Block, Border, Bounds, Padding, Scroll, Show, Stack, Themed, Wrap,
+    Align, Block, Border, Bounds, FlexItem, Padding, Scroll, Show, Stack,
+    Themed, Wrap,
 };
 
 pub trait IntoBlueprintExt: IntoBlueprint + Sized {
@@ -164,6 +165,18 @@ pub trait IntoBlueprintExt: IntoBlueprint + Sized {
 
     fn wrap_uniform(self, gap: impl IntoValue<u16>) -> Blueprint {
         Wrap::uniform(gap, self)
+    }
+
+    fn fill(self, weight: impl IntoValue<u16>) -> FlexItem {
+        FlexItem::fill(weight, self)
+    }
+
+    fn fixed(self, size: impl IntoValue<u16>) -> FlexItem {
+        FlexItem::fixed(size, self)
+    }
+
+    fn fit(self) -> FlexItem {
+        FlexItem::content(self)
     }
 }
 
