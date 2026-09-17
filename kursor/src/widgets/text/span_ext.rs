@@ -1,4 +1,7 @@
-use kursor_core::render::{color::Color, style::Style};
+use kursor_core::{
+    render::{color::Color, style::Style},
+    state::{Atom, Memo, Signal, Value},
+};
 
 use super::Span;
 
@@ -42,13 +45,13 @@ pub trait IntoSpanExt: IntoSpan + Sized {
 
 impl IntoSpan for &str {
     fn into_span(self) -> Span {
-        Span::new(self)
+        Span::from_static(self.to_owned(), None)
     }
 }
 
 impl IntoSpan for String {
     fn into_span(self) -> Span {
-        Span::new(self)
+        Span::from_static(self, None)
     }
 }
 
@@ -58,11 +61,28 @@ impl IntoSpan for Span {
     }
 }
 
-impl<T> IntoSpanExt for T where T: IntoSpan {}
-
-impl Span {
-    fn patch_style(mut self, style: Style) -> Self {
-        self.style = Some(self.style.unwrap_or_default().patch(style));
-        self
+impl IntoSpan for Value<String> {
+    fn into_span(self) -> Span {
+        Span::from_reactive(self)
     }
 }
+
+impl IntoSpan for Signal<String> {
+    fn into_span(self) -> Span {
+        Span::from_reactive(Value::signal(self))
+    }
+}
+
+impl IntoSpan for Atom<String> {
+    fn into_span(self) -> Span {
+        Span::from_reactive(Value::atom(self))
+    }
+}
+
+impl IntoSpan for Memo<String> {
+    fn into_span(self) -> Span {
+        Span::from_reactive(Value::memo(self))
+    }
+}
+
+impl<T> IntoSpanExt for T where T: IntoSpan {}

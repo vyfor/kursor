@@ -82,6 +82,16 @@ impl<T: LocalState> Value<T> {
         }
     }
 
+    /// reads the current value without subscribing.
+    pub fn peek(&self) -> T {
+        match &self.source {
+            ValueSource::Plain(value) => value.clone(),
+            ValueSource::Signal(signal) => signal.peek(),
+            ValueSource::Atom(atom) => atom.peek(),
+            ValueSource::Memo(memo) => memo.peek(),
+        }
+    }
+
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
         match &self.source {
             ValueSource::Plain(value) => f(value),
