@@ -7,6 +7,7 @@ pub use builder::TextBuilder;
 
 pub use line::Line;
 pub use span::Span;
+pub use span::SpanContent;
 pub use span_ext::{IntoSpan, IntoSpanExt};
 
 use kursor_core::{
@@ -195,8 +196,9 @@ fn wrap_lines(lines: &[Line], wrap: WrapMode, width: u16) -> Vec<Line> {
         let mut current = Line::default();
         let mut current_width = 0usize;
         for span in &line.spans {
+            let text = span.text();
             let mut start = 0;
-            for (index, ch) in span.text.char_indices() {
+            for (index, ch) in text.char_indices() {
                 let end = index + ch.len_utf8();
                 let char_width = ch.width().unwrap_or(0);
                 if current_width > 0
@@ -207,10 +209,10 @@ fn wrap_lines(lines: &[Line], wrap: WrapMode, width: u16) -> Vec<Line> {
                     current_width = 0;
                     start = index;
                 }
-                current.spans.push(Span {
-                    text: span.text[start..end].to_owned(),
-                    style: span.style,
-                });
+                current.spans.push(Span::from_static(
+                    text[start..end].to_owned(),
+                    span.style,
+                ));
                 current_width += char_width;
                 start = end;
             }
@@ -218,6 +220,22 @@ fn wrap_lines(lines: &[Line], wrap: WrapMode, width: u16) -> Vec<Line> {
         res.push(current);
     }
     res
+}
+
+fn resolve_lines(lines: &[Line]) -> Vec<Line> {
+    lines
+        .iter()
+        .map(|line| {
+            Line::from_spans(line.spans.iter().map(
+                |span| match span.content() {
+                    SpanContent::Static(_) => span.clone(),
+                    SpanContent::Reactive(value) => {
+                        Span::from_static(value.get(), span.style)
+                    }
+                },
+            ))
+        })
+        .collect()
 }
 
 impl Component for Text {
@@ -242,7 +260,7 @@ impl Component for Text {
             TextContent::Plain(text) => {
                 text.get().split('\n').map(Line::from).collect()
             }
-            TextContent::Lines(lines) => lines.get(),
+            TextContent::Lines(lines) => resolve_lines(&lines.get()),
         };
         let explicit = props.style.get();
         let wrap = props.wrap.get();
@@ -312,9 +330,10 @@ impl Component for Text {
                     Some(s) => default_style.patch(s),
                     None => default_style,
                 };
-                canvas.set_str(x, y, &span.text, style);
+                let text = span.text();
+                canvas.set_str(x, y, &text, style);
                 x = x.saturating_add(
-                    UnicodeWidthStr::width(span.text.as_str()) as u16,
+                    UnicodeWidthStr::width(text.as_ref()) as u16
                 );
             }
         }
