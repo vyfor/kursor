@@ -1,6 +1,6 @@
 use unicode_width::UnicodeWidthStr;
 
-use super::Span;
+use super::{IntoSpan, Span};
 
 /// a line of text built from one or more [`Span`]s.
 ///
@@ -21,15 +21,15 @@ impl Line {
         }
     }
 
-    pub fn span(mut self, span: impl Into<Span>) -> Self {
-        self.spans.push(span.into());
+    pub fn span(mut self, span: impl IntoSpan) -> Self {
+        self.spans.push(span.into_span());
         self
     }
 
     pub fn width(&self) -> usize {
         self.spans
             .iter()
-            .map(|span| UnicodeWidthStr::width(span.text.as_str()))
+            .map(|span| UnicodeWidthStr::width(span.text().as_ref()))
             .sum()
     }
 }

@@ -121,6 +121,17 @@ impl<T: LocalState> Memo<T> {
         self.with(|val| val.clone())
     }
 
+    /// returns the cached value, recomputing if dependency state changed,
+    /// without subscribing.
+    pub fn peek(&self) -> T {
+        let uncomputed = unsafe { (*self.inner.value.get()).is_none() };
+        if scope::is_active() || uncomputed {
+            let node: Rc<dyn MemoNode> = self.inner.clone();
+            Inner::refresh(&self.inner, &node);
+        }
+        unsafe { (*self.inner.value.get()).as_ref().unwrap().clone() }
+    }
+
     /// borrows the cached value, recomputing if dependency state changed.
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
         deps::record(self.id());

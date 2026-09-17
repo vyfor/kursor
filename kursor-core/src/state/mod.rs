@@ -40,4 +40,4 @@ pub use atom::Atom;
 pub use memo::Memo;
 pub use signal::Signal;
 pub use transition::{Channel, IntoChannel, Transition};
-pub use value::{IntoValue, Plain, Value};
+pub use value::{IntoValue, Plain, Value, ValueSource};
