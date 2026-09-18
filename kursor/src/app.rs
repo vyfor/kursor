@@ -8,10 +8,15 @@ use kursor_core::{
     event::{Event, EventResult, mouse::MouseKind},
     render::buffer::{Buffer, CellDiff},
     runtime::Runtime,
+    state::dirty_queue,
     term_info::TermInfo,
 };
 
-use crate::{focus, terminal::Terminal};
+use crate::{
+    executor::{Executor, TaskExecutor},
+    focus,
+    terminal::Terminal,
+};
 
 #[cfg(all(not(feature = "termina"), feature = "crossterm"))]
 use crate::terminal::crossterm::Crossterm;
@@ -30,11 +35,17 @@ pub fn quit() {
     QUIT.store(true, Ordering::Relaxed);
 }
 
+/// wakes the running [`App`]'s event loop.
+pub fn wake() {
+    dirty_queue().wake();
+}
+
 #[cfg(any(feature = "termina", feature = "crossterm"))]
 /// builder for an [`App`].
 pub struct AppBuilder {
     root: Blueprint,
     query_timeout: Option<Duration>,
+    executor: Option<TaskExecutor>,
 }
 
 #[cfg(any(feature = "termina", feature = "crossterm"))]
@@ -49,6 +60,12 @@ impl AppBuilder {
         self
     }
 
+    /// configures an async [`Executor`] for running background tasks.
+    pub fn executor(mut self, executor: impl Executor) -> Self {
+        self.executor = Some(TaskExecutor::new(executor));
+        self
+    }
+
     pub fn build(self) -> Result<App<DefaultTerminal>, std::io::Error> {
         let capabilities = match self.query_timeout {
             Some(timeout) => crate::terminal::probe::query(timeout),
@@ -58,7 +75,20 @@ impl AppBuilder {
         let size = terminal.size()?;
         let mut runtime = Runtime::new(size);
         runtime.provide(capabilities);
+
+        #[cfg(feature = "tokio")]
+        let executor = self.executor.or_else(|| {
+            Some(TaskExecutor::new(crate::executor::tokio::TokioExecutor))
+        });
+        #[cfg(not(feature = "tokio"))]
+        let executor = self.executor;
+
+        if let Some(executor) = executor {
+            runtime.provide(executor);
+        }
+
         runtime.mount(self.root);
+
         let mut app = App::with_terminal(runtime, terminal);
         app.init_focus();
         Ok(app)
@@ -86,6 +116,7 @@ pub struct App<T: Terminal> {
 
 impl<T: Terminal> App<T> {
     pub fn with_terminal(runtime: Runtime, terminal: T) -> Self {
+        dirty_queue().set_waker(terminal.waker());
         let mut app = Self {
             runtime,
             terminal,
@@ -218,6 +249,7 @@ impl App<DefaultTerminal> {
         AppBuilder {
             root,
             query_timeout: None,
+            executor: None,
         }
     }
 }
@@ -250,6 +282,8 @@ fn coalesce(events: &mut Vec<Event>, event: Event) {
 
 impl<T: Terminal> Drop for App<T> {
     fn drop(&mut self) {
+        dirty_queue().set_waker(None);
+
         if self.active {
             self.terminal.leave();
             self.active = false;

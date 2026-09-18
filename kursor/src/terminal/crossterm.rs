@@ -191,6 +191,12 @@ impl Terminal for Crossterm {
         }
         self.stdout.flush()
     }
+
+    fn waker(&self) -> Option<super::TerminalWaker> {
+        // crossterm does not (yet) expose its internal waker.
+        // see https://github.com/crossterm-rs/crossterm/pull/1122
+        None
+    }
 }
 
 impl Drop for Crossterm {

@@ -37,7 +37,9 @@ pub trait SharedState: LocalState + Send + Sync {}
 impl<T: LocalState + Send + Sync> SharedState for T {}
 
 pub use atom::Atom;
+pub use id::AtomId;
 pub use memo::Memo;
+pub use queue::{WakerFn, dirty_queue};
 pub use signal::Signal;
 pub use transition::{Channel, IntoChannel, Transition};
 pub use value::{IntoValue, Plain, Value, ValueSource};

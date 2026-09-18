@@ -1,4 +1,4 @@
-use std::{error::Error, time::Duration};
+use std::{error::Error, sync::Arc, time::Duration};
 
 use kursor_core::{
     event::Event,
@@ -13,6 +13,8 @@ pub mod crossterm;
 pub mod termina;
 
 pub(crate) mod probe;
+
+pub type TerminalWaker = Arc<dyn Fn() + Send + Sync + 'static>;
 
 /// backend abstraction for a terminal.
 pub trait Terminal {
@@ -30,4 +32,8 @@ pub trait Terminal {
         graphics: &GraphicsDiff,
         cursor: Option<(u16, u16)>,
     ) -> Result<(), Self::Error>;
+
+    fn waker(&self) -> Option<TerminalWaker> {
+        None
+    }
 }
