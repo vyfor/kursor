@@ -1,5 +1,6 @@
 use std::{
     io::{self, Write},
+    sync::Arc,
     time::Duration,
 };
 
@@ -147,7 +148,11 @@ impl Terminal for Termina {
     }
 
     fn read(&mut self) -> Result<Option<Event>, Self::Error> {
-        translate(self.inner.read(|_| true)?)
+        match self.inner.read(|_| true) {
+            Ok(event) => translate(event),
+            Err(err) if err.kind() == io::ErrorKind::Interrupted => Ok(None),
+            Err(err) => Err(err),
+        }
     }
 
     fn clear(&mut self) -> Result<(), Self::Error> {
@@ -223,6 +228,13 @@ impl Terminal for Termina {
         }
         self.inner.write_all(&self.output)?;
         self.inner.flush()
+    }
+
+    fn waker(&self) -> Option<super::TerminalWaker> {
+        let waker = self.inner.event_reader().waker();
+        Some(Arc::new(move || {
+            let _ = waker.wake();
+        }))
     }
 }
 

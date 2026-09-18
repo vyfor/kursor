@@ -20,12 +20,14 @@ termina = ["dep:termina"]
 animate = ["kursor-core/animate", "dep:animate"]
 fx = ["dep:kursor-fx", "animate"]
 image = ["dep:kursor-image"]
+tokio = ["dep:tokio"]
 
 [dependencies]
 # internal
 kursor-core = { version = "0.1.0", path = "../kursor-core" }
 kursor-fx = { version = "0.1.0", path = "../kursor-fx", optional = true }
 kursor-image = { version = "0.1.0", path = "../kursor-image", optional = true }
+tokio = { version = "1", features = ["rt"], optional = true }
 
 # backend
 crossterm = { version = "0.29.0", default-features = false, features = [
@@ -44,6 +46,18 @@ required-features = ["fx"]
 [[example]]
 name = "graphics"
 required-features = ["image"]
+
+[[example]]
+name = "async"
+required-features = ["tokio"]
+
+[dev-dependencies]
+tokio = { version = "1", features = [
+    "rt",
+    "rt-multi-thread",
+    "time",
+    "macros",
+] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
