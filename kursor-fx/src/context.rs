@@ -45,6 +45,10 @@ pub trait Fx: FxClone + 'static {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity;
 
     fn reset(&mut self) {}
+
+    fn is_finished(&self) -> bool {
+        false
+    }
 }
 
 pub trait FxClone {
@@ -73,5 +77,9 @@ impl Fx for Box<dyn Fx> {
 
     fn reset(&mut self) {
         (**self).reset();
+    }
+
+    fn is_finished(&self) -> bool {
+        (**self).is_finished()
     }
 }
