@@ -8,6 +8,7 @@ use kursor_core::{
         Component, Update,
         blueprint::{Blueprint, IntoBlueprint},
         context::Cx,
+        key::Key,
     },
     layout::{
         Alignment, HAlign, VAlign,
@@ -33,16 +34,29 @@ impl Default for Anchor {
 
 #[derive(Clone)]
 pub struct Layer {
-    anchor: Anchor,
-    content: Blueprint,
+    pub(crate) id: LayerId,
+    pub(crate) anchor: Anchor,
+    pub(crate) content: Blueprint,
 }
 
 impl Layer {
-    pub fn new(anchor: Anchor, content: impl IntoBlueprint) -> Self {
+    pub(crate) fn with_id(
+        id: LayerId,
+        anchor: Anchor,
+        content: impl IntoBlueprint,
+    ) -> Self {
         let mut blueprints = content.into_blueprint();
         let content = blueprints.pop().unwrap();
 
-        Self { anchor, content }
+        Self {
+            id,
+            anchor,
+            content,
+        }
+    }
+
+    pub(crate) fn new(anchor: Anchor, content: impl IntoBlueprint) -> Self {
+        Self::with_id(LayerId(0), anchor, content)
     }
 
     pub fn center(content: impl IntoBlueprint) -> Self {
@@ -70,13 +84,19 @@ pub struct Overlays {
 struct State {
     host: Option<NodeId>,
     pending: Vec<Command>,
+    next_id: u64,
 }
 
 enum Command {
-    Open(Layer),
+    Open(Layer, LayerId),
+    Close(LayerId),
+    Replace(LayerId, Layer),
     CloseTop,
     CloseAll,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct LayerId(u64);
 
 impl Overlays {
     pub fn new() -> Self {
@@ -84,22 +104,37 @@ impl Overlays {
             state: Rc::new(UnsafeCell::new(State {
                 host: None,
                 pending: Vec::new(),
+                next_id: 0,
             })),
         }
     }
 
-    pub fn open(&self, cx: &mut Cx, layer: Layer) {
-        self.command(cx, Command::Open(layer));
+    pub fn open(&self, cx: &mut Cx, layer: Layer) -> LayerId {
+        let id = self.next_id();
+        self.command(cx, Command::Open(layer, id));
+        id
     }
 
-    // todo: possibly add means to close by id (whenever component ids are
-    // added)
     pub fn close_top(&self, cx: &mut Cx) {
         self.command(cx, Command::CloseTop);
     }
 
     pub fn close_all(&self, cx: &mut Cx) {
         self.command(cx, Command::CloseAll);
+    }
+
+    pub fn close(&self, cx: &mut Cx, id: LayerId) {
+        self.command(cx, Command::Close(id));
+    }
+
+    pub fn replace(&self, cx: &mut Cx, id: LayerId, layer: Layer) {
+        self.command(cx, Command::Replace(id, layer));
+    }
+
+    fn next_id(&self) -> LayerId {
+        let state = unsafe { &mut *self.state.get() };
+        state.next_id += 1;
+        LayerId(state.next_id)
     }
 
     fn command(&self, cx: &mut Cx, command: Command) {
@@ -224,9 +259,11 @@ impl Overlay {
     fn blueprints(&self) -> Vec<Blueprint> {
         let mut children = Vec::with_capacity(self.layers.len() + 1);
         children.push((*self.base).clone());
-        children.extend(
-            self.layers.iter().map(|layer| layer.layer.content.clone()),
-        );
+        children.extend(self.layers.iter().map(|active| {
+            let mut blueprint = active.layer.content.clone();
+            blueprint.key = Some(Key::from(active.layer.id.0));
+            blueprint
+        }));
         children
     }
 }
@@ -287,10 +324,28 @@ impl Component for Overlay {
 
         for command in self.overlays.drain() {
             match command {
-                Command::Open(layer) => self.layers.push(ActiveLayer {
-                    layer,
-                    max_size: Size::default(),
-                }),
+                Command::Open(layer, id) => {
+                    let layer = Layer::with_id(id, layer.anchor, layer.content);
+                    self.layers.push(ActiveLayer {
+                        layer,
+                        max_size: Size::default(),
+                    });
+                }
+                Command::Close(id) => {
+                    if let Some(index) =
+                        self.layers.iter().position(|l| l.layer.id == id)
+                    {
+                        self.layers.remove(index);
+                    }
+                }
+                Command::Replace(id, layer) => {
+                    if let Some(active) =
+                        self.layers.iter_mut().find(|l| l.layer.id == id)
+                    {
+                        active.layer =
+                            Layer::with_id(id, layer.anchor, layer.content);
+                    }
+                }
                 Command::CloseTop => {
                     self.layers.pop();
                 }
