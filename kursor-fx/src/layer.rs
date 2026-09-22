@@ -142,7 +142,7 @@ impl EffectLayer {
     }
 
     pub(crate) fn write_underlay(&self, canvas: &mut Canvas<'_>) {
-        if self.underlay.len() != self.output.len() {
+        if self.underlay.is_empty() {
             return;
         }
 

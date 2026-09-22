@@ -23,6 +23,8 @@ pub mod styled;
 pub mod table;
 pub mod text;
 pub mod themed;
+#[cfg(feature = "animate")]
+pub mod toaster;
 pub mod wrap;
 
 pub use align::{Align, AlignProps};
@@ -68,4 +70,8 @@ pub use text::{
     IntoSpan, IntoSpanExt, IntoText, Line, Span, Text, TextBuilder, TextProps,
 };
 pub use themed::Themed;
+#[cfg(feature = "animate")]
+pub use toaster::{
+    CxToastExt, ToastId, Toaster, ToasterBuilder, ToasterProps, Toasts,
+};
 pub use wrap::{Wrap, WrapProps};

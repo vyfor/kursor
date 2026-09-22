@@ -44,6 +44,10 @@ name = "fx"
 required-features = ["fx"]
 
 [[example]]
+name = "toast"
+required-features = ["fx"]
+
+[[example]]
 name = "graphics"
 required-features = ["image"]
 
