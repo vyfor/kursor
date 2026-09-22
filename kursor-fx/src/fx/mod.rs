@@ -1,9 +1,9 @@
+pub mod cell;
 pub mod color;
 mod colorize;
 mod ink;
 mod reveal;
 mod shift;
-mod tint;
 
 pub use colorize::{Colorize, colorize};
 pub use ink::{
@@ -13,4 +13,3 @@ pub use ink::{
 };
 pub use reveal::{Reveal, reveal};
 pub use shift::{Shift, ShiftTarget, shift};
-pub use tint::{Tint, tint_bg, tint_fg, tint_style};

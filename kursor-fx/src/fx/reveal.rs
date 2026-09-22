@@ -3,7 +3,7 @@ use std::time::Duration;
 use animate::{Activity, Time};
 use kursor_core::{
     layout::Direction,
-    render::{cell::Cell, color::Color, style::Style, subcell::Subcell},
+    render::{cell::Cell, color::Color, subcell::Subcell},
 };
 
 use super::color::mix;
@@ -153,10 +153,6 @@ impl Reveal {
                         underlay
                     } else if amount >= 1.0 {
                         source
-                    } else if let Some(cell) = self.subcell_blend(
-                        cx, x, y, progress, source, underlay, true,
-                    ) {
-                        cell
                     } else {
                         self.blend_cell(source, underlay, amount, true)
                     }
@@ -165,10 +161,6 @@ impl Reveal {
                         source
                     } else if amount >= 1.0 {
                         underlay
-                    } else if let Some(cell) = self.subcell_blend(
-                        cx, x, y, progress, source, underlay, false,
-                    ) {
-                        cell
                     } else {
                         self.blend_cell(source, underlay, amount, false)
                     }
@@ -212,95 +204,6 @@ impl Reveal {
             cell.style.bg = mix(bg_from, bg_to, amount, base_bg);
         }
         cell
-    }
-
-    fn subcell_blend(
-        &self,
-        cx: &EffectCx<'_>,
-        x: u16,
-        y: u16,
-        progress: f32,
-        source: Cell,
-        underlay: Cell,
-        entering: bool,
-    ) -> Option<Cell> {
-        if self.subcell == Subcell::None
-            || source.ch != ' '
-            || source.style.bg == Color::Reset
-        {
-            return None;
-        }
-
-        let direction = match self.spread {
-            Spread::Towards(direction) => direction,
-            _ => return None,
-        };
-
-        let a_here = cx.spread(self.spread, progress, x, y);
-        let spread = |x: u16, y: u16| cx.spread(self.spread, progress, x, y);
-        let a_next = match direction {
-            Direction::Right => {
-                if x + 1 < cx.layer.width() {
-                    spread(x + 1, y)
-                } else {
-                    let step = spread(x.saturating_sub(1), y) - a_here;
-                    (a_here - step).max(0.0)
-                }
-            }
-            Direction::Left => {
-                if x > 0 {
-                    spread(x - 1, y)
-                } else {
-                    let step =
-                        spread((x + 1).min(cx.layer.width() - 1), y) - a_here;
-                    (a_here - step).max(0.0)
-                }
-            }
-            Direction::Down => {
-                if y + 1 < cx.layer.height() {
-                    spread(x, y + 1)
-                } else {
-                    let step = spread(x, y.saturating_sub(1)) - a_here;
-                    (a_here - step).max(0.0)
-                }
-            }
-            Direction::Up => {
-                if y > 0 {
-                    spread(x, y - 1)
-                } else {
-                    let step =
-                        spread(x, (y + 1).min(cx.layer.height() - 1)) - a_here;
-                    (a_here - step).max(0.0)
-                }
-            }
-        };
-
-        let gamma = 0.6;
-        let ag_here = a_here.powf(gamma);
-
-        let (from, to) = if entering {
-            (underlay.style.bg, source.style.bg)
-        } else {
-            (source.style.bg, underlay.style.bg)
-        };
-        let c_here = mix(from, to, a_here, Color::Black);
-        let c_next = mix(from, to, a_next, Color::Black);
-
-        let ch = match direction {
-            Direction::Right => self.subcell.fill_left(ag_here.clamp(0.0, 1.0)),
-            Direction::Left => self.subcell.fill_right(ag_here.clamp(0.0, 1.0)),
-            Direction::Down => self.subcell.fill_top(ag_here.clamp(0.0, 1.0)),
-            Direction::Up => self.subcell.fill_bottom(ag_here.clamp(0.0, 1.0)),
-        };
-
-        let bright_on_fill = true;
-        let (fg, bg) = if bright_on_fill {
-            (c_here, c_next)
-        } else {
-            (c_next, c_here)
-        };
-
-        Some(Cell::new(ch, Style::new().fg(fg).bg(bg)))
     }
 
     fn apply_soft_wipe(

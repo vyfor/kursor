@@ -47,10 +47,6 @@ impl Fx for Sequence {
             }
         }
 
-        if len > 0 {
-            self.effects[len - 1].apply(cx);
-        }
-
         Activity::FINISHED
     }
 

@@ -6,7 +6,7 @@ use kursor_core::{
     render::{cell::Cell, color::Color, style::Style, subcell::Subcell},
 };
 
-use crate::{EffectCx, Feather, Fx, Mask, Spread};
+use crate::{EffectCx, Fx, Mask, Spread};
 
 /// moves its content in or out of the area.
 #[derive(Clone)]
@@ -16,7 +16,6 @@ pub struct Shift {
     start: Option<Time>,
     mask: Mask,
     subcell: Subcell,
-    feather: Feather,
     spread: Spread,
     target: ShiftTarget,
 }
@@ -46,7 +45,6 @@ pub fn shift(duration: Duration, target: impl Into<ShiftTarget>) -> Shift {
         start: None,
         mask: Mask::all(),
         subcell: Subcell::None,
-        feather: Feather::hard(),
         spread: Spread::uniform(),
         target: target.into(),
     }
@@ -55,11 +53,6 @@ pub fn shift(duration: Duration, target: impl Into<ShiftTarget>) -> Shift {
 impl Shift {
     pub fn out(mut self) -> Self {
         self.inward = false;
-        self
-    }
-
-    pub fn feather(mut self, feather: Feather) -> Self {
-        self.feather = feather;
         self
     }
 
@@ -144,19 +137,22 @@ impl Shift {
         };
 
         if self.subcell == Subcell::None {
-            let distance = (total * amount).round() as i32;
-            let (dx, dy) = match direction {
-                Direction::Left => (-distance, 0),
-                Direction::Right => (distance, 0),
-                Direction::Up => (0, -distance),
-                Direction::Down => (0, distance),
-            };
-
             cx.layer.clear();
             for y in 0..cx.layer.height() {
                 for x in 0..cx.layer.width() {
-                    let nx = x as i32 + dx;
-                    let ny = y as i32 + dy;
+                    let spread_factor =
+                        cx.spread(self.spread, 1.0 - amount, x, y);
+                    let cell_amount = 1.0 - spread_factor;
+                    let cell_dist = (total * cell_amount).round() as i32;
+                    let (cdx, cdy) = match direction {
+                        Direction::Left => (-cell_dist, 0),
+                        Direction::Right => (cell_dist, 0),
+                        Direction::Up => (0, -cell_dist),
+                        Direction::Down => (0, cell_dist),
+                    };
+
+                    let nx = x as i32 + cdx;
+                    let ny = y as i32 + cdy;
                     if nx >= 0
                         && ny >= 0
                         && nx < cx.layer.width() as i32

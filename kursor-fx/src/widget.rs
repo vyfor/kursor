@@ -60,7 +60,11 @@ impl Component for Effect {
         _props: &Self::Props,
         canvas: &mut Canvas,
     ) {
-        if !self.underlay_captured || self.underlay_origin != canvas.origin() {
+        if self.fx.is_finished() {
+            return;
+        }
+
+        if !self.underlay_captured {
             self.layer.capture_underlay(canvas, cx.rect);
             self.underlay_captured = true;
             self.underlay_origin = canvas.origin();
@@ -91,7 +95,9 @@ impl Component for Effect {
         area: Rect,
         children: &mut LayoutCx,
     ) {
-        if self.layer.area() != area {
+        if self.layer.width() != area.width
+            || self.layer.height() != area.height
+        {
             self.underlay_captured = false;
         }
         if !children.is_empty() {
@@ -105,6 +111,10 @@ impl Component for Effect {
         _props: &Self::Props,
         canvas: &mut Canvas,
     ) -> bool {
+        if self.fx.is_finished() {
+            return false;
+        }
+
         self.layer.capture(canvas, cx.rect);
 
         let mut effect_cx = EffectCx {
