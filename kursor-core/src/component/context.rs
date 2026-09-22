@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     component::{action::Action, environment::Environment},
     layout::rect::Rect,
@@ -273,6 +275,14 @@ impl<'a> Cx<'a> {
     pub fn repaint_self(&mut self) {
         if let Some(node) = self.node {
             self.repaint(node);
+        }
+    }
+
+    pub fn wake_after(&mut self, delay: Duration) {
+        if let Some(node) = self.node {
+            if let Some(actions) = self.actions.as_deref_mut() {
+                actions.push(Action::Wake(node, delay));
+            }
         }
     }
 

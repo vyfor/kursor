@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::tree::id::NodeId;
 
 pub enum Action {
@@ -8,4 +10,5 @@ pub enum Action {
     Repaint(NodeId),
     Relayout(NodeId),
     Cursor(NodeId, Option<(u16, u16)>),
+    Wake(NodeId, Duration),
 }

@@ -125,6 +125,7 @@ pub struct Runtime {
     animation_deadline: Option<Instant>,
     #[cfg(feature = "animate")]
     animation_nodes: HashSet<NodeId>,
+    wakees: Vec<(Instant, NodeId)>,
 }
 
 impl Runtime {
@@ -170,6 +171,7 @@ impl Runtime {
             animation_deadline: None,
             #[cfg(feature = "animate")]
             animation_nodes: HashSet::new(),
+            wakees: Vec::new(),
         }
     }
 
@@ -246,6 +248,32 @@ impl Runtime {
                 .extend(self.scratch.dirty_nodes.iter().copied());
             self.paint_dirty
                 .extend(self.scratch.dirty_nodes.iter().copied());
+        }
+        self.process_wakees(now);
+    }
+
+    fn process_wakees(&mut self, now: Instant) {
+        let mut due = Vec::new();
+        self.wakees.retain(|&(at, node)| {
+            if at <= now {
+                due.push(node);
+                false
+            } else {
+                true
+            }
+        });
+        for node in due {
+            if self.tree.contains(node) {
+                self.update_dirty.insert(node);
+                self.paint_dirty.insert(node);
+            }
+        }
+        #[cfg(feature = "animate")]
+        if let Some(next) = self.wakees.iter().map(|(at, _)| *at).min() {
+            self.animation_deadline = Some(
+                self.animation_deadline
+                    .map_or(next, |current| current.min(next)),
+            );
         }
     }
 
@@ -459,6 +487,8 @@ impl Runtime {
     pub fn render(&mut self) -> Vec<CellDiff> {
         #[cfg(feature = "animate")]
         self.begin_frame();
+        #[cfg(not(feature = "animate"))]
+        self.process_wakees(Instant::now());
         #[cfg(feature = "animate")]
         let _frame = frame::enter(frame::FrameContext {
             elapsed: self.frame_elapsed,
@@ -717,6 +747,25 @@ impl Runtime {
                 Action::Cursor(node, position) => {
                     if self.tree.contains(node) {
                         self.cursor = position.map(|(x, y)| (node, x, y));
+                    }
+                }
+                Action::Wake(node, delay) => {
+                    if self.tree.contains(node) {
+                        let at = Instant::now() + delay;
+                        if let Some(slot) =
+                            self.wakees.iter_mut().find(|(_, id)| *id == node)
+                        {
+                            slot.0 = at;
+                        } else {
+                            self.wakees.push((at, node));
+                        }
+                        #[cfg(feature = "animate")]
+                        {
+                            self.animation_deadline = Some(
+                                self.animation_deadline
+                                    .map_or(at, |current| current.min(at)),
+                            );
+                        }
                     }
                 }
             }
@@ -1045,7 +1094,11 @@ impl Runtime {
                 .changed_any(instance.props.as_ref(), blueprint.props.as_ref());
             let env_changed = !instance.inherited.same(parent_env);
             let declared_changed =
-                !Rc::ptr_eq(&instance.declared_children, &blueprint.children);
+                !Rc::ptr_eq(&instance.declared_children, &blueprint.children)
+                    && !Rc::ptr_eq(
+                        &instance.spec_children,
+                        &blueprint.children,
+                    );
             let offset_changed = instance.declared_offset != blueprint.offset;
             let margin_changed = instance.margin != blueprint.margin;
 
@@ -1126,6 +1179,7 @@ impl Runtime {
         let st = subtree.clone();
         self.global_listeners
             .retain(|listener| !st.contains(listener));
+        self.wakees.retain(|&(_, node)| !st.contains(&node));
         for &node in &subtree {
             self.update_dirty.remove(&node);
             self.layout_dirty.remove(&node);
@@ -1205,6 +1259,7 @@ impl Runtime {
             key: bp.key,
             component,
             props: bp.props,
+            spec_children: bp.children.clone(),
             declared_children: bp.children,
             children: empty_children(),
             type_id: bp.type_id,

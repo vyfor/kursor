@@ -16,6 +16,7 @@ pub struct Instance {
     pub key: Option<Key>,
     pub component: Box<dyn AnyComponent>,
     pub props: Rc<dyn Any>,
+    pub spec_children: Rc<[Blueprint]>,
     pub declared_children: Rc<[Blueprint]>,
     pub children: Rc<[Blueprint]>,
     pub type_id: TypeId,
