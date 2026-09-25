@@ -11,6 +11,7 @@ pub mod grid;
 pub mod image;
 pub mod input;
 pub mod list;
+pub mod modal;
 pub mod overlay;
 pub mod padding;
 pub mod progress_bar;
@@ -49,7 +50,11 @@ pub use list::{
     IntoListSelection, List, ListBehavior, ListBuilder, ListData, ListFit,
     ListIntent, ListProps, ListSelection, ListState,
 };
-pub use overlay::{Anchor, Layer, Overlay, OverlayProps, Overlays};
+pub use modal::{Modal, ModalBehavior, ModalBuilder, ModalIntent, ModalState};
+pub use overlay::{
+    Anchor, Closable, CxOverlayExt, Layer, LayerId, Overlay, OverlayProps,
+    Overlays,
+};
 pub use padding::{Padding, PaddingProps};
 pub use progress_bar::{
     Progress, ProgressBar, ProgressBarBuilder, ProgressBarProps,
