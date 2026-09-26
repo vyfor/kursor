@@ -42,6 +42,13 @@ use crate::{
     tree::{Tree, id::NodeId},
 };
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Stage {
+    Event,
+    Update,
+    Paint,
+}
+
 struct Scratch {
     dirty_nodes: Vec<NodeId>,
     layout_pending: Vec<(NodeId, Rect, Offset)>,
@@ -59,6 +66,7 @@ struct Scratch {
     dirty_sources: Vec<AtomId>,
     memo_sources: Vec<AtomId>,
     actions: Vec<Action>,
+    deferred: Vec<Action>,
     placeholder: Option<Box<dyn AnyComponent>>,
 }
 
@@ -81,6 +89,7 @@ impl Scratch {
             dirty_sources: Vec::new(),
             memo_sources: Vec::new(),
             actions: Vec::new(),
+            deferred: Vec::new(),
             placeholder: None,
         }
     }
@@ -478,6 +487,10 @@ impl Runtime {
         });
         let _signals = signal::enter(&self.local_queue);
         let _scope = scope::enter();
+        if !self.scratch.deferred.is_empty() {
+            let deferred = mem::take(&mut self.scratch.deferred);
+            self.apply_actions(deferred, Stage::Update);
+        }
         self.do_update();
         #[cfg(feature = "animate")]
         let _phase = frame::enter_node(None, frame::Phase::Passive);
@@ -712,60 +725,78 @@ impl Runtime {
                 .event_any(&mut cx, ins.props.as_ref(), event, phase)
         };
         let actions = mem::take(&mut self.scratch.actions);
-        self.apply_actions(actions);
+        self.apply_actions(actions, Stage::Event);
         result
     }
 
-    fn apply_actions(&mut self, actions: Vec<Action>) {
+    fn apply_actions(&mut self, actions: Vec<Action>, stage: Stage) {
         for action in actions {
-            match action {
-                Action::Focus(next) => self.set_focus(next),
-                Action::Capture(node) => {
-                    if self.tree.contains(node) {
-                        self.capture = Some(node);
-                    }
+            self.apply_action(action, stage);
+        }
+    }
+
+    fn apply_action(&mut self, action: Action, stage: Stage) {
+        let defer = matches!(stage, Stage::Paint)
+            && matches!(
+                action,
+                Action::Remeasure(_) | Action::Relayout(_) | Action::Repaint(_)
+            );
+
+        if defer {
+            self.scratch.deferred.push(action);
+        } else {
+            self.execute(action);
+        }
+    }
+
+    fn execute(&mut self, action: Action) {
+        match action {
+            Action::Focus(next) => self.set_focus(next),
+            Action::Capture(node) => {
+                if self.tree.contains(node) {
+                    self.capture = Some(node);
                 }
-                Action::Release => self.capture = None,
-                Action::Remeasure(node) => {
-                    if self.tree.contains(node) {
-                        self.update_dirty.insert(node);
-                        self.layout_dirty.insert(node);
-                        self.paint_dirty.insert(node);
-                    }
+            }
+            Action::Release => self.capture = None,
+            Action::Remeasure(node) => {
+                if self.tree.contains(node) {
+                    self.update_dirty.insert(node);
+                    self.layout_dirty.insert(node);
+                    self.paint_dirty.insert(node);
                 }
-                Action::Repaint(node) => {
-                    if self.tree.contains(node) {
-                        self.paint_dirty.insert(node);
-                    }
+            }
+            Action::Repaint(node) => {
+                if self.tree.contains(node) {
+                    self.paint_dirty.insert(node);
                 }
-                Action::Relayout(node) => {
-                    if self.tree.contains(node) {
-                        self.layout_dirty.insert(node);
-                        self.paint_dirty.insert(node);
-                    }
+            }
+            Action::Relayout(node) => {
+                if self.tree.contains(node) {
+                    self.layout_dirty.insert(node);
+                    self.paint_dirty.insert(node);
                 }
-                Action::Cursor(node, position) => {
-                    if self.tree.contains(node) {
-                        self.cursor = position.map(|(x, y)| (node, x, y));
-                    }
+            }
+            Action::Cursor(node, position) => {
+                if self.tree.contains(node) {
+                    self.cursor = position.map(|(x, y)| (node, x, y));
                 }
-                Action::Wake(node, delay) => {
-                    if self.tree.contains(node) {
-                        let at = Instant::now() + delay;
-                        if let Some(slot) =
-                            self.wakees.iter_mut().find(|(_, id)| *id == node)
-                        {
-                            slot.0 = at;
-                        } else {
-                            self.wakees.push((at, node));
-                        }
-                        #[cfg(feature = "animate")]
-                        {
-                            self.animation_deadline = Some(
-                                self.animation_deadline
-                                    .map_or(at, |current| current.min(at)),
-                            );
-                        }
+            }
+            Action::Wake(node, delay) => {
+                if self.tree.contains(node) {
+                    let at = Instant::now() + delay;
+                    if let Some(slot) =
+                        self.wakees.iter_mut().find(|(_, id)| *id == node)
+                    {
+                        slot.0 = at;
+                    } else {
+                        self.wakees.push((at, node));
+                    }
+                    #[cfg(feature = "animate")]
+                    {
+                        self.animation_deadline = Some(
+                            self.animation_deadline
+                                .map_or(at, |current| current.min(at)),
+                        );
                     }
                 }
             }
@@ -885,7 +916,7 @@ impl Runtime {
                 (update, global_key_listener, !previous_env.same(&env))
             });
         let actions = mem::take(&mut self.scratch.actions);
-        self.apply_actions(actions);
+        self.apply_actions(actions, Stage::Update);
 
         self.do_deps(id, dep_reads);
         if let Some(enabled) = global_listener {
@@ -1338,7 +1369,7 @@ impl Runtime {
             )
         };
         let actions = mem::take(&mut self.scratch.actions);
-        self.apply_actions(actions);
+        self.apply_actions(actions, Stage::Update);
         if global_listener == Some(true) && !self.global_listeners.contains(&id)
         {
             self.global_listeners.push(id);
@@ -1915,7 +1946,7 @@ impl Runtime {
                 .paint_any(&mut cx, ins.props.as_ref(), &mut canvas);
         }
         let actions = mem::take(&mut self.scratch.actions);
-        self.apply_actions(actions);
+        self.apply_actions(actions, Stage::Paint);
 
         let children: Vec<NodeId> = self.tree.children(id).to_vec();
         for child in children {
@@ -1961,7 +1992,7 @@ impl Runtime {
             )
         };
         let actions = mem::take(&mut self.scratch.actions);
-        self.apply_actions(actions);
+        self.apply_actions(actions, Stage::Paint);
         if running {
             #[cfg(feature = "animate")]
             self.request_animation_frame(id);
