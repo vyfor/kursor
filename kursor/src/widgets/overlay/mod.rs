@@ -1,5 +1,7 @@
 pub mod builder;
+pub mod ext;
 pub use builder::OverlayBuilder;
+pub use ext::{Closable, CxOverlayExt};
 
 use std::{cell::UnsafeCell, mem, rc::Rc};
 
@@ -190,6 +192,75 @@ impl PartialEq for OverlayProps {
     }
 }
 
+struct LayerScope;
+
+#[derive(Clone)]
+struct LayerScopeProps {
+    id: LayerId,
+    content: Rc<Blueprint>,
+}
+
+impl PartialEq for LayerScopeProps {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && Rc::ptr_eq(&self.content, &other.content)
+    }
+}
+
+impl Component for LayerScope {
+    type Props = LayerScopeProps;
+
+    fn create(_cx: &mut Cx, _props: &Self::Props) -> Self {
+        Self
+    }
+
+    fn changed(&self, _old: &Self::Props, _new: &Self::Props) -> bool {
+        true
+    }
+
+    fn mount(
+        &mut self,
+        cx: &mut Cx,
+        props: &Self::Props,
+        children: &mut kursor_core::component::MountChildren,
+    ) {
+        cx.provide(props.id);
+
+        children.replace(vec![(*props.content).clone()]);
+    }
+
+    fn update(&mut self, cx: &mut Cx, props: &Self::Props) -> Update {
+        cx.provide(props.id);
+
+        Update::children(vec![(*props.content).clone()])
+    }
+
+    fn measure(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        available: Size,
+        children: &mut MeasureCx,
+    ) -> Size {
+        if children.is_empty() {
+            Size::default()
+        } else {
+            children.measure(0, available)
+        }
+    }
+
+    fn layout(
+        &mut self,
+        _cx: &mut Cx,
+        _props: &Self::Props,
+        area: Rect,
+        children: &mut LayoutCx,
+    ) {
+        if !children.is_empty() {
+            children.set(0, area);
+        }
+    }
+}
+
 struct ActiveLayer {
     layer: Layer,
     max_size: Size,
@@ -260,9 +331,11 @@ impl Overlay {
         let mut children = Vec::with_capacity(self.layers.len() + 1);
         children.push((*self.base).clone());
         children.extend(self.layers.iter().map(|active| {
-            let mut blueprint = active.layer.content.clone();
-            blueprint.key = Some(Key::from(active.layer.id.0));
-            blueprint
+            Blueprint::new::<LayerScope>(LayerScopeProps {
+                id: active.layer.id,
+                content: Rc::new(active.layer.content.clone()),
+            })
+            .key(Key::from(active.layer.id.0))
         }));
         children
     }
