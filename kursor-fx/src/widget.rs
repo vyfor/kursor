@@ -6,7 +6,6 @@ use kursor_core::{
     },
     layout::{
         context::{LayoutCx, MeasureCx},
-        offset::Offset,
         rect::Rect,
         size::Size,
     },
@@ -25,7 +24,6 @@ pub struct Effect {
     fx: Box<dyn Fx>,
     layer: EffectLayer,
     underlay_captured: bool,
-    underlay_origin: Offset,
 }
 
 impl Effect {
@@ -42,7 +40,6 @@ impl Component for Effect {
             fx: props.fx.clone(),
             layer: EffectLayer::new(),
             underlay_captured: false,
-            underlay_origin: Offset::ZERO,
         }
     }
 
@@ -67,7 +64,6 @@ impl Component for Effect {
         if !self.underlay_captured {
             self.layer.capture_underlay(canvas, cx.rect);
             self.underlay_captured = true;
-            self.underlay_origin = canvas.origin();
         }
         canvas.merge_borders(false);
         self.layer.write_underlay(canvas);

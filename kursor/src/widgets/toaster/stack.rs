@@ -61,7 +61,14 @@ impl ToastStack {
                     Effect::new(entry.content.clone(), entry.cell.clone());
                 #[cfg(not(feature = "fx"))]
                 let child = entry.content.clone();
-                child.key(entry.id.0)
+                child.key(
+                    // avoid colliding ids between entering and exiting toasts
+                    entry
+                        .id
+                        .0
+                        .wrapping_mul(2)
+                        .wrapping_add(u64::from(entry.exiting)),
+                )
             })
             .collect()
     }
@@ -76,19 +83,18 @@ impl ToastStack {
             return false;
         }
         let live = self.entries.iter().filter(|e| !e.exiting).count();
-        let mut excess = live.saturating_sub(limit);
-        let mut changed = false;
+        if live <= limit {
+            return false;
+        }
+
         for entry in &mut self.entries {
-            if excess == 0 {
-                break;
-            }
             if !entry.exiting && entry.motion.is_none() {
                 entry.exit(&self.config);
-                excess -= 1;
-                changed = true;
+                return true;
             }
         }
-        changed
+
+        false
     }
 }
 
@@ -203,15 +209,12 @@ impl Component for ToastStack {
             }
         }
 
-        if self.force_limit() {
-            changed = true;
-        }
-
         let before = self.entries.len();
         self.entries.retain(|entry| !entry.finished());
         let dropped = before != self.entries.len();
         if dropped {
             changed = true;
+            cx.wake_after(Duration::ZERO);
         }
 
         while let Some(queued) = self.queued.pop_front() {
@@ -236,13 +239,14 @@ impl Component for ToastStack {
             changed = true;
         }
 
+        if !dropped && self.force_limit() {
+            changed = true;
+        }
+
         let busy = dropped
             || self.animating
             || self.entries.iter().any(|e| e.exiting || e.motion.is_some());
         if !busy {
-            if self.force_limit() {
-                changed = true;
-            }
             let now = cx.time().elapsed;
             for entry in &mut self.entries {
                 if entry.motion.is_none()
@@ -417,7 +421,15 @@ impl Component for ToastStack {
         _canvas: &mut Canvas,
     ) -> bool {
         let any_exiting = self.entries.iter().any(|e| e.exiting);
-        if !any_exiting && !self.animating {
+        let has_motion = self.entries.iter().any(|e| e.motion.is_some());
+        if !any_exiting && !self.animating && !has_motion {
+            let its_over = self.config.soft_limit.is_some_and(|limit| {
+                self.entries.iter().filter(|e| !e.exiting).count() > limit
+            });
+            if its_over {
+                cx.remeasure_self();
+            }
+
             let next_deadline = self
                 .entries
                 .iter()

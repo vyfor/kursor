@@ -866,10 +866,11 @@ impl Runtime {
                 let ins = self.tree.get_mut(id).unwrap();
                 let previous_env = ins.env.clone();
                 let mut global_key_listener = None;
+                self.scratch.actions.clear();
                 let mut cx = Cx {
                     rect: Self::local_rect(ins.rect),
                     node: Some(id),
-                    actions: None,
+                    actions: Some(&mut self.scratch.actions),
                     global_input: Some(&mut global_key_listener),
                     env: inherited.clone(),
                     #[cfg(feature = "animate")]
@@ -883,6 +884,8 @@ impl Runtime {
                 drop(cx);
                 (update, global_key_listener, !previous_env.same(&env))
             });
+        let actions = mem::take(&mut self.scratch.actions);
+        self.apply_actions(actions);
 
         self.do_deps(id, dep_reads);
         if let Some(enabled) = global_listener {
@@ -905,7 +908,11 @@ impl Runtime {
                 ins.declared_children = children.clone();
                 ins.children = children.clone();
             }
+            let old_children = self.tree.children(id).to_vec();
             self.sync(id, &children);
+            if old_children != self.tree.children(id) {
+                self.paint_all = true;
+            }
             invalidation |= Invalidation::ALL;
         }
 
@@ -1308,10 +1315,11 @@ impl Runtime {
             let previous_env = ins.env.clone();
             let mut children = Children::new(declared_children.clone());
             let mut global_key_listener = None;
+            self.scratch.actions.clear();
             let mut cx = Cx {
                 rect: Self::local_rect(ins.rect),
                 node: Some(id),
-                actions: None,
+                actions: Some(&mut self.scratch.actions),
                 global_input: Some(&mut global_key_listener),
                 env: inherited.clone(),
                 #[cfg(feature = "animate")]
@@ -1329,6 +1337,8 @@ impl Runtime {
                 !previous_env.same(&env),
             )
         };
+        let actions = mem::take(&mut self.scratch.actions);
+        self.apply_actions(actions);
         if global_listener == Some(true) && !self.global_listeners.contains(&id)
         {
             self.global_listeners.push(id);
