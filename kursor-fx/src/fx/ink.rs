@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell, rc::Rc};
 
 use animate::Time;
 use kursor_core::{
@@ -6,6 +6,7 @@ use kursor_core::{
     render::{cell::Cell, color::Color},
 };
 
+use crate::Driven;
 use crate::color::{hsv, scale};
 use crate::fx::color;
 
@@ -76,6 +77,7 @@ enum Motion {
     Flow { speed: f32 },
     Bounce { speed: f32 },
     Oscillate { freq: f32, speed: f32 },
+    Driven { current: Rc<cell::Cell<f32>> },
 }
 
 #[derive(Clone, Copy)]
@@ -104,6 +106,13 @@ impl Source {
 
     pub fn oscillate(mut self, freq: f32, speed: f32) -> Self {
         self.motion = Motion::Oscillate { freq, speed };
+        self
+    }
+
+    pub fn driven(mut self, driven: &Driven) -> Self {
+        self.motion = Motion::Driven {
+            current: driven.current.clone(),
+        };
         self
     }
 
@@ -147,6 +156,7 @@ impl Source {
                 0.5 + 0.5
                     * ((base * freq - t * speed) * std::f32::consts::TAU).sin()
             }
+            Motion::Driven { current } => base + current.get(),
         };
         match &self.shaping {
             Some((width, Shaping::Falloff)) => {

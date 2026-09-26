@@ -1,20 +1,19 @@
 use std::time::Duration;
 
-use animate::{Activity, Time};
+use animate::Activity;
 use kursor_core::{
     layout::Direction,
     render::{cell::Cell, color::Color, subcell::Subcell},
 };
 
 use super::color::mix;
-use crate::{EffectCx, Feather, Fx, Mask, Spread};
+use crate::{Driven, EffectCx, Feather, Fx, Mask, Progress, Spread};
 
 /// reveals or hides its content across the area.
 #[derive(Clone)]
 pub struct Reveal {
-    duration: Duration,
+    progress: Progress,
     inward: bool,
-    start: Option<Time>,
     mask: Mask,
     subcell: Subcell,
     feather: Feather,
@@ -24,9 +23,8 @@ pub struct Reveal {
 
 pub fn reveal(duration: Duration) -> Reveal {
     Reveal {
-        duration,
+        progress: Progress::clock(duration),
         inward: true,
-        start: None,
         mask: Mask::all(),
         subcell: Subcell::None,
         feather: Feather::full(),
@@ -64,19 +62,24 @@ impl Reveal {
         self.mask = mask;
         self
     }
+
+    pub fn driven(mut self, driven: &Driven) -> Self {
+        self.progress = Progress::driven(driven);
+        self
+    }
 }
 
 impl Fx for Reveal {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity {
-        let start = *self.start.get_or_insert(cx.time);
-        let progress = cx.progress(start, self.duration);
+        let adv = self.progress.advance(cx.time);
+        let progress = adv.value;
 
         match self.spread {
             Spread::Uniform => {
                 self.apply_blend(cx, progress);
             }
             Spread::Towards(dir) => {
-                if progress >= 1.0 {
+                if adv.settled {
                     self.finished(cx);
                     return Activity::FINISHED;
                 }
@@ -98,7 +101,7 @@ impl Fx for Reveal {
                 self.apply_soft_wipe(cx, amount, wipe_dir);
             }
             Spread::Radial => {
-                if progress >= 1.0 {
+                if adv.settled {
                     self.finished(cx);
                     return Activity::FINISHED;
                 }
@@ -111,7 +114,7 @@ impl Fx for Reveal {
             }
         }
 
-        if progress >= 1.0 {
+        if adv.settled {
             self.finished(cx);
             Activity::FINISHED
         } else {
@@ -120,7 +123,7 @@ impl Fx for Reveal {
     }
 
     fn reset(&mut self) {
-        self.start = None;
+        self.progress.reset();
     }
 }
 

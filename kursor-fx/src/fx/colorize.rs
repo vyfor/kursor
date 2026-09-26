@@ -1,10 +1,10 @@
 use std::time::Duration;
 
-use animate::{Activity, Time};
+use animate::Activity;
 use kursor_core::{layout::size::Size, render::color::Color};
 
 use super::color::mix;
-use crate::{EffectCx, Fx, Ink, Mask, Spread};
+use crate::{Advance, Driven, EffectCx, Fx, Ink, Mask, Progress, Spread};
 
 pub fn colorize(ink: impl Ink + Clone) -> Colorize {
     Colorize {
@@ -13,7 +13,6 @@ pub fn colorize(ink: impl Ink + Clone) -> Colorize {
         mode: Mode::Replace,
         mask: Mask::all(),
         spread: Spread::uniform(),
-        start: None,
     }
 }
 
@@ -25,7 +24,6 @@ pub struct Colorize {
     mode: Mode,
     mask: Mask,
     spread: Spread,
-    start: Option<Time>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -39,7 +37,7 @@ enum Target {
 enum Mode {
     Replace,
     Animate,
-    Blend { duration: Duration },
+    Blend { progress: Progress },
 }
 
 impl Colorize {
@@ -64,7 +62,12 @@ impl Colorize {
     }
 
     pub fn blend(mut self, duration: Duration) -> Self {
-        self.mode = Mode::Blend { duration };
+        self.mode = Mode::Blend { progress: Progress::clock(duration) };
+        self
+    }
+
+    pub fn driven(mut self, driven: &Driven) -> Self {
+        self.mode = Mode::Blend { progress: Progress::driven(driven) };
         self
     }
 
@@ -81,8 +84,10 @@ impl Colorize {
 
 impl Fx for Colorize {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity {
-        let start = *self.start.get_or_insert(cx.time);
-        let pg = cx.progress(start, self.duration());
+        let adv = match &mut self.mode {
+            Mode::Blend { progress } => progress.advance(cx.time),
+            _ => Advance { value: 1.0, settled: true },
+        };
         let size = Size::new(cx.layer.width(), cx.layer.height());
         let time = cx.time;
 
@@ -96,7 +101,9 @@ impl Fx for Colorize {
                 let inked = self.ink.color(x, y, cell, size, time);
                 let amount = match &self.mode {
                     Mode::Replace | Mode::Animate => 1.0,
-                    Mode::Blend { .. } => cx.spread(self.spread, pg, x, y),
+                    Mode::Blend { .. } => {
+                        cx.spread(self.spread, adv.value, x, y)
+                    }
                 };
 
                 let mut cell = cell;
@@ -126,7 +133,7 @@ impl Fx for Colorize {
             Mode::Replace => Activity::FINISHED,
             Mode::Animate => Activity::RUNNING,
             Mode::Blend { .. } => {
-                if pg >= 1.0 {
+                if adv.settled {
                     Activity::FINISHED
                 } else {
                     Activity::RUNNING
@@ -136,15 +143,8 @@ impl Fx for Colorize {
     }
 
     fn reset(&mut self) {
-        self.start = None;
-    }
-}
-
-impl Colorize {
-    fn duration(&self) -> Duration {
-        match &self.mode {
-            Mode::Blend { duration } => *duration,
-            _ => Duration::from_millis(1),
+        if let Mode::Blend { progress } = &mut self.mode {
+            progress.reset();
         }
     }
 }
