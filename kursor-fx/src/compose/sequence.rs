@@ -35,6 +35,13 @@ impl Clone for Sequence {
 impl Fx for Sequence {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity {
         let len = self.effects.len();
+        if self.index >= len {
+            if len > 0 {
+                self.effects[len - 1].apply(cx);
+            }
+
+            return Activity::FINISHED;
+        }
         while self.index < len {
             let activity = self.effects[self.index].apply(cx);
             if !activity.finished {

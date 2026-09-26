@@ -1,19 +1,18 @@
 use std::time::Duration;
 
-use animate::{Activity, Time};
+use animate::Activity;
 use kursor_core::{
     layout::{Direction, Offset},
     render::{cell::Cell, color::Color, style::Style, subcell::Subcell},
 };
 
-use crate::{EffectCx, Fx, Mask, Spread};
+use crate::{Driven, EffectCx, Fx, Mask, Progress, Spread};
 
 /// moves its content in or out of the area.
 #[derive(Clone)]
 pub struct Shift {
-    duration: Duration,
+    progress: Progress,
     inward: bool,
-    start: Option<Time>,
     mask: Mask,
     subcell: Subcell,
     spread: Spread,
@@ -40,9 +39,8 @@ impl From<Offset> for ShiftTarget {
 
 pub fn shift(duration: Duration, target: impl Into<ShiftTarget>) -> Shift {
     Shift {
-        duration,
+        progress: Progress::clock(duration),
         inward: true,
-        start: None,
         mask: Mask::all(),
         subcell: Subcell::None,
         spread: Spread::uniform(),
@@ -70,16 +68,21 @@ impl Shift {
         self.mask = mask;
         self
     }
+
+    pub fn driven(mut self, driven: &Driven) -> Self {
+        self.progress = Progress::driven(driven);
+        self
+    }
 }
 
 impl Fx for Shift {
     fn apply(&mut self, cx: &mut EffectCx<'_>) -> Activity {
-        let start = *self.start.get_or_insert(cx.time);
-        let progress = cx.progress(start, self.duration);
+        let adv = self.progress.advance(cx.time);
+        let progress = adv.value;
 
         match &self.target {
             ShiftTarget::Direction(dir) => {
-                if progress >= 1.0 {
+                if adv.settled {
                     self.finished(cx);
                     return Activity::FINISHED;
                 }
@@ -96,11 +99,11 @@ impl Fx for Shift {
                 } else {
                     1.0 - progress
                 };
-                self.apply_move(cx, t, progress, *offset);
+                self.apply_move(cx, t, adv.settled, *offset);
             }
         }
 
-        if progress >= 1.0 {
+        if adv.settled {
             Activity::FINISHED
         } else {
             Activity::RUNNING
@@ -108,7 +111,7 @@ impl Fx for Shift {
     }
 
     fn reset(&mut self) {
-        self.start = None;
+        self.progress.reset();
     }
 }
 
@@ -359,10 +362,9 @@ impl Shift {
         &self,
         cx: &mut EffectCx<'_>,
         t: f32,
-        progress: f32,
+        finished: bool,
         offset: Offset,
     ) {
-        let finished = progress >= 1.0;
         let (px, py) = if finished {
             if self.inward {
                 ((offset.x as f32).abs(), (offset.y as f32).abs())
